@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Header, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
@@ -14,12 +14,10 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
 import json
-import httpx
 import cloudinary
 import cloudinary.uploader
 from authlib.integrations.starlette_client import OAuth
 from itsdangerous import URLSafeTimedSerializer
-import hashlib
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -47,7 +45,10 @@ cloudinary.config(
 )
 
 # Razorpay client
-razorpay_client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
+razorpay_client = razorpay.Client(auth=(
+    os.environ.get('RAZORPAY_KEY_ID', ''), 
+    os.environ.get('RAZORPAY_KEY_SECRET', '')
+))
 
 # Admin emails
 ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
@@ -100,9 +101,9 @@ class Question(BaseModel):
     company_id: Optional[str] = None
     question: str
     answer: str
-    difficulty: str  # easy, medium, hard
-    tags: List[str] = []  # just-read, v.imp, fav
-    category: Optional[str] = None  # project, HR, technical, coding
+    difficulty: str
+    tags: List[str] = []
+    category: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Company(BaseModel):
@@ -121,11 +122,11 @@ class Experience(BaseModel):
     role: str
     rounds: int
     experience: str
-    status: str = "selected"  # selected, not selected, pending
+    status: str = "selected"
     posted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CreateOrderRequest(BaseModel):
-    amount: int  # in paise
+    amount: int
 
 class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
@@ -134,30 +135,24 @@ class VerifyPaymentRequest(BaseModel):
 
 # MongoDB-based cache helper functions
 def generate_cache_key(prefix: str, **kwargs) -> str:
-    """Generate a cache key based on prefix and query parameters"""
     if not kwargs:
         return prefix
-    # Sort kwargs for consistent keys
     params = "_".join(f"{k}:{v}" for k, v in sorted(kwargs.items()) if v is not None)
     return f"{prefix}_{params}" if params else prefix
 
 async def get_cached_data(key: str):
-    """Get data from MongoDB cache"""
     try:
         cached_doc = await cache_collection.find_one({"key": key})
         if cached_doc:
-            # Check if cache is still valid
             if datetime.fromisoformat(cached_doc['expires_at']) > datetime.now(timezone.utc):
                 return json.loads(cached_doc['data'])
             else:
-                # Cache expired, delete it
                 await cache_collection.delete_one({"key": key})
     except Exception as e:
         logging.warning(f"Cache get failed for {key}: {e}")
     return None
 
 async def set_cached_data(key: str, data, ttl: int = 3600):
-    """Set data in MongoDB cache with TTL"""
     try:
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
         await cache_collection.update_one(
@@ -176,9 +171,7 @@ async def set_cached_data(key: str, data, ttl: int = 3600):
         logging.warning(f"Cache set failed for {key}: {e}")
 
 async def invalidate_cache_pattern(pattern: str):
-    """Invalidate cache keys matching a pattern"""
     try:
-        # Convert glob pattern to regex
         regex_pattern = pattern.replace("*", ".*")
         await cache_collection.delete_many({"key": {"$regex": f"^{regex_pattern}$"}})
     except Exception as e:
@@ -218,7 +211,7 @@ async def require_auth(request: Request) -> User:
 
 async def require_premium(request: Request) -> User:
     user = await require_auth(request)
-    if not user.is_premium:
+    if not user.is_premium and not user.is_admin:
         raise HTTPException(status_code=403, detail="Premium subscription required")
     return user
 
@@ -231,7 +224,6 @@ async def require_admin(request: Request) -> User:
 # Auth endpoints
 @api_router.get("/auth/login")
 async def login(request: Request):
-    # Store the redirect URL in session for after auth
     redirect_uri = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/auth/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
@@ -267,7 +259,7 @@ async def auth_callback(request: Request):
                 name=name,
                 picture=picture,
                 is_admin=is_admin,
-                is_premium=is_admin  # Admins are premium by default
+                is_premium=is_admin
             )
             await db.users.insert_one(user.model_dump())
         
@@ -279,52 +271,55 @@ async def auth_callback(request: Request):
         
         # Redirect to frontend with cookie
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        response = RedirectResponse(url=frontend_url)
+        response = RedirectResponse(url=frontend_url, status_code=302)
+        
+        # Set cookie with proper settings for production
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
-            samesite="lax",
+            secure=True,  # Always use secure in production
+            samesite="none",  # Required for cross-site cookies
             max_age=7*24*60*60,
+            domain=None,  # Let browser handle domain
             path="/"
         )
         
         return response
     except Exception as e:
         logging.error(f"Auth callback failed: {e}")
-        # Redirect to frontend with error
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
 
 @api_router.get("/auth/me")
-async def get_me(user: User = Depends(require_auth)):
-    return {"user": user.model_dump()}
+async def get_me(request: Request):
+    user = await get_current_user(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return user.model_dump()
 
 @api_router.post("/auth/logout")
-async def logout(request: Request, response: Response, user: User = Depends(require_auth)):
+async def logout(request: Request, response: Response):
     session_token = request.cookies.get('session_token')
     if session_token:
         await db.sessions.delete_one({"session_token": session_token})
-    response.delete_cookie("session_token", path="/")
+    response.delete_cookie("session_token", path="/", domain=None, samesite="none", secure=True)
     return {"success": True}
 
-# Free endpoints - Topics & Questions
+# Free endpoints
 @api_router.get("/topics", response_model=List[Topic])
 async def get_topics():
-    # Check cache
     cache_key = "topics"
     cached = await get_cached_data(cache_key)
     if cached:
         return cached
     
     topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
-    await set_cached_data(cache_key, topics, ttl=7200)  # 2 hour cache
+    await set_cached_data(cache_key, topics, ttl=7200)
     return topics
 
 @api_router.get("/companies-preview", response_model=List[Company])
 async def get_companies_preview():
-    # Public endpoint for browsing companies without auth
     cache_key = "companies"
     cached = await get_cached_data(cache_key)
     if cached:
@@ -335,12 +330,7 @@ async def get_companies_preview():
     return companies
 
 @api_router.get("/questions")
-async def get_questions(
-    topic_id: Optional[str] = None, 
-    difficulty: Optional[str] = None
-):
-    # Free endpoint - no authentication needed, show all questions
-    # Generate cache key based on query params
+async def get_questions(topic_id: Optional[str] = None, difficulty: Optional[str] = None):
     cache_key = generate_cache_key("questions", topic_id=topic_id, difficulty=difficulty)
     cached = await get_cached_data(cache_key)
     if cached:
@@ -356,10 +346,9 @@ async def get_questions(
     await set_cached_data(cache_key, questions, ttl=3600)
     return questions
 
-# Premium endpoints - Companies & Questions
+# Premium endpoints
 @api_router.get("/companies", response_model=List[Company])
 async def get_companies(user: User = Depends(require_auth)):
-    # Allow both premium users and admins
     if not user.is_premium and not user.is_admin:
         raise HTTPException(status_code=403, detail="Premium subscription required")
     
@@ -373,16 +362,10 @@ async def get_companies(user: User = Depends(require_auth)):
     return companies
 
 @api_router.get("/company-questions/{company_id}")
-async def get_company_questions(
-    company_id: str, 
-    category: Optional[str] = None, 
-    request: Request = None
-):
-    # Check user authentication and premium status
+async def get_company_questions(company_id: str, category: Optional[str] = None, request: Request = None):
     user = await get_current_user(request) if request else None
     is_premium = user and (user.is_premium or user.is_admin)
     
-    # Generate cache key with category
     cache_key = generate_cache_key("company_questions", company_id=company_id, category=category)
     cached = await get_cached_data(cache_key)
     if cached:
@@ -395,10 +378,8 @@ async def get_company_questions(
         questions = await db.questions.find(query, {"_id": 0}).to_list(1000)
         await set_cached_data(cache_key, questions, ttl=3600)
     
-    # For non-premium users, limit to 3 questions as preview
     if not is_premium and len(questions) > 3:
         preview_questions = questions[:3]
-        # Mark remaining questions as locked
         locked_questions = [
             {**q, "answer": "🔒 Unlock premium to see the answer", "locked": True} 
             for q in questions[3:]
@@ -410,19 +391,11 @@ async def get_company_questions(
 @api_router.post("/bookmark/{question_id}")
 async def toggle_bookmark(question_id: str, user: User = Depends(require_premium)):
     if question_id in user.bookmarked_questions:
-        await db.users.update_one(
-            {"id": user.id},
-            {"$pull": {"bookmarked_questions": question_id}}
-        )
-        # Invalidate user's bookmark cache
+        await db.users.update_one({"id": user.id}, {"$pull": {"bookmarked_questions": question_id}})
         await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
         return {"bookmarked": False}
     else:
-        await db.users.update_one(
-            {"id": user.id},
-            {"$addToSet": {"bookmarked_questions": question_id}}
-        )
-        # Invalidate user's bookmark cache
+        await db.users.update_one({"id": user.id}, {"$addToSet": {"bookmarked_questions": question_id}})
         await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
         return {"bookmarked": True}
 
@@ -431,20 +404,17 @@ async def get_bookmarks(user: User = Depends(require_premium)):
     if not user.bookmarked_questions:
         return []
     
-    # Cache per user
     cache_key = f"bookmarks_user:{user.id}"
     cached = await get_cached_data(cache_key)
     if cached:
         return cached
     
     questions = await db.questions.find({"id": {"$in": user.bookmarked_questions}}, {"_id": 0}).to_list(1000)
-    await set_cached_data(cache_key, questions, ttl=1800)  # 30 min cache
+    await set_cached_data(cache_key, questions, ttl=1800)
     return questions
 
-# Experiences
 @api_router.get("/experiences", response_model=List[Experience])
 async def get_experiences(company_id: Optional[str] = None):
-    # Generate cache key based on company filter
     cache_key = generate_cache_key("experiences", company_id=company_id)
     cached = await get_cached_data(cache_key)
     if cached:
@@ -481,7 +451,6 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
         }
         razorpay_client.utility.verify_payment_signature(params_dict)
         
-        # Update user to premium
         await db.users.update_one({"id": user.id}, {"$set": {"is_premium": True}})
         
         return {"success": True, "message": "Payment verified successfully"}
@@ -512,61 +481,43 @@ async def get_all_users(user: User = Depends(require_admin)):
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    """Grant admin and premium access to a user"""
-    # Check if user exists
     target_user = await db.users.find_one({"id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Update user to admin and premium
-    await db.users.update_one(
-        {"id": user_id}, 
-        {"$set": {"is_admin": True, "is_premium": True}}
-    )
+    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
     
     return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/revoke-admin")
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    """Revoke admin access from a user (keeps premium status)"""
-    # Check if user exists
     target_user = await db.users.find_one({"id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Prevent revoking own admin access
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
-    # Update user to remove admin
-    await db.users.update_one(
-        {"id": user_id}, 
-        {"$set": {"is_admin": False}}
-    )
+    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": False}})
     
     return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-    """Toggle premium status for a user (cannot remove premium from admins)"""
     target_user = await db.users.find_one({"id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Prevent removing premium from admin users
     if target_user.get('is_admin') and target_user.get('is_premium'):
         raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
     
     new_premium_status = not target_user.get('is_premium', False)
-    await db.users.update_one(
-        {"id": user_id}, 
-        {"$set": {"is_premium": new_premium_status}}
-    )
+    await db.users.update_one({"id": user_id}, {"$set": {"is_premium": new_premium_status}})
     
     status_text = "granted" if new_premium_status else "revoked"
     return {"success": True, "message": f"Premium access {status_text} for {target_user['email']}"}
 
-# Admin - Topics
+# Admin CRUD - Topics
 @api_router.post("/admin/topics")
 async def create_topic(topic: Topic, user: User = Depends(require_admin)):
     await db.topics.insert_one(topic.model_dump())
@@ -583,11 +534,10 @@ async def update_topic(topic_id: str, topic: Topic, user: User = Depends(require
 async def delete_topic(topic_id: str, user: User = Depends(require_admin)):
     await db.topics.delete_one({"id": topic_id})
     await invalidate_cache_pattern("topics*")
-    # Also invalidate questions cache as they might reference this topic
     await invalidate_cache_pattern("questions*")
     return {"success": True}
 
-# Admin - Questions
+# Admin CRUD - Questions
 @api_router.get("/admin/questions")
 async def get_all_questions(user: User = Depends(require_admin)):
     questions = await db.questions.find({}, {"_id": 0}).to_list(10000)
@@ -597,12 +547,10 @@ async def get_all_questions(user: User = Depends(require_admin)):
 async def create_question(question: Question, user: User = Depends(require_admin)):
     await db.questions.insert_one(question.model_dump())
     
-    # Invalidate all question caches
     await invalidate_cache_pattern("questions*")
     await invalidate_cache_pattern("company_questions*")
     await invalidate_cache_pattern("bookmarks*")
     
-    # Update company question count if company_id exists
     if question.company_id:
         count = await db.questions.count_documents({"company_id": question.company_id})
         await db.companies.update_one({"id": question.company_id}, {"$set": {"question_count": count}})
@@ -612,17 +560,14 @@ async def create_question(question: Question, user: User = Depends(require_admin
 
 @api_router.put("/admin/questions/{question_id}")
 async def update_question(question_id: str, question: Question, user: User = Depends(require_admin)):
-    # Get old question to check if company changed
     old_question = await db.questions.find_one({"id": question_id})
     
     await db.questions.update_one({"id": question_id}, {"$set": question.model_dump()})
     
-    # Invalidate all question caches
     await invalidate_cache_pattern("questions*")
     await invalidate_cache_pattern("company_questions*")
     await invalidate_cache_pattern("bookmarks*")
     
-    # Update counts for affected companies
     companies_to_update = set()
     if old_question and old_question.get('company_id'):
         companies_to_update.add(old_question['company_id'])
@@ -643,7 +588,6 @@ async def delete_question(question_id: str, user: User = Depends(require_admin))
     question = await db.questions.find_one({"id": question_id})
     await db.questions.delete_one({"id": question_id})
     
-    # Invalidate all question caches
     await invalidate_cache_pattern("questions*")
     await invalidate_cache_pattern("company_questions*")
     await invalidate_cache_pattern("bookmarks*")
@@ -655,14 +599,12 @@ async def delete_question(question_id: str, user: User = Depends(require_admin))
     
     return {"success": True}
 
-# Admin - Companies
+# Admin CRUD - Companies
 @api_router.post("/admin/upload-image")
 async def upload_image(file: UploadFile = File(...), user: User = Depends(require_admin)):
     try:
-        # Read file content
         contents = await file.read()
         
-        # Upload to Cloudinary
         upload_result = cloudinary.uploader.upload(
             contents,
             folder="interview_prep/companies",
@@ -694,7 +636,7 @@ async def delete_company(company_id: str, user: User = Depends(require_admin)):
     await invalidate_cache_pattern("company_questions*")
     return {"success": True}
 
-# Admin - Experiences
+# Admin CRUD - Experiences
 @api_router.post("/admin/experiences")
 async def create_experience(experience: Experience, user: User = Depends(require_admin)):
     await db.experiences.insert_one(experience.model_dump())
@@ -713,22 +655,27 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
     await invalidate_cache_pattern("experiences*")
     return {"success": True}
 
-# Add GZip compression middleware for response optimization
-app.add_middleware(GZipMiddleware, minimum_size=1000)
-
-# Add session middleware
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
-)
-
+# Middleware setup - ORDER MATTERS!
+# 1. CORS must be first to handle preflight requests
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+# 2. Session middleware
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this'),
+    https_only=True,  # Force HTTPS for cookies
+    same_site="none"  # Allow cross-site
+)
+
+# 3. GZip compression last
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -736,49 +683,38 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Startup event - create indexes for optimization
 @app.on_event("startup")
 async def startup_db():
-    """Create database indexes for better query performance"""
     try:
-        # Topics indexes
         await db.topics.create_index("id", unique=True)
         
-        # Questions indexes
         await db.questions.create_index("id", unique=True)
         await db.questions.create_index("topic_id")
         await db.questions.create_index("company_id")
         await db.questions.create_index([("difficulty", 1), ("topic_id", 1)])
         await db.questions.create_index([("category", 1), ("company_id", 1)])
         
-        # Companies indexes
         await db.companies.create_index("id", unique=True)
         await db.companies.create_index("name")
         
-        # Experiences indexes
         await db.experiences.create_index("id", unique=True)
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        # Users indexes
         await db.users.create_index("id", unique=True)
         try:
             await db.users.create_index("email", unique=True)
         except Exception:
-            # Email index might already exist or have duplicates
             pass
         
-        # Sessions indexes
         await db.sessions.create_index("session_token", unique=True)
         await db.sessions.create_index("expires_at", expireAfterSeconds=0)
         
-        # Cache collection indexes
         await cache_collection.create_index("key", unique=True)
-        await cache_collection.create_index("expires_at", expireAfterSeconds=0)  # Auto-delete expired cache
+        await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
         logger.info("Database indexes created successfully")
         
-        # Warm up cache with frequently accessed data
         topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
         await set_cached_data("topics", topics, ttl=7200)
         
@@ -790,13 +726,10 @@ async def startup_db():
     except Exception as e:
         logger.warning(f"Index creation warning: {e}")
 
-# Cache stats endpoint for monitoring
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
-    """Get MongoDB cache statistics"""
     try:
         total_keys = await cache_collection.count_documents({})
-        # Count valid vs expired keys
         now = datetime.now(timezone.utc).isoformat()
         valid_keys = await cache_collection.count_documents({"expires_at": {"$gt": now}})
         expired_keys = total_keys - valid_keys
@@ -810,18 +743,14 @@ async def get_cache_stats(user: User = Depends(require_admin)):
     except Exception as e:
         return {"error": str(e)}
 
-# Health check endpoint
 @api_router.get("/health")
 async def health_check():
-    """Health check endpoint for monitoring"""
     try:
-        # Check MongoDB
         await db.command('ping')
         mongo_status = "healthy"
     except Exception as e:
         mongo_status = f"unhealthy: {str(e)}"
     
-    # Check cache collection
     try:
         await cache_collection.count_documents({})
         cache_status = "healthy"
@@ -838,5 +767,4 @@ async def health_check():
 async def shutdown_db_client():
     client.close()
 
-# Include the API router after all endpoints are defined
 app.include_router(api_router)
