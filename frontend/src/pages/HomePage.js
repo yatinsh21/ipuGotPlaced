@@ -154,8 +154,10 @@ const HomePage = () => {
       
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="mb-12">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Interview Questions</h1>
-          <p className="text-lg text-gray-600">Practice free interview questions by topic</p>
+          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
+            Ace your next tech interview like a Pro
+          </h1>
+          <p className="text-lg text-gray-600">Actual interviews from real experiences!</p>
         </div>
 
         {loading ? (
