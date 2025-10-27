@@ -1070,8 +1070,13 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
           {experiences.map((exp) => (
             <div key={exp.id} className="border border-gray-200 p-4">
               <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-bold text-gray-900">{exp.company_name}</h3>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-gray-900">{exp.company_name}</h3>
+                    <Badge className={getStatusColor(exp.status || 'selected')}>
+                      {exp.status || 'selected'}
+                    </Badge>
+                  </div>
                   <p className="text-sm text-gray-600">{exp.role} • {exp.rounds} rounds</p>
                 </div>
                 <div className="flex gap-2">
