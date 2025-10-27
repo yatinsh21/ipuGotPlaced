@@ -10,11 +10,11 @@ const LandingPage = () => {
   const navigate = useNavigate();
 
   const companies = [
-    { name: 'Google', logo: 'https://cdn.worldvectorlogo.com/logos/google-icon.svg' },
-    { name: 'Microsoft', logo: 'https://cdn.worldvectorlogo.com/logos/microsoft-5.svg' },
-    { name: 'Amazon', logo: 'https://cdn.worldvectorlogo.com/logos/amazon-icon-1.svg' },
-    { name: 'Meta', logo: 'https://cdn.worldvectorlogo.com/logos/meta-icon-new.svg' },
-    { name: 'Apple', logo: 'https://cdn.worldvectorlogo.com/logos/apple-14.svg' }
+    { name: 'TCS', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/hdc4u34c_tcs.png' },
+    { name: 'Cvent', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/yncdtcih_cvent.jpg' },
+    { name: 'IVP', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/2jfnamkw_ivp.jpg' },
+    { name: 'TTN', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/bvknwmxb_ttn.jpg' },
+    { name: 'Unthinkable', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/33ca93na_unthinkable.png' }
   ];
 
   return (
