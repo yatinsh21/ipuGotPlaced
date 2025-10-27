@@ -257,89 +257,12 @@ async def require_admin(user: User = Depends(require_auth)) -> User:
     return user
 
 # Auth endpoints
-@api_router.get("/auth/login")
-async def login(request: Request):
-    redirect_uri = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/auth/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri)
-
-@api_router.get("/auth/callback")
-async def auth_callback(request: Request):
-    try:
-        # Get token from Google
-        token = await oauth.google.authorize_access_token(request)
-        user_info = token.get('userinfo')
-        
-        if not user_info:
-            raise HTTPException(status_code=400, detail="Failed to get user info")
-        
-        email = user_info.get('email')
-        name = user_info.get('name')
-        picture = user_info.get('picture')
-        
-        # Check if user exists
-        existing_user = await db.users.find_one({"email": email}, {"_id": 0})
-        
-        if existing_user:
-            user = User(**existing_user)
-            # Update admin status if email is in admin list
-            if email in ADMIN_EMAILS and not user.is_admin:
-                user.is_admin = True
-                user.is_premium = True
-                await db.users.update_one({"id": user.id}, {"$set": {"is_admin": True, "is_premium": True}})
-        else:
-            # Create new user
-            is_admin = email in ADMIN_EMAILS
-            user = User(
-                email=email,
-                name=name,
-                picture=picture,
-                is_admin=is_admin,
-                is_premium=is_admin
-            )
-            await db.users.insert_one(user.model_dump())
-        
-        # Create session
-        session_token = serializer.dumps({'user_id': user.id})
-        expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-        session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
-        await db.sessions.insert_one(session.model_dump())
-        
-        # Redirect to frontend with cookie
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        response = RedirectResponse(url=frontend_url, status_code=302)
-        
-        # Set cookie with proper settings for production
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=True,  # Always use secure in production
-            samesite="none",  # Required for cross-site cookies
-            max_age=7*24*60*60,
-            domain=None,  # Let browser handle domain
-            path="/"
-        )
-        
-        return response
-    except Exception as e:
-        logging.error(f"Auth callback failed: {e}")
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
-
 @api_router.get("/auth/me")
-async def get_me(request: Request):
-    user = await get_current_user(request)
+async def get_current_user_info(user: User = Depends(get_current_user)):
+    """Get current user info"""
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return {"user": user.model_dump()}
-
-@api_router.post("/auth/logout")
-async def logout(request: Request, response: Response):
-    session_token = request.cookies.get('session_token')
-    if session_token:
-        await db.sessions.delete_one({"session_token": session_token})
-    response.delete_cookie("session_token", path="/", domain=None, samesite="none", secure=True)
-    return {"success": True}
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user.model_dump()
 
 # Free endpoints
 @api_router.get("/topics", response_model=List[Topic])
