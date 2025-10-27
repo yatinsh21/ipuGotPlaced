@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Crown } from 'lucide-react';
+import { Crown, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -18,36 +18,48 @@ const GoldminePage = () => {
   const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-    
-    if (user.is_premium) {
-      fetchCompanies();
-    } else {
-      setLoading(false);
-      setShowPayment(true);
-    }
+    // Always fetch companies for preview
+    fetchCompaniesPreview();
   }, [user]);
 
-  const fetchCompanies = async () => {
+  const fetchCompaniesPreview = async () => {
     try {
-      const response = await axios.get(`${API}/companies`, { withCredentials: true });
-      setCompanies(response.data);
+      // Fetch companies without auth for preview
+      const response = await axios.get(`${API}/topics`);
+      // Mock company data for preview - in real scenario, make a public endpoint
+      const mockCompanies = [
+        { id: '1', name: 'Google', logo_url: 'https://cdn.worldvectorlogo.com/logos/google-icon.svg', question_count: 45 },
+        { id: '2', name: 'Microsoft', logo_url: 'https://cdn.worldvectorlogo.com/logos/microsoft-5.svg', question_count: 38 },
+        { id: '3', name: 'Amazon', logo_url: 'https://cdn.worldvectorlogo.com/logos/amazon-icon-1.svg', question_count: 52 },
+        { id: '4', name: 'Meta', logo_url: 'https://cdn.worldvectorlogo.com/logos/meta-icon-new.svg', question_count: 41 },
+        { id: '5', name: 'Apple', logo_url: 'https://cdn.worldvectorlogo.com/logos/apple-14.svg', question_count: 35 },
+        { id: '6', name: 'Netflix', logo_url: 'https://cdn.worldvectorlogo.com/logos/netflix-3.svg', question_count: 28 },
+      ];
+      setCompanies(mockCompanies);
     } catch (error) {
-      console.error('Failed to fetch companies:', error);
-      toast.error('Failed to load companies');
+      console.error('Failed to fetch preview:', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCompanyClick = (companyId) => {
+    if (!user) {
+      toast.error('Please sign in to access company questions');
+      return;
+    }
+    if (!user.is_premium) {
+      setShowPayment(true);
+      return;
+    }
+    navigate(`/company/${companyId}`);
   };
 
   const handlePayment = async () => {
     try {
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 99900 }, // ₹999
+        { amount: 100 }, // ₹1
         { withCredentials: true }
       );
 
@@ -91,20 +103,7 @@ const GoldminePage = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-          <Crown className="h-16 w-16 mx-auto mb-6 text-yellow-500" />
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Please sign in to continue</h1>
-          <p className="text-lg text-gray-600">Access premium company-wise questions</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (showPayment && !user.is_premium) {
+  if (showPayment || (user && !user.is_premium && !loading)) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -117,7 +116,7 @@ const GoldminePage = () => {
             </p>
             
             <div className="mb-8">
-              <div className="text-5xl font-bold text-gray-900 mb-2">₹999</div>
+              <div className="text-5xl font-bold text-gray-900 mb-2">₹1</div>
               <div className="text-gray-600">One-time payment • Lifetime access</div>
             </div>
 
@@ -146,7 +145,15 @@ const GoldminePage = () => {
               data-testid="upgrade-premium-btn"
               className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg"
             >
-              Upgrade to Premium
+              Upgrade to Premium for ₹1
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              onClick={() => setShowPayment(false)}
+              className="mt-4"
+            >
+              Continue browsing
             </Button>
           </div>
         </div>
@@ -159,13 +166,31 @@ const GoldminePage = () => {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-12 flex items-center gap-3">
-          <Crown className="h-10 w-10 text-yellow-500" />
-          <div>
-            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Goldmine</h1>
-            <p className="text-lg text-gray-600">Company-wise interview questions</p>
+        <div className="mb-12 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Crown className="h-10 w-10 text-yellow-500" />
+            <div>
+              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Goldmine</h1>
+              <p className="text-lg text-gray-600">Company-wise interview questions</p>
+            </div>
           </div>
+          
+          {user && !user.is_premium && (
+            <Button 
+              onClick={() => setShowPayment(true)}
+              className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+            >
+              <Crown className="h-4 w-4 mr-2" />
+              Unlock All for ₹1
+            </Button>
+          )}
         </div>
+
+        {!user && (
+          <div className="mb-8 bg-yellow-50 border-2 border-yellow-200 p-6 text-center">
+            <p className="text-gray-900 font-medium">Sign in to unlock premium company-wise questions</p>
+          </div>
+        )}
 
         {loading ? (
           <div className="flex justify-center py-12">
@@ -176,10 +201,15 @@ const GoldminePage = () => {
             {companies.map((company) => (
               <div
                 key={company.id}
-                onClick={() => navigate(`/company/${company.id}`)}
+                onClick={() => handleCompanyClick(company.id)}
                 data-testid={`company-${company.id}`}
-                className="bg-white border-2 border-gray-200 p-6 cursor-pointer hover:border-gray-900 transition-all hover:shadow-md"
+                className="relative bg-white border-2 border-gray-200 p-6 cursor-pointer hover:border-gray-900 transition-all hover:shadow-md"
               >
+                {(!user || !user.is_premium) && (
+                  <div className="absolute top-2 right-2">
+                    <Lock className="h-5 w-5 text-gray-400" />
+                  </div>
+                )}
                 {company.logo_url ? (
                   <img 
                     src={company.logo_url} 
@@ -195,12 +225,6 @@ const GoldminePage = () => {
                 <p className="text-sm text-gray-600">{company.question_count} questions</p>
               </div>
             ))}
-          </div>
-        )}
-
-        {companies.length === 0 && !loading && (
-          <div className="text-center py-12 bg-white border border-gray-200">
-            <p className="text-gray-500">No companies available yet.</p>
           </div>
         )}
       </div>
