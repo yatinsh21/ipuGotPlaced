@@ -175,7 +175,7 @@ const AdminPanel = () => {
               </TabsList>
 
               <TabsContent value="topics">
-                <TopicsManager topics={topics} setTopics={setTopics} fetchAllData={fetchAllData} />
+                <TopicsManager topics={topics} setTopics={setTopics} fetchAllData={fetchAllData} getAuthConfig={getAuthConfig} />
               </TabsContent>
 
               <TabsContent value="questions">
@@ -183,11 +183,12 @@ const AdminPanel = () => {
                   questions={questions.filter(q => q.topic_id && !q.company_id)} 
                   topics={topics}
                   fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
                 />
               </TabsContent>
 
               <TabsContent value="companies">
-                <CompaniesManager companies={companies} setCompanies={setCompanies} fetchAllData={fetchAllData} />
+                <CompaniesManager companies={companies} setCompanies={setCompanies} fetchAllData={fetchAllData} getAuthConfig={getAuthConfig} />
               </TabsContent>
 
               <TabsContent value="company-questions">
@@ -195,6 +196,7 @@ const AdminPanel = () => {
                   questions={questions.filter(q => q.company_id)} 
                   companies={companies}
                   fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
                 />
               </TabsContent>
 
@@ -204,11 +206,12 @@ const AdminPanel = () => {
                   setExperiences={setExperiences} 
                   companies={companies}
                   fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
                 />
               </TabsContent>
 
               <TabsContent value="users">
-                <UsersManager users={users} onRefresh={fetchAllData} currentUser={user} />
+                <UsersManager users={users} onRefresh={fetchAllData} currentUser={user} getAuthConfig={getAuthConfig} />
               </TabsContent>
             </Tabs>
           </>
