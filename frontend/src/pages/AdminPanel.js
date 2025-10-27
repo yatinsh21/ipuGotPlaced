@@ -728,7 +728,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthCo
 };
 
 // Companies Manager Component
-const CompaniesManager = ({ companies, fetchAllData }) => {
+const CompaniesManager = ({ companies, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: '', logo_url: '' });
