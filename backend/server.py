@@ -394,6 +394,7 @@ async def get_experiences(company_id: Optional[str] = None):
 @api_router.post("/payment/create-order")
 async def create_order(order_req: CreateOrderRequest, user: User = Depends(require_auth)):
     try:
+        logging.info(f"Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
             "currency": "INR",
