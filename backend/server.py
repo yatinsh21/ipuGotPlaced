@@ -13,7 +13,6 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
-import redis.asyncio as redis
 import json
 import httpx
 import cloudinary
@@ -37,14 +36,8 @@ client = AsyncIOMotorClient(
 )
 db = client[os.environ['DB_NAME']]
 
-# Redis connection with connection pooling
-redis_client = redis.from_url(
-    os.environ.get('REDIS_URL', 'redis://localhost:6379'), 
-    decode_responses=True,
-    max_connections=50,
-    socket_timeout=5,
-    socket_connect_timeout=5
-)
+# MongoDB-based cache collection
+cache_collection = db.cache
 
 # Cloudinary configuration
 cloudinary.config(
@@ -97,7 +90,7 @@ class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    description: str
+    description: Optional[str] = ""
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Question(BaseModel):
@@ -139,7 +132,7 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_signature: str
 
-# Cache helper functions
+# MongoDB-based cache helper functions
 def generate_cache_key(prefix: str, **kwargs) -> str:
     """Generate a cache key based on prefix and query parameters"""
     if not kwargs:
@@ -149,30 +142,45 @@ def generate_cache_key(prefix: str, **kwargs) -> str:
     return f"{prefix}_{params}" if params else prefix
 
 async def get_cached_data(key: str):
-    """Get data from cache"""
+    """Get data from MongoDB cache"""
     try:
-        cached = await redis_client.get(key)
-        if cached:
-            return json.loads(cached)
+        cached_doc = await cache_collection.find_one({"key": key})
+        if cached_doc:
+            # Check if cache is still valid
+            if datetime.fromisoformat(cached_doc['expires_at']) > datetime.now(timezone.utc):
+                return json.loads(cached_doc['data'])
+            else:
+                # Cache expired, delete it
+                await cache_collection.delete_one({"key": key})
     except Exception as e:
         logging.warning(f"Cache get failed for {key}: {e}")
     return None
 
 async def set_cached_data(key: str, data, ttl: int = 3600):
-    """Set data in cache with TTL"""
+    """Set data in MongoDB cache with TTL"""
     try:
-        await redis_client.set(key, json.dumps(data), ex=ttl)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
+        await cache_collection.update_one(
+            {"key": key},
+            {
+                "$set": {
+                    "key": key,
+                    "data": json.dumps(data),
+                    "expires_at": expires_at.isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
     except Exception as e:
         logging.warning(f"Cache set failed for {key}: {e}")
 
 async def invalidate_cache_pattern(pattern: str):
     """Invalidate cache keys matching a pattern"""
     try:
-        keys = []
-        async for key in redis_client.scan_iter(match=pattern):
-            keys.append(key)
-        if keys:
-            await redis_client.delete(*keys)
+        # Convert glob pattern to regex
+        regex_pattern = pattern.replace("*", ".*")
+        await cache_collection.delete_many({"key": {"$regex": f"^{regex_pattern}$"}})
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
@@ -407,7 +415,7 @@ async def toggle_bookmark(question_id: str, user: User = Depends(require_premium
             {"$pull": {"bookmarked_questions": question_id}}
         )
         # Invalidate user's bookmark cache
-        await redis_client.delete(f"bookmarks_user:{user.id}")
+        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
         return {"bookmarked": False}
     else:
         await db.users.update_one(
@@ -415,7 +423,7 @@ async def toggle_bookmark(question_id: str, user: User = Depends(require_premium
             {"$addToSet": {"bookmarked_questions": question_id}}
         )
         # Invalidate user's bookmark cache
-        await redis_client.delete(f"bookmarks_user:{user.id}")
+        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
         return {"bookmarked": True}
 
 @api_router.get("/bookmarks")
@@ -764,6 +772,10 @@ async def startup_db():
         await db.sessions.create_index("session_token", unique=True)
         await db.sessions.create_index("expires_at", expireAfterSeconds=0)
         
+        # Cache collection indexes
+        await cache_collection.create_index("key", unique=True)
+        await cache_collection.create_index("expires_at", expireAfterSeconds=0)  # Auto-delete expired cache
+        
         logger.info("Database indexes created successfully")
         
         # Warm up cache with frequently accessed data
@@ -781,14 +793,19 @@ async def startup_db():
 # Cache stats endpoint for monitoring
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
-    """Get Redis cache statistics"""
+    """Get MongoDB cache statistics"""
     try:
-        info = await redis_client.info()
+        total_keys = await cache_collection.count_documents({})
+        # Count valid vs expired keys
+        now = datetime.now(timezone.utc).isoformat()
+        valid_keys = await cache_collection.count_documents({"expires_at": {"$gt": now}})
+        expired_keys = total_keys - valid_keys
+        
         return {
-            "connected_clients": info.get('connected_clients', 0),
-            "used_memory_human": info.get('used_memory_human', 'N/A'),
-            "total_keys": await redis_client.dbsize(),
-            "uptime_seconds": info.get('uptime_in_seconds', 0)
+            "total_keys": total_keys,
+            "valid_keys": valid_keys,
+            "expired_keys": expired_keys,
+            "cache_type": "MongoDB"
         }
     except Exception as e:
         return {"error": str(e)}
@@ -804,23 +821,22 @@ async def health_check():
     except Exception as e:
         mongo_status = f"unhealthy: {str(e)}"
     
+    # Check cache collection
     try:
-        # Check Redis
-        await redis_client.ping()
-        redis_status = "healthy"
+        await cache_collection.count_documents({})
+        cache_status = "healthy"
     except Exception as e:
-        redis_status = f"unhealthy: {str(e)}"
+        cache_status = f"unhealthy: {str(e)}"
     
     return {
-        "status": "healthy" if mongo_status == "healthy" and redis_status == "healthy" else "degraded",
+        "status": "healthy" if mongo_status == "healthy" and cache_status == "healthy" else "degraded",
         "mongodb": mongo_status,
-        "redis": redis_status
+        "cache": cache_status
     }
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-    await redis_client.close()
 
 # Include the API router after all endpoints are defined
 app.include_router(api_router)

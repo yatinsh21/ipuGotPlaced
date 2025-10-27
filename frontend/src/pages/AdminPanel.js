@@ -209,7 +209,7 @@ const AdminPanel = () => {
 const TopicsManager = ({ topics, fetchAllData }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '' });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -223,7 +223,7 @@ const TopicsManager = ({ topics, fetchAllData }) => {
       }
       setOpen(false);
       setEditing(null);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '' });
       fetchAllData();
     } catch (error) {
       toast.error('Operation failed');
@@ -248,7 +248,7 @@ const TopicsManager = ({ topics, fetchAllData }) => {
           <CardTitle>Topics Management</CardTitle>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => { setEditing(null); setFormData({ name: '', description: '' }); }} data-testid="add-topic-btn">
+              <Button onClick={() => { setEditing(null); setFormData({ name: '' }); }} data-testid="add-topic-btn">
                 <Plus className="h-4 w-4 mr-2" /> Add Topic
               </Button>
             </DialogTrigger>
@@ -266,15 +266,6 @@ const TopicsManager = ({ topics, fetchAllData }) => {
                     required 
                   />
                 </div>
-                <div>
-                  <Label>Description</Label>
-                  <Textarea 
-                    value={formData.description} 
-                    onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                    data-testid="topic-description-input"
-                    required 
-                  />
-                </div>
                 <Button type="submit" data-testid="submit-topic-btn">Save</Button>
               </form>
             </DialogContent>
@@ -286,7 +277,6 @@ const TopicsManager = ({ topics, fetchAllData }) => {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -294,7 +284,6 @@ const TopicsManager = ({ topics, fetchAllData }) => {
             {topics.map((topic) => (
               <TableRow key={topic.id}>
                 <TableCell className="font-medium">{topic.name}</TableCell>
-                <TableCell>{topic.description}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button 

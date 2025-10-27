@@ -10,11 +10,10 @@ const LandingPage = () => {
   const navigate = useNavigate();
 
   const companies = [
-    { name: 'Google', logo: 'https://cdn.worldvectorlogo.com/logos/google-icon.svg' },
-    { name: 'Microsoft', logo: 'https://cdn.worldvectorlogo.com/logos/microsoft-5.svg' },
-    { name: 'Amazon', logo: 'https://cdn.worldvectorlogo.com/logos/amazon-icon-1.svg' },
-    { name: 'Meta', logo: 'https://cdn.worldvectorlogo.com/logos/meta-icon-new.svg' },
-    { name: 'Apple', logo: 'https://cdn.worldvectorlogo.com/logos/apple-14.svg' }
+    { name: 'TCS', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/hdc4u34c_tcs.png' },
+    { name: 'Cvent', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/yncdtcih_cvent.jpg' },
+    { name: 'IVP', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/2jfnamkw_ivp.jpg' },
+    { name: 'TTN', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/bvknwmxb_ttn.jpg' }
   ];
 
   return (
@@ -25,12 +24,14 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 py-12 sm:py-16 md:py-20">
         <div className="text-center mb-12 md:mb-16">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 md:mb-6 px-4">
-            Ace Your Next Interview
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto px-4">
-            Practice with real interview questions from top tech companies. Master data structures, algorithms, system design, and more.
-          </p>
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 md:mb-4">
+              Trust IGP — He Knows Interviews !
+            </h1>
+            <p className="text-lg sm:text-xl md:text-2xl text-gray-600 font-medium max-w-3xl mx-auto px-4">
+              We can't change luck — but we can be ready when it arrives.
+            </p>
+          </div>
           <Button 
             size="lg" 
             onClick={() => navigate('/topics')}
@@ -45,13 +46,13 @@ const LandingPage = () => {
         {/* Company Logos */}
         <div className="mb-12 md:mb-20">
           <p className="text-center text-xs sm:text-sm text-gray-500 mb-6 md:mb-8 uppercase tracking-wide">Questions from Top Companies</p>
-          <div className="flex justify-center items-center gap-6 md:gap-12 flex-wrap px-4">
+          <div className="flex justify-center items-center gap-8 md:gap-16 flex-wrap px-4">
             {companies.map((company) => (
-              <div key={company.name} className="grayscale hover:grayscale-0 transition-all">
+              <div key={company.name} className="transition-transform hover:scale-110">
                 <img 
                   src={company.logo} 
                   alt={company.name} 
-                  className="h-8 sm:h-10 md:h-12 w-auto object-contain"
+                  className="h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain"
                 />
               </div>
             ))}
@@ -63,7 +64,7 @@ const LandingPage = () => {
           <Link to="/topics" className="group">
             <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
               <BookOpen className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Free Questions</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Free Question Banks</h3>
               <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Practice 100+ interview questions organized by topics like Data Structures, Algorithms, and System Design</p>
               <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">Browse Topics →</span>
             </div>
@@ -72,8 +73,8 @@ const LandingPage = () => {
           <Link to="/goldmine" className="group">
             <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
               <Crown className="h-10 w-10 md:h-12 md:w-12 text-yellow-500 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Premium Goldmine</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Company-wise questions with insider tips, categorized by interview types. Bookmark your favorites</p>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Company-Wise Prep</h3>
+              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Real questions from top companies. Practice what actually gets asked in interviews</p>
               <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">View Companies →</span>
             </div>
           </Link>
@@ -81,8 +82,8 @@ const LandingPage = () => {
           <Link to="/experiences" className="group">
             <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
               <FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Interview Experiences</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Real interview experiences from candidates who got offers from top tech companies</p>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Real Experiences</h3>
+              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Learn from students who got placed. Real stories, real insights</p>
               <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">Read Stories →</span>
             </div>
           </Link>
