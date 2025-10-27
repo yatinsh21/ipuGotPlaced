@@ -120,25 +120,252 @@ class InterviewPrepAPITester:
         test_company = {"name": "Test Company", "logo_url": ""}
         self.test_endpoint('POST', 'admin/companies', 401, data=test_company, description="Create company (should require admin)")
 
-    def test_redis_caching(self):
-        """Test Redis caching by making multiple requests"""
-        print("⚡ Testing Redis Caching...")
+    def test_health_check(self):
+        """Test health check endpoint for MongoDB and Redis connectivity"""
+        print("🏥 Testing Health Check Endpoint...")
+        print("=" * 40)
+        
+        success, response = self.test_endpoint('GET', 'health', 200, description="Health check - MongoDB and Redis connectivity")
+        
+        if success and response:
+            try:
+                health_data = response.json()
+                print(f"    Health Status: {health_data.get('status', 'unknown')}")
+                print(f"    MongoDB: {health_data.get('mongodb', 'unknown')}")
+                print(f"    Redis: {health_data.get('redis', 'unknown')}")
+                
+                if health_data.get('mongodb') == 'healthy' and health_data.get('redis') == 'healthy':
+                    print("✅ Both MongoDB and Redis are healthy")
+                else:
+                    print("⚠️  One or more services are not healthy")
+            except Exception as e:
+                print(f"⚠️  Error parsing health check response: {e}")
+
+    def test_cache_warming(self):
+        """Test cache warming on startup by checking if data loads faster"""
+        print("🔥 Testing Cache Warming...")
         print("=" * 30)
         
-        # Test topics caching
-        start_time = datetime.now()
-        success1, _ = self.test_endpoint('GET', 'topics', 200, description="Topics - First request (cache miss)")
-        first_request_time = (datetime.now() - start_time).total_seconds()
+        # Test topics (should be warmed up on startup)
+        start_time = time.time()
+        success1, response1 = self.test_endpoint('GET', 'topics', 200, description="Topics - Should be pre-warmed")
+        topics_time = time.time() - start_time
         
-        start_time = datetime.now()
-        success2, _ = self.test_endpoint('GET', 'topics', 200, description="Topics - Second request (cache hit)")
-        second_request_time = (datetime.now() - start_time).total_seconds()
+        # Test companies-preview (should be warmed up on startup)
+        start_time = time.time()
+        success2, response2 = self.test_endpoint('GET', 'companies-preview', 200, description="Companies preview - Should be pre-warmed")
+        companies_time = time.time() - start_time
         
         if success1 and success2:
-            if second_request_time < first_request_time:
-                print(f"✅ Redis caching working - Second request faster ({second_request_time:.3f}s vs {first_request_time:.3f}s)")
+            print(f"    Topics response time: {topics_time:.3f}s")
+            print(f"    Companies response time: {companies_time:.3f}s")
+            
+            # If both are under 100ms, likely cached
+            if topics_time < 0.1 and companies_time < 0.1:
+                print("✅ Cache warming appears to be working - Fast response times")
             else:
-                print(f"⚠️  Redis caching unclear - Times: {first_request_time:.3f}s vs {second_request_time:.3f}s")
+                print("⚠️  Cache warming may not be working - Slower response times")
+
+    def test_redis_caching_detailed(self):
+        """Test Redis caching in detail with multiple scenarios"""
+        print("⚡ Testing Redis Caching (Detailed)...")
+        print("=" * 40)
+        
+        # Test 1: Topics caching
+        print("📋 Testing Topics Caching:")
+        times = []
+        for i in range(3):
+            start_time = time.time()
+            success, _ = self.test_endpoint('GET', 'topics', 200, description=f"Topics request #{i+1}")
+            request_time = time.time() - start_time
+            times.append(request_time)
+            time.sleep(0.1)  # Small delay between requests
+        
+        print(f"    Request times: {[f'{t:.3f}s' for t in times]}")
+        if len(times) >= 2 and times[1] < times[0]:
+            print("✅ Topics caching working - Subsequent requests faster")
+        
+        # Test 2: Questions caching with different filters
+        print("\n❓ Testing Questions Caching with Filters:")
+        
+        # Get a topic ID first
+        success, response = self.test_endpoint('GET', 'topics', 200, description="Get topics for filter testing")
+        if success and response:
+            topics = response.json()
+            if topics:
+                topic_id = topics[0]['id']
+                
+                # Test different filter combinations
+                filter_tests = [
+                    ('questions', 'No filters'),
+                    (f'questions?topic_id={topic_id}', 'With topic_id filter'),
+                    ('questions?difficulty=easy', 'With difficulty filter'),
+                    (f'questions?topic_id={topic_id}&difficulty=easy', 'With both filters')
+                ]
+                
+                for endpoint, description in filter_tests:
+                    # First request (cache miss)
+                    start_time = time.time()
+                    success1, _ = self.test_endpoint('GET', endpoint, 200, description=f"{description} - First request")
+                    first_time = time.time() - start_time
+                    
+                    # Second request (cache hit)
+                    start_time = time.time()
+                    success2, _ = self.test_endpoint('GET', endpoint, 200, description=f"{description} - Second request")
+                    second_time = time.time() - start_time
+                    
+                    if success1 and success2:
+                        print(f"    {description}: {first_time:.3f}s → {second_time:.3f}s")
+        
+        # Test 3: Companies caching
+        print("\n🏢 Testing Companies Caching:")
+        start_time = time.time()
+        success1, _ = self.test_endpoint('GET', 'companies-preview', 200, description="Companies - First request")
+        first_time = time.time() - start_time
+        
+        start_time = time.time()
+        success2, _ = self.test_endpoint('GET', 'companies-preview', 200, description="Companies - Second request")
+        second_time = time.time() - start_time
+        
+        if success1 and success2:
+            print(f"    Companies caching: {first_time:.3f}s → {second_time:.3f}s")
+        
+        # Test 4: Experiences caching
+        print("\n💼 Testing Experiences Caching:")
+        
+        # Test without filter
+        start_time = time.time()
+        success1, response1 = self.test_endpoint('GET', 'experiences', 200, description="Experiences - No filter (first)")
+        first_time = time.time() - start_time
+        
+        start_time = time.time()
+        success2, _ = self.test_endpoint('GET', 'experiences', 200, description="Experiences - No filter (second)")
+        second_time = time.time() - start_time
+        
+        if success1 and success2:
+            print(f"    Experiences (no filter): {first_time:.3f}s → {second_time:.3f}s")
+            
+            # Test with company filter if we have experiences
+            if response1:
+                experiences = response1.json()
+                if experiences:
+                    company_id = experiences[0]['company_id']
+                    
+                    start_time = time.time()
+                    success3, _ = self.test_endpoint('GET', f'experiences?company_id={company_id}', 200, 
+                                                   description="Experiences - With company filter (first)")
+                    third_time = time.time() - start_time
+                    
+                    start_time = time.time()
+                    success4, _ = self.test_endpoint('GET', f'experiences?company_id={company_id}', 200,
+                                                   description="Experiences - With company filter (second)")
+                    fourth_time = time.time() - start_time
+                    
+                    if success3 and success4:
+                        print(f"    Experiences (with filter): {third_time:.3f}s → {fourth_time:.3f}s")
+
+    def test_gzip_compression(self):
+        """Test GZip compression middleware"""
+        print("🗜️  Testing GZip Compression...")
+        print("=" * 35)
+        
+        # Make request with Accept-Encoding header
+        headers = {'Accept-Encoding': 'gzip, deflate'}
+        
+        try:
+            response = self.session.get(f"{self.api_url}/topics", headers=headers)
+            
+            # Check if response has compression headers
+            content_encoding = response.headers.get('content-encoding', '')
+            content_length = response.headers.get('content-length', 'unknown')
+            
+            print(f"    Content-Encoding: {content_encoding or 'none'}")
+            print(f"    Content-Length: {content_length}")
+            
+            if 'gzip' in content_encoding.lower():
+                print("✅ GZip compression is working")
+                self.log_test("GZip Compression", True, f"Content-Encoding: {content_encoding}")
+            else:
+                print("⚠️  GZip compression not detected")
+                self.log_test("GZip Compression", False, f"No gzip in Content-Encoding: {content_encoding}")
+                
+        except Exception as e:
+            print(f"❌ Error testing compression: {e}")
+            self.log_test("GZip Compression", False, f"Exception: {str(e)}")
+
+    def test_cache_stats_endpoint(self):
+        """Test cache stats endpoint (admin only)"""
+        print("📊 Testing Cache Stats Endpoint...")
+        print("=" * 40)
+        
+        # Should fail without admin auth
+        success, response = self.test_endpoint('GET', 'admin/cache-stats', 401, 
+                                             description="Cache stats (should require admin)")
+        
+        if success:
+            print("✅ Cache stats endpoint properly protected")
+        else:
+            print("⚠️  Cache stats endpoint security issue")
+
+    def test_response_times_comparison(self):
+        """Compare response times for first vs cached requests"""
+        print("⏱️  Testing Response Time Improvements...")
+        print("=" * 45)
+        
+        endpoints_to_test = [
+            ('topics', 'Topics'),
+            ('companies-preview', 'Companies Preview'),
+            ('questions', 'Questions'),
+            ('experiences', 'Experiences')
+        ]
+        
+        improvements = []
+        
+        for endpoint, name in endpoints_to_test:
+            print(f"\n📈 Testing {name}:")
+            
+            # Clear any existing cache by making a request first
+            self.session.get(f"{self.api_url}/{endpoint}")
+            time.sleep(0.1)
+            
+            # Measure first request
+            start_time = time.time()
+            response1 = self.session.get(f"{self.api_url}/{endpoint}")
+            first_time = time.time() - start_time
+            
+            # Small delay
+            time.sleep(0.05)
+            
+            # Measure second request (should be cached)
+            start_time = time.time()
+            response2 = self.session.get(f"{self.api_url}/{endpoint}")
+            second_time = time.time() - start_time
+            
+            if response1.status_code == 200 and response2.status_code == 200:
+                improvement = ((first_time - second_time) / first_time) * 100 if first_time > 0 else 0
+                improvements.append(improvement)
+                
+                print(f"    First request:  {first_time:.3f}s")
+                print(f"    Second request: {second_time:.3f}s")
+                print(f"    Improvement:    {improvement:.1f}%")
+                
+                if improvement > 10:  # At least 10% improvement
+                    print(f"    ✅ Good caching performance")
+                elif improvement > 0:
+                    print(f"    ⚠️  Modest caching improvement")
+                else:
+                    print(f"    ❌ No caching improvement detected")
+        
+        if improvements:
+            avg_improvement = sum(improvements) / len(improvements)
+            print(f"\n📊 Average Response Time Improvement: {avg_improvement:.1f}%")
+            
+            if avg_improvement > 15:
+                print("✅ Excellent caching performance overall")
+            elif avg_improvement > 5:
+                print("⚠️  Moderate caching performance")
+            else:
+                print("❌ Poor caching performance")
 
     def test_error_handling(self):
         """Test error handling for invalid requests"""
