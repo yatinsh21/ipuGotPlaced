@@ -182,12 +182,50 @@ const CompanyQuestionsPage = () => {
   };
 
   if (!user) {
+    // Allow preview for non-logged in users
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 py-20 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Please sign in</h1>
-          <p className="text-gray-600 mb-6">Sign in to view company questions</p>
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <Button 
+            variant="ghost" 
+            onClick={() => navigate('/goldmine')}
+            className="mb-6"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Goldmine
+          </Button>
+
+          <div className="mb-6 bg-yellow-50 border-2 border-yellow-200 p-6 rounded">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Sign in to unlock preview
+                </h3>
+                <p className="text-gray-700">Sign in with Google to see company questions structure and upgrade to premium for full access.</p>
+              </div>
+              <Button 
+                onClick={() => {
+                  const redirectUrl = encodeURIComponent(window.location.href);
+                  window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
+                }}
+                className="bg-gray-900 hover:bg-gray-800 text-white"
+              >
+                Sign in with Google
+              </Button>
+            </div>
+          </div>
+
+          <div className="mb-8 flex items-center gap-4">
+            {company?.logo_url && (
+              <img src={company.logo_url} alt={company.name} className="h-16 w-16 object-contain" />
+            )}
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">{company?.name || 'Company'}</h1>
+              <p className="text-gray-600">Sign in to view questions</p>
+            </div>
+          </div>
         </div>
       </div>
     );
