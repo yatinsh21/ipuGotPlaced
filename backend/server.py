@@ -616,6 +616,9 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
 
 app.include_router(api_router)
 
+# Add GZip compression middleware for response optimization
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # Add session middleware
 app.add_middleware(
     SessionMiddleware, 
@@ -635,6 +638,91 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Startup event - create indexes for optimization
+@app.on_event("startup")
+async def startup_db():
+    """Create database indexes for better query performance"""
+    try:
+        # Topics indexes
+        await db.topics.create_index("id", unique=True)
+        
+        # Questions indexes
+        await db.questions.create_index("id", unique=True)
+        await db.questions.create_index("topic_id")
+        await db.questions.create_index("company_id")
+        await db.questions.create_index([("difficulty", 1), ("topic_id", 1)])
+        await db.questions.create_index([("category", 1), ("company_id", 1)])
+        
+        # Companies indexes
+        await db.companies.create_index("id", unique=True)
+        await db.companies.create_index("name")
+        
+        # Experiences indexes
+        await db.experiences.create_index("id", unique=True)
+        await db.experiences.create_index("company_id")
+        await db.experiences.create_index([("posted_at", -1)])
+        
+        # Users indexes
+        await db.users.create_index("id", unique=True)
+        await db.users.create_index("email", unique=True)
+        
+        # Sessions indexes
+        await db.sessions.create_index("session_token", unique=True)
+        await db.sessions.create_index("expires_at", expireAfterSeconds=0)
+        
+        logger.info("Database indexes created successfully")
+        
+        # Warm up cache with frequently accessed data
+        topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
+        await set_cached_data("topics", topics, ttl=7200)
+        
+        companies = await db.companies.find({}, {"_id": 0}).to_list(1000)
+        await set_cached_data("companies", companies, ttl=7200)
+        
+        logger.info("Cache warmed up successfully")
+        
+    except Exception as e:
+        logger.warning(f"Index creation warning: {e}")
+
+# Cache stats endpoint for monitoring
+@api_router.get("/admin/cache-stats")
+async def get_cache_stats(user: User = Depends(require_admin)):
+    """Get Redis cache statistics"""
+    try:
+        info = await redis_client.info()
+        return {
+            "connected_clients": info.get('connected_clients', 0),
+            "used_memory_human": info.get('used_memory_human', 'N/A'),
+            "total_keys": await redis_client.dbsize(),
+            "uptime_seconds": info.get('uptime_in_seconds', 0)
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+# Health check endpoint
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    try:
+        # Check MongoDB
+        await db.command('ping')
+        mongo_status = "healthy"
+    except Exception as e:
+        mongo_status = f"unhealthy: {str(e)}"
+    
+    try:
+        # Check Redis
+        await redis_client.ping()
+        redis_status = "healthy"
+    except Exception as e:
+        redis_status = f"unhealthy: {str(e)}"
+    
+    return {
+        "status": "healthy" if mongo_status == "healthy" and redis_status == "healthy" else "degraded",
+        "mongodb": mongo_status,
+        "redis": redis_status
+    }
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
