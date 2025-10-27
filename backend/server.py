@@ -525,6 +525,9 @@ async def create_question(question: Question, user: User = Depends(require_admin
 
 @api_router.put("/admin/questions/{question_id}")
 async def update_question(question_id: str, question: Question, user: User = Depends(require_admin)):
+    # Get old question to check if company changed
+    old_question = await db.questions.find_one({"id": question_id})
+    
     await db.questions.update_one({"id": question_id}, {"$set": question.model_dump()})
     
     # Invalidate all question caches
@@ -532,9 +535,18 @@ async def update_question(question_id: str, question: Question, user: User = Dep
     await invalidate_cache_pattern("company_questions*")
     await invalidate_cache_pattern("bookmarks*")
     
+    # Update counts for affected companies
+    companies_to_update = set()
+    if old_question and old_question.get('company_id'):
+        companies_to_update.add(old_question['company_id'])
     if question.company_id:
-        count = await db.questions.count_documents({"company_id": question.company_id})
-        await db.companies.update_one({"id": question.company_id}, {"$set": {"question_count": count}})
+        companies_to_update.add(question.company_id)
+    
+    for company_id in companies_to_update:
+        count = await db.questions.count_documents({"company_id": company_id})
+        await db.companies.update_one({"id": company_id}, {"$set": {"question_count": count}})
+    
+    if companies_to_update:
         await invalidate_cache_pattern("companies*")
     
     return question
