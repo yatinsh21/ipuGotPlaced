@@ -45,9 +45,12 @@ const GoldminePage = () => {
 
   const handlePayment = async () => {
     try {
+      // PAYMENT DEBUG v2 - Check token retrieval
+      console.log('=== PAYMENT FLOW STARTED ===');
       console.log('Getting token from Clerk...');
       const token = await getToken();
       console.log('Token received:', token ? 'Yes (length: ' + token.length + ')' : 'No');
+      console.log('Token value (first 20 chars):', token ? token.substring(0, 20) + '...' : 'NULL');
       
       if (!token) {
         console.error('No token available');
