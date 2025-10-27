@@ -68,6 +68,26 @@ oauth.register(
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
+
+@app.get("/", include_in_schema=False)
+async def root(request: Request):
+    """Root route / health check returning status and docs URL."""
+    backend_url = os.environ.get("BACKEND_URL")
+    docs_path = "/docs"
+    if backend_url:
+        docs_url = backend_url.rstrip("/") + docs_path
+    else:
+        # Build docs URL from request if BACKEND_URL not set
+        scheme = request.url.scheme
+        host = request.headers.get("host", "localhost")
+        docs_url = f"{scheme}://{host}{docs_path}"
+
+    return JSONResponse({
+        "status": "ok",
+        "message": "IPU Got Placed backend is running",
+        "docs": docs_url,
+    })
+
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
