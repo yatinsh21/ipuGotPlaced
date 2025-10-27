@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
   const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
