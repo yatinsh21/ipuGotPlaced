@@ -162,6 +162,11 @@ async def create_session(request: Request, response: Response, x_session_id: str
             
             if existing_user:
                 user = User(**existing_user)
+                # Update admin status if email is in admin list
+                if email in ADMIN_EMAILS and not user.is_admin:
+                    user.is_admin = True
+                    await db.users.update_one({"id": user.id}, {"$set": {"is_admin": True, "is_premium": True}})
+                    user.is_premium = True
             else:
                 # Create new user
                 is_admin = email in ADMIN_EMAILS
@@ -169,7 +174,8 @@ async def create_session(request: Request, response: Response, x_session_id: str
                     email=email,
                     name=data['name'],
                     picture=data.get('picture'),
-                    is_admin=is_admin
+                    is_admin=is_admin,
+                    is_premium=is_admin  # Admins are premium by default
                 )
                 await db.users.insert_one(user.model_dump())
             
