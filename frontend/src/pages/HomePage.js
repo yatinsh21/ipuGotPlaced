@@ -26,10 +26,25 @@ const HomePage = () => {
 
   useEffect(() => {
     fetchTopics();
-    if (user?.is_premium) {
-      setBookmarkedIds(user.bookmarked_questions || []);
+    if (isPremium && isSignedIn) {
+      // Fetch user's bookmarks from backend
+      fetchUserBookmarks();
     }
-  }, [user]);
+  }, [isPremium, isSignedIn]);
+
+  const fetchUserBookmarks = async () => {
+    try {
+      const token = await user.getClerkSessionToken();
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setBookmarkedIds(response.data.bookmarked_questions || []);
+    } catch (error) {
+      console.error('Failed to fetch bookmarks:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedTopic) {
