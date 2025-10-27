@@ -867,22 +867,40 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
 const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [rounds, setRounds] = useState([{ title: 'Round 1', description: '' }]);
+  const [tips, setTips] = useState('');
   const [formData, setFormData] = useState({
     company_id: '',
     company_name: '',
     role: '',
     rounds: 1,
-    experience: ''
+    experience: '',
+    status: 'selected'
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Build experience text from rounds and tips
+      let experienceText = rounds.map((round, i) => 
+        `Round ${i + 1}: ${round.description}`
+      ).join('\\n');
+      
+      if (tips) {
+        experienceText += `\\n\\nTips: ${tips}`;
+      }
+
+      const dataToSubmit = {
+        ...formData,
+        experience: experienceText,
+        rounds: rounds.length
+      };
+
       if (editing) {
-        await axios.put(`${API}/admin/experiences/${editing.id}`, { ...editing, ...formData }, { withCredentials: true });
+        await axios.put(`${API}/admin/experiences/${editing.id}`, { ...editing, ...dataToSubmit }, { withCredentials: true });
         toast.success('Experience updated');
       } else {
-        await axios.post(`${API}/admin/experiences`, formData, { withCredentials: true });
+        await axios.post(`${API}/admin/experiences`, dataToSubmit, { withCredentials: true });
         toast.success('Experience created');
       }
       setOpen(false);
@@ -895,7 +913,25 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
   };
 
   const resetForm = () => {
-    setFormData({ company_id: '', company_name: '', role: '', rounds: 1, experience: '' });
+    setFormData({ company_id: '', company_name: '', role: '', rounds: 1, experience: '', status: 'selected' });
+    setRounds([{ title: 'Round 1', description: '' }]);
+    setTips('');
+  };
+
+  const addRound = () => {
+    setRounds([...rounds, { title: `Round ${rounds.length + 1}`, description: '' }]);
+  };
+
+  const removeRound = (index) => {
+    if (rounds.length > 1) {
+      setRounds(rounds.filter((_, i) => i !== index));
+    }
+  };
+
+  const updateRound = (index, description) => {
+    const newRounds = [...rounds];
+    newRounds[index].description = description;
+    setRounds(newRounds);
   };
 
   const handleDelete = async (id) => {
@@ -906,6 +942,15 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
       fetchAllData();
     } catch (error) {
       toast.error('Delete failed');
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch(status) {
+      case 'selected': return 'bg-green-100 text-green-800';
+      case 'not selected': return 'bg-red-100 text-red-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -920,60 +965,100 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
                 <Plus className="h-4 w-4 mr-2" /> Add Experience
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? 'Edit Experience' : 'Add New Experience'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Company</Label>
+                    <Select 
+                      value={formData.company_id} 
+                      onValueChange={(val) => {
+                        const company = companies.find(c => c.id === val);
+                        setFormData({...formData, company_id: val, company_name: company?.name || ''});
+                      }}
+                    >
+                      <SelectTrigger data-testid="experience-company-select">
+                        <SelectValue placeholder="Select company" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Role</Label>
+                    <Input 
+                      value={formData.role} 
+                      onChange={(e) => setFormData({...formData, role: e.target.value})} 
+                      data-testid="experience-role-input"
+                      placeholder="Software Engineer"
+                      required 
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <Label>Company</Label>
+                  <Label>Status</Label>
                   <Select 
-                    value={formData.company_id} 
-                    onValueChange={(val) => {
-                      const company = companies.find(c => c.id === val);
-                      setFormData({...formData, company_id: val, company_name: company?.name || ''});
-                    }}
+                    value={formData.status} 
+                    onValueChange={(val) => setFormData({...formData, status: val})}
                   >
-                    <SelectTrigger data-testid="experience-company-select">
-                      <SelectValue placeholder="Select company" />
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      <SelectItem value="selected">Selected</SelectItem>
+                      <SelectItem value="not selected">Not Selected</SelectItem>
+                      <SelectItem value="pending">Pending</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
-                  <Label>Role</Label>
-                  <Input 
-                    value={formData.role} 
-                    onChange={(e) => setFormData({...formData, role: e.target.value})} 
-                    data-testid="experience-role-input"
-                    placeholder="Software Engineer"
-                    required 
-                  />
+                  <div className="flex items-center justify-between mb-2">
+                    <Label>Interview Rounds</Label>
+                    <Button type="button" variant="outline" size="sm" onClick={addRound}>
+                      <Plus className="h-3 w-3 mr-1" /> Add Round
+                    </Button>
+                  </div>
+                  {rounds.map((round, index) => (
+                    <div key={index} className="mb-3 p-3 border border-gray-200 rounded">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-sm">{round.title}</span>
+                        {rounds.length > 1 && (
+                          <Button 
+                            type="button" 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => removeRound(index)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <Input
+                        value={round.description}
+                        onChange={(e) => updateRound(index, e.target.value)}
+                        placeholder={`e.g., Coding round - two medium level problems`}
+                        required
+                      />
+                    </div>
+                  ))}
                 </div>
+
                 <div>
-                  <Label>Number of Rounds</Label>
-                  <Input 
-                    type="number" 
-                    value={formData.rounds} 
-                    onChange={(e) => setFormData({...formData, rounds: parseInt(e.target.value)})} 
-                    data-testid="experience-rounds-input"
-                    min="1"
-                    required 
-                  />
-                </div>
-                <div>
-                  <Label>Experience</Label>
+                  <Label>Tips / Focus Areas (Optional)</Label>
                   <Textarea 
-                    value={formData.experience} 
-                    onChange={(e) => setFormData({...formData, experience: e.target.value})} 
-                    data-testid="experience-text-input"
-                    rows={8}
-                    placeholder="Describe the interview experience..."
-                    required 
+                    value={tips}
+                    onChange={(e) => setTips(e.target.value)}
+                    rows={3}
+                    placeholder="e.g., Focus on: System design, Clean code, Azure knowledge"
                   />
                 </div>
+
                 <Button type="submit" data-testid="submit-experience-btn">Save</Button>
               </form>
             </DialogContent>
