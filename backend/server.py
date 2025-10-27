@@ -314,8 +314,12 @@ async def get_companies(user: User = Depends(require_auth)):
     return companies
 
 @api_router.get("/company-questions/{company_id}")
-async def get_company_questions(company_id: str, category: Optional[str] = None, request: Request = None):
-    user = await get_current_user(request) if request else None
+async def get_company_questions(
+    company_id: str, 
+    category: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    user = await get_current_user(authorization) if authorization else None
     is_premium = user and (user.is_premium or user.is_admin)
     
     cache_key = generate_cache_key("company_questions", company_id=company_id, category=category)
