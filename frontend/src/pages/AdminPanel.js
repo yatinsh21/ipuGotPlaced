@@ -561,7 +561,6 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
             </div>
           ))}
         </div>
-        </div>
       </CardContent>
     </Card>
   );
