@@ -395,17 +395,32 @@ async def toggle_bookmark(question_id: str, user: User = Depends(require_premium
 async def get_bookmarks(user: User = Depends(require_premium)):
     if not user.bookmarked_questions:
         return []
+    
+    # Cache per user
+    cache_key = f"bookmarks_user:{user.id}"
+    cached = await get_cached_data(cache_key)
+    if cached:
+        return cached
+    
     questions = await db.questions.find({"id": {"$in": user.bookmarked_questions}}, {"_id": 0}).to_list(1000)
+    await set_cached_data(cache_key, questions, ttl=1800)  # 30 min cache
     return questions
 
 # Experiences
 @api_router.get("/experiences", response_model=List[Experience])
 async def get_experiences(company_id: Optional[str] = None):
+    # Generate cache key based on company filter
+    cache_key = generate_cache_key("experiences", company_id=company_id)
+    cached = await get_cached_data(cache_key)
+    if cached:
+        return cached
+    
     query = {}
     if company_id:
         query["company_id"] = company_id
     
     experiences = await db.experiences.find(query, {"_id": 0}).sort("posted_at", -1).to_list(1000)
+    await set_cached_data(cache_key, experiences, ttl=3600)
     return experiences
 
 # Payment endpoints
