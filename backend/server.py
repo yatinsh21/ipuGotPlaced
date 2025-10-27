@@ -164,8 +164,10 @@ async def invalidate_cache_pattern(pattern: str):
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
 # Auth dependency using Clerk
-async def get_current_user(authorization: Optional[str] = Header(None, alias="Authorization")) -> Optional[User]:
+async def get_current_user(request: Request) -> Optional[User]:
     """Verify Clerk session token and get/create user"""
+    authorization = request.headers.get('Authorization') or request.headers.get('authorization')
+    
     if not authorization or not authorization.startswith('Bearer '):
         return None
     
