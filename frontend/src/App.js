@@ -22,34 +22,9 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for session_id in URL fragment
-    const hash = window.location.hash;
-    if (hash.includes('session_id=')) {
-      const sessionId = hash.split('session_id=')[1].split('&')[0];
-      handleSessionId(sessionId);
-    } else {
-      checkExistingSession();
-    }
+    // Check for existing session
+    checkExistingSession();
   }, []);
-
-  const handleSessionId = async (sessionId) => {
-    try {
-      const response = await axios.post(
-        `${API}/auth/session`,
-        {},
-        {
-          headers: { 'X-Session-ID': sessionId },
-          withCredentials: true
-        }
-      );
-      setUser(response.data.user);
-      window.history.replaceState({}, document.title, window.location.pathname);
-    } catch (error) {
-      console.error('Session creation failed:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const checkExistingSession = async () => {
     try {
