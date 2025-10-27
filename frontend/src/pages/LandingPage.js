@@ -1,17 +1,13 @@
 import { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
+import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Crown, BookOpen, Building2, FileText, ChevronRight } from 'lucide-react';
 
 const LandingPage = () => {
   const { user } = useContext(AuthContext);
   const navigate = useNavigate();
-
-  const handleLogin = () => {
-    const redirectUrl = encodeURIComponent(window.location.origin + '/goldmine');
-    window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
-  };
 
   const companies = [
     { name: 'Google', logo: 'https://cdn.worldvectorlogo.com/logos/google-icon.svg' },
@@ -23,21 +19,8 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 sticky top-0 bg-white z-50">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="text-2xl font-bold text-gray-900">InterviewPrep</div>
-          {user ? (
-            <Button onClick={() => navigate('/topics')} data-testid="get-started-btn">
-              Go to Dashboard
-            </Button>
-          ) : (
-            <Button onClick={handleLogin} data-testid="login-btn">
-              Sign in with Google
-            </Button>
-          )}
-        </div>
-      </header>
+      {/* Use same navbar as other pages */}
+      <Navbar />
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 py-20">
@@ -50,7 +33,7 @@ const LandingPage = () => {
           </p>
           <Button 
             size="lg" 
-            onClick={() => user ? navigate('/topics') : handleLogin()}
+            onClick={() => navigate('/topics')}
             className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg"
             data-testid="cta-btn"
           >
@@ -111,7 +94,7 @@ const LandingPage = () => {
           <p className="text-lg text-gray-600 mb-6">Join thousands of developers preparing for their dream job</p>
           <Button 
             size="lg" 
-            onClick={() => user ? navigate('/topics') : handleLogin()}
+            onClick={() => navigate('/topics')}
             className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg"
           >
             Get Started for Free
