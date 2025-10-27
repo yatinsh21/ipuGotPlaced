@@ -421,10 +421,14 @@ class InterviewPrepAPITester:
                 print(f"  - {test['name']}: {test['details']}")
         
         print("\n🔍 TESTING NOTES:")
+        print("- Health check endpoint should show MongoDB and Redis connectivity")
+        print("- Cache warming should make initial requests faster")
         print("- Free endpoints (topics, questions, experiences) should work without auth")
         print("- Protected endpoints should return 401 without authentication")
         print("- Admin endpoints should return 401/403 without admin privileges")
-        print("- Redis caching should make subsequent requests faster")
+        print("- Redis caching should make subsequent requests significantly faster")
+        print("- GZip compression should be enabled for responses")
+        print("- Cache invalidation requires admin authentication to test")
         
         return self.tests_passed == self.tests_run
 
