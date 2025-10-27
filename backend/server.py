@@ -287,6 +287,79 @@ async def auth_callback(request: Request):
                 name=name,
                 picture=picture,
                 is_admin=is_admin,
+                is_premium=is_admin
+            )
+            await db.users.insert_one(user.model_dump())
+        
+        # Create session
+        session_token = serializer.dumps({'user_id': user.id})
+        expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
+        session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
+        await db.sessions.insert_one(session.model_dump())
+        
+        # === FIXED COOKIE LOGIC ===
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        response = RedirectResponse(url=frontend_url)
+
+        # Parse domain properly (no port, no path)
+        import urllib.parse
+        parsed = urllib.parse.urlparse(frontend_url)
+        domain = parsed.hostname  # e.g., "yourapp.onrender.com" or "localhost"
+
+        # Detect production
+        backend_url = os.environ.get('BACKEND_URL', '')
+        is_prod = backend_url.startswith('https://')
+
+        # Set cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=is_prod,                    # Required for SameSite=None
+            samesite="none" if is_prod else "lax",
+            max_age=7 * 24 * 60 * 60,
+            path="/",
+            # Only set domain for cross-subdomain (e.g. app.example.com → api.example.com)
+            # On Render: same domain → DO NOT set domain
+            domain=None  # ← SAFE: let browser use current domain
+        )
+        
+        return response
+
+    except Exception as e:
+        logging.error(f"Auth callback failed: {e}")
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
+    try:
+        # Get token from Google
+        token = await oauth.google.authorize_access_token(request)
+        user_info = token.get('userinfo')
+        
+        if not user_info:
+            raise HTTPException(status_code=400, detail="Failed to get user info")
+        
+        email = user_info.get('email')
+        name = user_info.get('name')
+        picture = user_info.get('picture')
+        
+        # Check if user exists
+        existing_user = await db.users.find_one({"email": email}, {"_id": 0})
+        
+        if existing_user:
+            user = User(**existing_user)
+            # Update admin status if email is in admin list
+            if email in ADMIN_EMAILS and not user.is_admin:
+                user.is_admin = True
+                user.is_premium = True
+                await db.users.update_one({"id": user.id}, {"$set": {"is_admin": True, "is_premium": True}})
+        else:
+            # Create new user
+            is_admin = email in ADMIN_EMAILS
+            user = User(
+                email=email,
+                name=name,
+                picture=picture,
+                is_admin=is_admin,
                 is_premium=is_admin  # Admins are premium by default
             )
             await db.users.insert_one(user.model_dump())
