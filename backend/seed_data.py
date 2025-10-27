@@ -13,9 +13,8 @@ mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
 db_name = os.environ.get('DB_NAME', 'interview_prep_db')
 
 async def seed_database():
-    mongo_url = "mongodb://localhost:27017"
     client = AsyncIOMotorClient(mongo_url)
-    db = client["interview_prep_db"]
+    db = client[db_name]
     
     # Clear existing data
     await db.topics.delete_many({})
