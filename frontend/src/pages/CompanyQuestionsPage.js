@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Bookmark, BookmarkCheck, ArrowLeft, Lock, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import '../copyProtection.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -33,6 +34,50 @@ const CompanyQuestionsPage = () => {
     fetchCompanyAndQuestions();
   }, [companyId, user]);
 
+  // Disable copy/paste functionality
+  useEffect(() => {
+    const preventCopy = (e) => {
+      e.preventDefault();
+      toast.error('Copying is disabled to protect content');
+      return false;
+    };
+
+    const preventCut = (e) => {
+      e.preventDefault();
+      toast.error('Cutting is disabled to protect content');
+      return false;
+    };
+
+    const preventContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const preventKeyboardShortcuts = (e) => {
+      if (
+        (e.ctrlKey && (e.key === 'c' || e.key === 'x' || e.key === 'a' || e.key === 'u')) ||
+        (e.metaKey && (e.key === 'c' || e.key === 'x' || e.key === 'a')) ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+        toast.error('This action is disabled to protect content');
+        return false;
+      }
+    };
+
+    document.addEventListener('copy', preventCopy);
+    document.addEventListener('cut', preventCut);
+    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('keydown', preventKeyboardShortcuts);
+
+    return () => {
+      document.removeEventListener('copy', preventCopy);
+      document.removeEventListener('cut', preventCut);
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('keydown', preventKeyboardShortcuts);
+    };
+  }, []);
+
   const fetchCompanyAndQuestions = async () => {
     try {
       // Fetch company from preview endpoint
@@ -40,22 +85,11 @@ const CompanyQuestionsPage = () => {
       const comp = companiesRes.data.find(c => c.id === companyId);
       setCompany(comp);
 
-      // For premium users, fetch real questions
-      if (isPremiumUser) {
-        const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, { withCredentials: true });
-        setQuestions(questionsRes.data);
-      } else {
-        // For non-premium, show preview questions (locked)
-        const previewQuestions = [
-          { id: '1', question: 'Design a scalable system for...', category: 'technical', difficulty: 'hard', tags: ['v.imp'] },
-          { id: '2', question: 'Implement a data structure that...', category: 'coding', difficulty: 'medium', tags: ['fav'] },
-          { id: '3', question: 'Tell me about your most challenging project', category: 'project', difficulty: 'easy', tags: [] },
-          { id: '4', question: 'Why do you want to work at this company?', category: 'HR', difficulty: 'easy', tags: ['just-read'] },
-          { id: '5', question: 'Explain the concept of distributed systems', category: 'technical', difficulty: 'hard', tags: ['v.imp'] },
-          { id: '6', question: 'Write code to reverse a linked list', category: 'coding', difficulty: 'medium', tags: [] },
-        ];
-        setQuestions(previewQuestions);
-      }
+      // Fetch questions (backend will handle preview for non-premium)
+      const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, 
+        isPremiumUser ? { withCredentials: true } : {}
+      );
+      setQuestions(questionsRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load company data');
