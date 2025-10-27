@@ -127,7 +127,7 @@ const CompanyQuestionsPage = () => {
       const token = await getToken();
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 100 }, // ₹1
+        { amount: 39900 }, // ₹399
         { 
           headers: {
             Authorization: `Bearer ${token}`
@@ -318,7 +318,7 @@ const CompanyQuestionsPage = () => {
                 className="bg-gray-900 hover:bg-gray-800 text-white"
               >
                 <Crown className="h-4 w-4 mr-2" />
-                Upgrade for ₹1
+                Upgrade for ₹399
               </Button>
             </div>
           </div>
@@ -459,7 +459,7 @@ const CompanyQuestionsPage = () => {
               Upgrade to premium to view complete answers, bookmark questions, and access all features.
             </p>
             <div className="mb-6 text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-1">₹1</div>
+              <div className="text-4xl font-bold text-gray-900 mb-1">₹399</div>
               <div className="text-gray-600">One-time payment • Lifetime access</div>
             </div>
             <Button 
