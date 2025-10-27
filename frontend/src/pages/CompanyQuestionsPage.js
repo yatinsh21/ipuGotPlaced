@@ -1,7 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,7 @@ const API = `${BACKEND_URL}/api`;
 const CompanyQuestionsPage = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
   const [questions, setQuestions] = useState([]);
   const [company, setCompany] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -25,7 +25,7 @@ const CompanyQuestionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  const isPremiumUser = user?.is_premium || user?.is_admin;
+  const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
     if (user) {
