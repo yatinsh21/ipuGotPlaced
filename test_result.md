@@ -302,15 +302,18 @@ backend:
   
   - task: "Health Check Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Added /api/health endpoint for monitoring MongoDB and Redis connectivity"
+        - working: true
+          agent: "testing"
+          comment: "✅ Health check endpoint working perfectly. Returns status: 'healthy', mongodb: 'healthy', redis: 'healthy'. Endpoint registration issue fixed and now properly accessible."
 
 frontend:
   - task: "No frontend changes"
