@@ -872,7 +872,7 @@ const CompaniesManager = ({ companies, fetchAllData, getAuthConfig }) => {
 };
 
 // Experiences Manager Component
-const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
+const ExperiencesManager = ({ experiences, companies, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [rounds, setRounds] = useState([{ title: 'Round 1', description: '' }]);
