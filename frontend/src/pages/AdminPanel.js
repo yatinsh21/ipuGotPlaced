@@ -1,6 +1,6 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,7 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminPanel = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useUser();
   const [stats, setStats] = useState(null);
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
@@ -27,22 +27,35 @@ const AdminPanel = () => {
   const [experiences, setExperiences] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const isAdmin = user?.publicMetadata?.isAdmin;
+
+  // Helper function to get auth config
+  const getAuthConfig = async () => {
+    const token = await user?.getClerkSessionToken();
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    };
+  };
 
   useEffect(() => {
-    if (user?.is_admin) {
+    if (isAdmin) {
       fetchAllData();
     }
-  }, [user]);
+  }, [isAdmin]);
 
   const fetchAllData = async () => {
     try {
+      const config = await getAuthConfig();
       const [statsRes, topicsRes, questionsRes, companiesRes, experiencesRes, usersRes] = await Promise.all([
-        axios.get(`${API}/admin/stats`, { withCredentials: true }),
-        axios.get(`${API}/topics`, { withCredentials: true }),
-        axios.get(`${API}/admin/questions`, { withCredentials: true }),
-        axios.get(`${API}/companies`, { withCredentials: true }),
-        axios.get(`${API}/experiences`, { withCredentials: true }),
-        axios.get(`${API}/admin/users`, { withCredentials: true })
+        axios.get(`${API}/admin/stats`, config),
+        axios.get(`${API}/topics`, config),
+        axios.get(`${API}/admin/questions`, config),
+        axios.get(`${API}/companies`, config),
+        axios.get(`${API}/experiences`, config),
+        axios.get(`${API}/admin/users`, config)
       ]);
       
       setStats(statsRes.data);
