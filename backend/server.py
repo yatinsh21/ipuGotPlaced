@@ -169,46 +169,89 @@ async def invalidate_cache_pattern(pattern: str):
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
-# Auth dependency
-async def get_current_user(request: Request) -> Optional[User]:
-    session_token = request.cookies.get('session_token')
-    if not session_token:
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            session_token = auth_header.split(' ')[1]
-    
-    if not session_token:
+# Auth dependency using Clerk
+async def get_current_user(authorization: str = Header(None)) -> Optional[User]:
+    """Verify Clerk session token and get/create user"""
+    if not authorization or not authorization.startswith('Bearer '):
         return None
     
-    session = await db.sessions.find_one({"session_token": session_token})
-    if not session:
+    if not clerk_client:
+        logging.error("Clerk client not initialized")
         return None
     
-    expires_at = datetime.fromisoformat(session['expires_at'])
-    if expires_at < datetime.now(timezone.utc):
-        await db.sessions.delete_one({"session_token": session_token})
-        return None
+    token = authorization.split(' ')[1]
     
-    user = await db.users.find_one({"id": session['user_id']}, {"_id": 0})
-    if not user:
+    try:
+        # Verify token with Clerk
+        jwt_claims = clerk_client.jwt_templates.verify_token(token)
+        
+        if not jwt_claims or not jwt_claims.get('sub'):
+            return None
+        
+        clerk_user_id = jwt_claims['sub']
+        
+        # Get or create user in our database
+        user_doc = await db.users.find_one({"clerk_id": clerk_user_id}, {"_id": 0})
+        
+        if not user_doc:
+            # Get user info from Clerk
+            try:
+                clerk_user = clerk_client.users.get(user_id=clerk_user_id)
+                
+                # Create new user in our database
+                new_user = {
+                    "clerk_id": clerk_user_id,
+                    "email": clerk_user.email_addresses[0].email_address if clerk_user.email_addresses else "",
+                    "name": f"{clerk_user.first_name or ''} {clerk_user.last_name or ''}".strip() or "User",
+                    "picture": clerk_user.image_url if hasattr(clerk_user, 'image_url') else None,
+                    "is_premium": clerk_user.public_metadata.get('isPremium', False) if hasattr(clerk_user, 'public_metadata') else False,
+                    "is_admin": clerk_user.public_metadata.get('isAdmin', False) if hasattr(clerk_user, 'public_metadata') else False,
+                    "bookmarked_questions": [],
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(new_user)
+                user_doc = new_user
+            except Exception as e:
+                logging.error(f"Failed to get Clerk user: {e}")
+                return None
+        else:
+            # Update user metadata from Clerk on each request
+            try:
+                clerk_user = clerk_client.users.get(user_id=clerk_user_id)
+                is_premium = clerk_user.public_metadata.get('isPremium', False) if hasattr(clerk_user, 'public_metadata') else False
+                is_admin = clerk_user.public_metadata.get('isAdmin', False) if hasattr(clerk_user, 'public_metadata') else False
+                
+                # Update if changed
+                if user_doc.get('is_premium') != is_premium or user_doc.get('is_admin') != is_admin:
+                    await db.users.update_one(
+                        {"clerk_id": clerk_user_id},
+                        {"$set": {"is_premium": is_premium, "is_admin": is_admin}}
+                    )
+                    user_doc['is_premium'] = is_premium
+                    user_doc['is_admin'] = is_admin
+            except Exception as e:
+                logging.error(f"Failed to update user metadata: {e}")
+        
+        return User(**user_doc)
+        
+    except Exception as e:
+        logging.error(f"Auth error: {e}")
         return None
-    
-    return User(**user)
 
-async def require_auth(request: Request) -> User:
-    user = await get_current_user(request)
+async def require_auth(user: User = Depends(get_current_user)) -> User:
+    """Require authenticated user"""
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        raise HTTPException(status_code=401, detail="Authentication required")
     return user
 
-async def require_premium(request: Request) -> User:
-    user = await require_auth(request)
+async def require_premium(user: User = Depends(require_auth)) -> User:
+    """Require premium user"""
     if not user.is_premium and not user.is_admin:
         raise HTTPException(status_code=403, detail="Premium subscription required")
     return user
 
-async def require_admin(request: Request) -> User:
-    user = await require_auth(request)
+async def require_admin(user: User = Depends(require_auth)) -> User:
+    """Require admin user"""
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
