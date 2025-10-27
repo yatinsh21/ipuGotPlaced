@@ -287,15 +287,18 @@ backend:
   
   - task: "Cache Stats Endpoint"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "low"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Added /api/admin/cache-stats endpoint for monitoring Redis cache statistics"
+        - working: true
+          agent: "testing"
+          comment: "✅ Cache stats endpoint working correctly. Properly protected with admin authentication (returns 401 Unauthorized without admin credentials). Endpoint registration fixed and now accessible."
   
   - task: "Health Check Endpoint"
     implemented: true
