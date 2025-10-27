@@ -20,6 +20,7 @@ const API = `${BACKEND_URL}/api`;
 
 const AdminPanel = () => {
   const { user } = useUser();
+  const { getToken } = useAuth();
   const [stats, setStats] = useState(null);
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
@@ -32,7 +33,7 @@ const AdminPanel = () => {
 
   // Helper function to get auth config
   const getAuthConfig = async () => {
-    const token = await user?.getClerkSessionToken();
+    const token = await getToken();
     return {
       headers: {
         Authorization: `Bearer ${token}`
