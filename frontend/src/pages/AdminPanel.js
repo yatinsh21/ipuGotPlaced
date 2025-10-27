@@ -739,10 +739,13 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-
+      
+      const authConfig = await getAuthConfig();
       const response = await axios.post(`${API}/admin/upload-image`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          ...authConfig.headers
+        }
       });
 
       setFormData(prev => ({ ...prev, logo_url: response.data.url }));
