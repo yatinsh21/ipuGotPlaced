@@ -249,7 +249,7 @@ const GoldminePage = () => {
                 data-testid={`company-${company.id}`}
                 className="relative bg-white border-2 border-gray-200 p-6 cursor-pointer hover:border-gray-900 transition-all hover:shadow-md"
               >
-                {(!user || !user.is_premium) && (
+                {(!isSignedIn || !isPremium) && (
                   <div className="absolute top-2 right-2">
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
