@@ -30,7 +30,7 @@ const Navbar = () => {
             </Link>
             
             <div className="hidden md:flex gap-6">
-              <Link to="/" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+              <Link to="/topics" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                 Questions
               </Link>
               <Link to="/goldmine" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
