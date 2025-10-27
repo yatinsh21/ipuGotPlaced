@@ -380,19 +380,38 @@ async def get_companies(user: User = Depends(require_auth)):
     return companies
 
 @api_router.get("/company-questions/{company_id}")
-async def get_company_questions(company_id: str, category: Optional[str] = None, user: User = Depends(require_premium)):
+async def get_company_questions(
+    company_id: str, 
+    category: Optional[str] = None, 
+    request: Request = None
+):
+    # Check user authentication and premium status
+    user = await get_current_user(request) if request else None
+    is_premium = user and (user.is_premium or user.is_admin)
+    
     # Generate cache key with category
     cache_key = generate_cache_key("company_questions", company_id=company_id, category=category)
     cached = await get_cached_data(cache_key)
     if cached:
-        return cached
+        questions = cached
+    else:
+        query = {"company_id": company_id}
+        if category:
+            query["category"] = category
+        
+        questions = await db.questions.find(query, {"_id": 0}).to_list(1000)
+        await set_cached_data(cache_key, questions, ttl=3600)
     
-    query = {"company_id": company_id}
-    if category:
-        query["category"] = category
+    # For non-premium users, limit to 3 questions as preview
+    if not is_premium and len(questions) > 3:
+        preview_questions = questions[:3]
+        # Mark remaining questions as locked
+        locked_questions = [
+            {**q, "answer": "🔒 Unlock premium to see the answer", "locked": True} 
+            for q in questions[3:]
+        ]
+        return preview_questions + locked_questions
     
-    questions = await db.questions.find(query, {"_id": 0}).to_list(1000)
-    await set_cached_data(cache_key, questions, ttl=3600)
     return questions
 
 @api_router.post("/bookmark/{question_id}")
