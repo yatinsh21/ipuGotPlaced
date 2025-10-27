@@ -148,7 +148,7 @@ const HomePage = () => {
     }
 
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
         {},
