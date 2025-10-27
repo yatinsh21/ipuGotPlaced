@@ -1,12 +1,9 @@
-import { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Crown, BookOpen, Building2, FileText, ChevronRight } from 'lucide-react';
 
 const LandingPage = () => {
-  const { user } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const companies = [
