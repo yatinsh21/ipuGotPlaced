@@ -225,7 +225,7 @@ const GoldminePage = () => {
               className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 mt-4"
             >
               <Crown className="h-4 w-4 mr-2" />
-              Unlock All for ₹1
+              Unlock All for ₹399
             </Button>
           )}
         </div>
