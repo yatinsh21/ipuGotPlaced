@@ -483,19 +483,21 @@ async def get_all_users(user: User = Depends(require_admin)):
 @api_router.post("/admin/topics")
 async def create_topic(topic: Topic, user: User = Depends(require_admin)):
     await db.topics.insert_one(topic.model_dump())
-    await redis_client.delete("topics")
+    await invalidate_cache_pattern("topics*")
     return topic
 
 @api_router.put("/admin/topics/{topic_id}")
 async def update_topic(topic_id: str, topic: Topic, user: User = Depends(require_admin)):
     await db.topics.update_one({"id": topic_id}, {"$set": topic.model_dump()})
-    await redis_client.delete("topics")
+    await invalidate_cache_pattern("topics*")
     return topic
 
 @api_router.delete("/admin/topics/{topic_id}")
 async def delete_topic(topic_id: str, user: User = Depends(require_admin)):
     await db.topics.delete_one({"id": topic_id})
-    await redis_client.delete("topics")
+    await invalidate_cache_pattern("topics*")
+    # Also invalidate questions cache as they might reference this topic
+    await invalidate_cache_pattern("questions*")
     return {"success": True}
 
 # Admin - Questions
