@@ -413,6 +413,21 @@ test_plan:
           agent: "testing"
           comment: "✅ Get all users working correctly. Returns array of all users with id, email, name, is_admin, is_premium, and other fields. Properly protected with admin authentication."
 
+  - task: "Payment Order Creation - Fix 401 Error"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py, frontend/src/pages/GoldminePage.js, frontend/src/pages/CompanyQuestionsPage.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "User reported: When clicking 'Purchase' in payment modal, getting 'Failed to initiate payment' error. Payment endpoint /api/payment/create-order returning 401 Unauthorized"
+        - working: "NA"
+          agent: "main"
+          comment: "Fixed authentication issue: 1) Updated get_current_user to use Request object and check both 'Authorization' and 'authorization' headers, 2) Added null token check in frontend before making payment request, 3) Added better error logging to distinguish 401 from other errors. Need testing with authenticated user."
+
 agent_communication:
     - agent: "main"
       message: "Implemented comprehensive Redis caching and optimization techniques including: 1) Connection pooling for both Redis and MongoDB, 2) Query-specific caching for all major endpoints (topics, questions, companies, experiences, bookmarks), 3) Pattern-based cache invalidation, 4) GZip compression middleware, 5) Database indexes on frequently queried fields, 6) Cache warming on startup, 7) Cache stats and health check endpoints. Redis server installed and running. Backend restarted successfully. Ready for testing."
