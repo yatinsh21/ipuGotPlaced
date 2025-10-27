@@ -19,6 +19,7 @@ const GoldminePage = () => {
 
   useEffect(() => {
     if (!user) {
+      setLoading(false);
       return;
     }
     
