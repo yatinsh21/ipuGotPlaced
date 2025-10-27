@@ -139,6 +139,43 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_signature: str
 
+# Cache helper functions
+def generate_cache_key(prefix: str, **kwargs) -> str:
+    """Generate a cache key based on prefix and query parameters"""
+    if not kwargs:
+        return prefix
+    # Sort kwargs for consistent keys
+    params = "_".join(f"{k}:{v}" for k, v in sorted(kwargs.items()) if v is not None)
+    return f"{prefix}_{params}" if params else prefix
+
+async def get_cached_data(key: str):
+    """Get data from cache"""
+    try:
+        cached = await redis_client.get(key)
+        if cached:
+            return json.loads(cached)
+    except Exception as e:
+        logging.warning(f"Cache get failed for {key}: {e}")
+    return None
+
+async def set_cached_data(key: str, data, ttl: int = 3600):
+    """Set data in cache with TTL"""
+    try:
+        await redis_client.set(key, json.dumps(data), ex=ttl)
+    except Exception as e:
+        logging.warning(f"Cache set failed for {key}: {e}")
+
+async def invalidate_cache_pattern(pattern: str):
+    """Invalidate cache keys matching a pattern"""
+    try:
+        keys = []
+        async for key in redis_client.scan_iter(match=pattern):
+            keys.append(key)
+        if keys:
+            await redis_client.delete(*keys)
+    except Exception as e:
+        logging.warning(f"Cache invalidation failed for {pattern}: {e}")
+
 # Auth dependency
 async def get_current_user(request: Request) -> Optional[User]:
     session_token = request.cookies.get('session_token')
