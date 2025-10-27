@@ -1,7 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { ClerkProvider } from "@clerk/clerk-react";
 import "@/index.css";
 import App from "@/App";
+
+// Get Clerk publishable key
+const clerkPubKey = process.env.REACT_APP_CLERK_PUBLISHABLE_KEY;
+
+if (!clerkPubKey) {
+  console.error("Missing Clerk Publishable Key");
+}
 
 // Suppress ResizeObserver benign warnings from Radix UI
 const debounce = (callback, delay) => {
@@ -26,6 +34,8 @@ window.ResizeObserver = class ResizeObserver extends _ {
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>
-    <App />
+    <ClerkProvider publishableKey={clerkPubKey}>
+      <App />
+    </ClerkProvider>
   </React.StrictMode>,
 );

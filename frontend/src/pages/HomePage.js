@@ -1,6 +1,6 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -14,20 +14,38 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
-  const { user } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [difficulty, setDifficulty] = useState('all');
   const [loading, setLoading] = useState(true);
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
+  
+  const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
     fetchTopics();
-    if (user?.is_premium) {
-      setBookmarkedIds(user.bookmarked_questions || []);
+    if (isPremium && isSignedIn) {
+      // Fetch user's bookmarks from backend
+      fetchUserBookmarks();
     }
-  }, [user]);
+  }, [isPremium, isSignedIn]);
+
+  const fetchUserBookmarks = async () => {
+    try {
+      const token = await getToken();
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setBookmarkedIds(response.data.bookmarked_questions || []);
+    } catch (error) {
+      console.error('Failed to fetch bookmarks:', error);
+    }
+  };
 
   useEffect(() => {
     if (selectedTopic) {
@@ -119,21 +137,26 @@ const HomePage = () => {
   const toggleBookmark = async (questionId, e) => {
     e.stopPropagation();
     
-    if (!user) {
+    if (!isSignedIn) {
       toast.error('Please sign in to bookmark questions');
       return;
     }
     
-    if (!user.is_premium) {
+    if (!isPremium) {
       toast.error('Premium subscription required to bookmark questions');
       return;
     }
 
     try {
+      const token = await getToken();
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
         {},
-        { withCredentials: true }
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
       
       if (response.data.bookmarked) {

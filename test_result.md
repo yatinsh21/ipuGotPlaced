@@ -348,7 +348,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Admin Panel UI - User Management"
+    - "Payment Order Creation - Fix 401 Error"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -413,6 +413,21 @@ test_plan:
           agent: "testing"
           comment: "✅ Get all users working correctly. Returns array of all users with id, email, name, is_admin, is_premium, and other fields. Properly protected with admin authentication."
 
+  - task: "Payment Order Creation - Fix 401 Error"
+    implemented: true
+    working: "NA"
+    file: "backend/server.py, frontend/src/pages/GoldminePage.js, frontend/src/pages/CompanyQuestionsPage.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: false
+          agent: "user"
+          comment: "User reported: When clicking 'Purchase' in payment modal, getting 'Failed to initiate payment' error. Payment endpoint /api/payment/create-order returning 401 Unauthorized"
+        - working: "NA"
+          agent: "main"
+          comment: "Fixed authentication issue: 1) Updated get_current_user to use Request object and check both 'Authorization' and 'authorization' headers, 2) Added null token check in frontend before making payment request, 3) Added better error logging to distinguish 401 from other errors. Need testing with authenticated user."
+
 agent_communication:
     - agent: "main"
       message: "Implemented comprehensive Redis caching and optimization techniques including: 1) Connection pooling for both Redis and MongoDB, 2) Query-specific caching for all major endpoints (topics, questions, companies, experiences, bookmarks), 3) Pattern-based cache invalidation, 4) GZip compression middleware, 5) Database indexes on frequently queried fields, 6) Cache warming on startup, 7) Cache stats and health check endpoints. Redis server installed and running. Backend restarted successfully. Ready for testing."
@@ -422,3 +437,5 @@ agent_communication:
       message: "✅ COMPREHENSIVE TESTING COMPLETED - All Redis caching and optimization features working correctly! Fixed endpoint registration issue by moving app.include_router() after endpoint definitions. Key findings: 1) Health check shows both MongoDB and Redis as 'healthy', 2) Cache warming working with fast initial response times, 3) All caching scenarios tested successfully with performance improvements, 4) GZip compression working correctly for responses >1000 bytes, 5) All endpoints properly secured with authentication. 97.4% test success rate (38/39 tests passed). Cache invalidation requires admin auth to test fully but implementation verified. Ready for production use."
     - agent: "testing"
       message: "✅ ADMIN USER MANAGEMENT TESTING COMPLETED - All admin user management functionality working correctly! Tested with real admin authentication (sharmayatin0882@gmail.com). Key findings: 1) Grant admin access sets both is_admin=true and is_premium=true, 2) Revoke admin access removes admin status but preserves premium, 3) Toggle premium works for non-admin users but prevents removal from admins, 4) Self-revocation prevention working, 5) All endpoints return proper 404 for invalid users, 6) Get all users returns complete user data with status fields. 75% test success rate (9/12 tests passed - 3 expected failures for invalid user scenarios). All core functionality verified and working correctly."
+    - agent: "main"
+      message: "Fixed payment creation 401 error. Problem: User reporting 'Failed to initiate payment' when clicking purchase in modal. Root cause: 1) get_current_user was using Header(None) which might not properly capture Authorization header, 2) No null check for token in frontend causing 'Bearer null' to be sent. Solution: 1) Changed get_current_user to use Request object and check both 'Authorization' and 'authorization' headers, 2) Added token null check in both GoldminePage.js and CompanyQuestionsPage.js, 3) Added better error messages to distinguish 401 from other errors. Ready for testing with authenticated user."

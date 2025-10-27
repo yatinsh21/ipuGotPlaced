@@ -1,7 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +17,8 @@ const API = `${BACKEND_URL}/api`;
 const CompanyQuestionsPage = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const [questions, setQuestions] = useState([]);
   const [company, setCompany] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -25,14 +26,28 @@ const CompanyQuestionsPage = () => {
   const [loading, setLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  const isPremiumUser = user?.is_premium || user?.is_admin;
+  const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
-    if (user) {
-      setBookmarkedIds(user.bookmarked_questions || []);
+    if (isPremiumUser && isSignedIn) {
+      fetchUserBookmarks();
     }
     fetchCompanyAndQuestions();
-  }, [companyId, user]);
+  }, [companyId, isPremiumUser, isSignedIn]);
+
+  const fetchUserBookmarks = async () => {
+    try {
+      const token = await getToken();
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setBookmarkedIds(response.data.bookmarked_questions || []);
+    } catch (error) {
+      console.error('Failed to fetch bookmarks:', error);
+    }
+  };
 
   // Disable copy/paste functionality
   useEffect(() => {
@@ -86,9 +101,12 @@ const CompanyQuestionsPage = () => {
       setCompany(comp);
 
       // Fetch questions (backend will handle preview for non-premium)
-      const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, 
-        isPremiumUser ? { withCredentials: true } : {}
-      );
+      const config = isPremiumUser && isSignedIn ? {
+        headers: {
+          Authorization: `Bearer ${await getToken()}`
+        }
+      } : {};
+      const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, config);
       setQuestions(questionsRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
@@ -104,51 +122,120 @@ const CompanyQuestionsPage = () => {
     }
   };
 
+  // PAYMENT HANDLER - REWRITTEN FROM SCRATCH
   const handlePayment = async () => {
+    console.log('=== PAYMENT FLOW STARTED (Company Page) ===');
+    
     try {
+      // Step 1: Check if user is signed in
+      if (!isSignedIn) {
+        toast.error('Please sign in to purchase premium');
+        return;
+      }
+      
+      // Step 2: Get Clerk authentication token
+      console.log('Step 1: Getting Clerk token...');
+      const token = await getToken();
+      
+      if (!token) {
+        console.error('❌ No token received from Clerk');
+        toast.error('Authentication error. Please sign out and sign in again.');
+        return;
+      }
+      
+      console.log('✓ Token received from Clerk (length:', token.length, ')');
+      
+      // Step 3: Create payment order
+      console.log('Step 2: Creating payment order...');
+      toast.info('Initializing payment...');
+      
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 100 }, // ₹1
-        { withCredentials: true }
+        { amount: 39900 }, // ₹399 in paise
+        { 
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
-
-      const options = {
+      
+      console.log('✓ Payment order created:', orderResponse.data.id);
+      
+      // Step 4: Open Razorpay checkout
+      console.log('Step 3: Opening Razorpay checkout...');
+      
+      const razorpayOptions = {
         key: 'rzp_live_RVGaTvsyo82E4p',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
-        name: 'InterviewPrep Premium',
+        name: 'IGP Premium',
         description: 'Lifetime access to company-wise questions',
-        handler: async (response) => {
+        handler: async (razorpayResponse) => {
+          console.log('Step 4: Payment successful, verifying...');
           try {
+            // Verify payment with backend
             await axios.post(
               `${API}/payment/verify`,
               {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
+                razorpay_order_id: razorpayResponse.razorpay_order_id,
+                razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                razorpay_signature: razorpayResponse.razorpay_signature
               },
-              { withCredentials: true }
+              { 
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
             );
-            toast.success('Payment successful! Reloading...');
-            setTimeout(() => window.location.reload(), 1500);
-          } catch (error) {
-            toast.error('Payment verification failed');
+            
+            console.log('✓ Payment verified successfully');
+            toast.success('🎉 Premium unlocked! Reloading...');
+            
+            // Reload page after 1.5 seconds
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+            
+          } catch (verifyError) {
+            console.error('❌ Payment verification failed:', verifyError);
+            toast.error('Payment verification failed. Contact support.');
           }
         },
         prefill: {
-          name: user?.name,
-          email: user?.email
+          name: user?.fullName || user?.firstName || 'User',
+          email: user?.primaryEmailAddress?.emailAddress || ''
         },
         theme: {
           color: '#000000'
+        },
+        modal: {
+          ondismiss: () => {
+            console.log('Payment cancelled by user');
+          }
         }
       };
 
-      const razorpay = new window.Razorpay(options);
+      const razorpay = new window.Razorpay(razorpayOptions);
       razorpay.open();
+      
     } catch (error) {
-      toast.error('Failed to initiate payment');
+      console.error('❌ Payment error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please sign out and sign in again.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Payment initiation failed. Please try again.');
+      }
     }
   };
 
@@ -160,10 +247,15 @@ const CompanyQuestionsPage = () => {
     }
 
     try {
+      const token = await getToken();
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
         {},
-        { withCredentials: true }
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
       
       if (response.data.bookmarked) {
@@ -286,7 +378,7 @@ const CompanyQuestionsPage = () => {
                 className="bg-gray-900 hover:bg-gray-800 text-white"
               >
                 <Crown className="h-4 w-4 mr-2" />
-                Upgrade for ₹1
+                Upgrade for ₹399
               </Button>
             </div>
           </div>
@@ -427,7 +519,7 @@ const CompanyQuestionsPage = () => {
               Upgrade to premium to view complete answers, bookmark questions, and access all features.
             </p>
             <div className="mb-6 text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-1">₹1</div>
+              <div className="text-4xl font-bold text-gray-900 mb-1">₹399</div>
               <div className="text-gray-600">One-time payment • Lifetime access</div>
             </div>
             <Button 

@@ -1,7 +1,7 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '@/App';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -12,16 +12,19 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const GoldminePage = () => {
-  const { user } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
+  
+  const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
     // Always fetch companies for everyone
     fetchCompaniesPreview();
-  }, [user]);
+  }, [isSignedIn]);
 
   const fetchCompaniesPreview = async () => {
     try {
@@ -40,55 +43,124 @@ const GoldminePage = () => {
     navigate(`/company/${companyId}`);
   };
 
+  // PAYMENT HANDLER - REWRITTEN FROM SCRATCH
   const handlePayment = async () => {
+    console.log('=== PAYMENT FLOW STARTED ===');
+    
     try {
+      // Step 1: Check if user is signed in
+      if (!isSignedIn) {
+        toast.error('Please sign in to purchase premium');
+        return;
+      }
+      
+      // Step 2: Get Clerk authentication token
+      console.log('Step 1: Getting Clerk token...');
+      const token = await getToken();
+      
+      if (!token) {
+        console.error('❌ No token received from Clerk');
+        toast.error('Authentication error. Please sign out and sign in again.');
+        return;
+      }
+      
+      console.log('✓ Token received from Clerk (length:', token.length, ')');
+      
+      // Step 3: Create payment order
+      console.log('Step 2: Creating payment order...');
+      toast.info('Initializing payment...');
+      
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 100 }, // ₹1
-        { withCredentials: true }
+        { amount: 39900 }, // ₹399 in paise
+        { 
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
       );
-
-      const options = {
+      
+      console.log('✓ Payment order created:', orderResponse.data.id);
+      
+      // Step 4: Open Razorpay checkout
+      console.log('Step 3: Opening Razorpay checkout...');
+      
+      const razorpayOptions = {
         key: 'rzp_live_RVGaTvsyo82E4p',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
-        name: 'InterviewPrep Premium',
+        name: 'IGP Premium',
         description: 'Lifetime access to company-wise questions',
-        handler: async (response) => {
+        handler: async (razorpayResponse) => {
+          console.log('Step 4: Payment successful, verifying...');
           try {
+            // Verify payment with backend
             await axios.post(
               `${API}/payment/verify`,
               {
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature
+                razorpay_order_id: razorpayResponse.razorpay_order_id,
+                razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+                razorpay_signature: razorpayResponse.razorpay_signature
               },
-              { withCredentials: true }
+              { 
+                headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+                }
+              }
             );
-            toast.success('Payment successful! Reloading...');
-            setTimeout(() => window.location.reload(), 1500);
-          } catch (error) {
-            toast.error('Payment verification failed');
+            
+            console.log('✓ Payment verified successfully');
+            toast.success('🎉 Premium unlocked! Reloading...');
+            
+            // Reload page after 1.5 seconds
+            setTimeout(() => {
+              window.location.reload();
+            }, 1500);
+            
+          } catch (verifyError) {
+            console.error('❌ Payment verification failed:', verifyError);
+            toast.error('Payment verification failed. Contact support.');
           }
         },
         prefill: {
-          name: user?.name,
-          email: user?.email
+          name: user?.fullName || user?.firstName || 'User',
+          email: user?.primaryEmailAddress?.emailAddress || ''
         },
         theme: {
           color: '#000000'
+        },
+        modal: {
+          ondismiss: () => {
+            console.log('Payment cancelled by user');
+          }
         }
       };
 
-      const razorpay = new window.Razorpay(options);
+      const razorpay = new window.Razorpay(razorpayOptions);
       razorpay.open();
+      
     } catch (error) {
-      toast.error('Failed to initiate payment');
+      console.error('❌ Payment error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      
+      if (error.response?.status === 401) {
+        toast.error('Authentication failed. Please sign out and sign in again.');
+      } else if (error.response?.status === 500) {
+        toast.error('Server error. Please try again later.');
+      } else {
+        toast.error('Payment initiation failed. Please try again.');
+      }
     }
   };
 
-  if (showPayment && user && !user.is_premium) {
+  if (showPayment && isSignedIn && !isPremium) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white max-w-3xl w-full p-6 max-h-[95vh] overflow-y-auto">
@@ -96,7 +168,7 @@ const GoldminePage = () => {
             <Crown className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
             <h2 className="text-2xl font-bold text-gray-900 mb-1">Upgrade to Premium</h2>
             <div className="my-4">
-              <div className="text-4xl font-bold text-gray-900 mb-1">₹1</div>
+              <div className="text-4xl font-bold text-gray-900 mb-1">₹399</div>
               <div className="text-sm text-gray-600">One-time • Lifetime access</div>
             </div>
           </div>
@@ -173,7 +245,7 @@ const GoldminePage = () => {
               data-testid="upgrade-premium-btn"
               className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-4 text-base mb-3"
             >
-              Upgrade to Premium for ₹1
+              Upgrade to Premium for ₹399
             </Button>
             
             <Button 
@@ -206,18 +278,18 @@ const GoldminePage = () => {
           </p>
           <p className="text-xl font-semibold text-gray-900">The Only Set You Need</p>
           
-          {user && !user.is_premium && (
+          {isSignedIn && !isPremium && (
             <Button 
               onClick={() => setShowPayment(true)}
               className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 mt-4"
             >
               <Crown className="h-4 w-4 mr-2" />
-              Unlock All for ₹1
+              Unlock All for ₹399
             </Button>
           )}
         </div>
 
-        {!user && (
+        {!isSignedIn && (
           <div className="mb-8 bg-yellow-50 border-2 border-yellow-200 p-6 text-center">
             <p className="text-gray-900 font-medium">Sign in to unlock premium company-wise questions</p>
           </div>
@@ -236,7 +308,7 @@ const GoldminePage = () => {
                 data-testid={`company-${company.id}`}
                 className="relative bg-white border-2 border-gray-200 p-6 cursor-pointer hover:border-gray-900 transition-all hover:shadow-md"
               >
-                {(!user || !user.is_premium) && (
+                {(!isSignedIn || !isPremium) && (
                   <div className="absolute top-2 right-2">
                     <Lock className="h-5 w-5 text-gray-400" />
                   </div>
@@ -268,7 +340,7 @@ const GoldminePage = () => {
               <Crown className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
               <h2 className="text-2xl font-bold text-gray-900 mb-1">Upgrade to Premium</h2>
               <div className="my-4">
-                <div className="text-4xl font-bold text-gray-900 mb-1">₹1</div>
+                <div className="text-4xl font-bold text-gray-900 mb-1">₹399</div>
                 <div className="text-sm text-gray-600">One-time • Lifetime access</div>
               </div>
             </div>
@@ -345,7 +417,7 @@ const GoldminePage = () => {
                 data-testid="upgrade-premium-btn"
                 className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-4 text-base mb-3"
               >
-                Upgrade to Premium for ₹1
+                Upgrade to Premium for ₹399
               </Button>
               
               <Button 

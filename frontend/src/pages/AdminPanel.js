@@ -1,6 +1,6 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,7 +19,8 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const AdminPanel = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useUser();
+  const { getToken } = useAuth();
   const [stats, setStats] = useState(null);
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
@@ -27,22 +28,35 @@ const AdminPanel = () => {
   const [experiences, setExperiences] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const isAdmin = user?.publicMetadata?.isAdmin;
+
+  // Helper function to get auth config
+  const getAuthConfig = async () => {
+    const token = await getToken();
+    return {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    };
+  };
 
   useEffect(() => {
-    if (user?.is_admin) {
+    if (isAdmin) {
       fetchAllData();
     }
-  }, [user]);
+  }, [isAdmin]);
 
   const fetchAllData = async () => {
     try {
+      const config = await getAuthConfig();
       const [statsRes, topicsRes, questionsRes, companiesRes, experiencesRes, usersRes] = await Promise.all([
-        axios.get(`${API}/admin/stats`, { withCredentials: true }),
-        axios.get(`${API}/topics`, { withCredentials: true }),
-        axios.get(`${API}/admin/questions`, { withCredentials: true }),
-        axios.get(`${API}/companies`, { withCredentials: true }),
-        axios.get(`${API}/experiences`, { withCredentials: true }),
-        axios.get(`${API}/admin/users`, { withCredentials: true })
+        axios.get(`${API}/admin/stats`, config),
+        axios.get(`${API}/topics`, config),
+        axios.get(`${API}/admin/questions`, config),
+        axios.get(`${API}/companies`, config),
+        axios.get(`${API}/experiences`, config),
+        axios.get(`${API}/admin/users`, config)
       ]);
       
       setStats(statsRes.data);
@@ -59,7 +73,7 @@ const AdminPanel = () => {
     }
   };
 
-  if (!user?.is_admin) {
+  if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -162,7 +176,7 @@ const AdminPanel = () => {
               </TabsList>
 
               <TabsContent value="topics">
-                <TopicsManager topics={topics} setTopics={setTopics} fetchAllData={fetchAllData} />
+                <TopicsManager topics={topics} setTopics={setTopics} fetchAllData={fetchAllData} getAuthConfig={getAuthConfig} />
               </TabsContent>
 
               <TabsContent value="questions">
@@ -170,11 +184,12 @@ const AdminPanel = () => {
                   questions={questions.filter(q => q.topic_id && !q.company_id)} 
                   topics={topics}
                   fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
                 />
               </TabsContent>
 
               <TabsContent value="companies">
-                <CompaniesManager companies={companies} setCompanies={setCompanies} fetchAllData={fetchAllData} />
+                <CompaniesManager companies={companies} setCompanies={setCompanies} fetchAllData={fetchAllData} getAuthConfig={getAuthConfig} />
               </TabsContent>
 
               <TabsContent value="company-questions">
@@ -182,6 +197,7 @@ const AdminPanel = () => {
                   questions={questions.filter(q => q.company_id)} 
                   companies={companies}
                   fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
                 />
               </TabsContent>
 
@@ -191,11 +207,12 @@ const AdminPanel = () => {
                   setExperiences={setExperiences} 
                   companies={companies}
                   fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
                 />
               </TabsContent>
 
               <TabsContent value="users">
-                <UsersManager users={users} onRefresh={fetchAllData} />
+                <UsersManager users={users} onRefresh={fetchAllData} currentUser={user} getAuthConfig={getAuthConfig} />
               </TabsContent>
             </Tabs>
           </>
@@ -206,7 +223,7 @@ const AdminPanel = () => {
 };
 
 // Topics Manager Component
-const TopicsManager = ({ topics, fetchAllData }) => {
+const TopicsManager = ({ topics, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: '' });
@@ -215,10 +232,10 @@ const TopicsManager = ({ topics, fetchAllData }) => {
     e.preventDefault();
     try {
       if (editing) {
-        await axios.put(`${API}/admin/topics/${editing.id}`, { ...editing, ...formData }, { withCredentials: true });
+        await axios.put(`${API}/admin/topics/${editing.id}`, { ...editing, ...formData }, await getAuthConfig());
         toast.success('Topic updated');
       } else {
-        await axios.post(`${API}/admin/topics`, formData, { withCredentials: true });
+        await axios.post(`${API}/admin/topics`, formData, await getAuthConfig());
         toast.success('Topic created');
       }
       setOpen(false);
@@ -233,7 +250,7 @@ const TopicsManager = ({ topics, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/topics/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/topics/${id}`, await getAuthConfig());
       toast.success('Topic deleted');
       fetchAllData();
     } catch (error) {
@@ -308,7 +325,7 @@ const TopicsManager = ({ topics, fetchAllData }) => {
 };
 
 // Topic Questions Manager Component (Free Questions)
-const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
+const TopicQuestionsManager = ({ questions, topics, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -327,10 +344,10 @@ const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
     try {
       const data = { ...formData, company_id: null, category: null };
       if (editing) {
-        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
         toast.success('Question updated');
       } else {
-        await axios.post(`${API}/admin/questions`, data, { withCredentials: true });
+        await axios.post(`${API}/admin/questions`, data, await getAuthConfig());
         toast.success('Question created');
       }
       setOpen(false);
@@ -357,7 +374,7 @@ const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/questions/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/questions/${id}`, await getAuthConfig());
       toast.success('Question deleted');
       fetchAllData();
     } catch (error) {
@@ -488,7 +505,7 @@ const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
 };
 
 // Company Questions Manager Component (Premium Goldmine Questions)
-const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
+const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState('all');
@@ -508,10 +525,10 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
     try {
       const data = { ...formData, topic_id: null };
       if (editing) {
-        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
         toast.success('Question updated');
       } else {
-        await axios.post(`${API}/admin/questions`, data, { withCredentials: true });
+        await axios.post(`${API}/admin/questions`, data, await getAuthConfig());
         toast.success('Question created');
       }
       setOpen(false);
@@ -538,7 +555,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/questions/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/questions/${id}`, await getAuthConfig());
       toast.success('Question deleted');
       fetchAllData();
     } catch (error) {
@@ -712,7 +729,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
 };
 
 // Companies Manager Component
-const CompaniesManager = ({ companies, fetchAllData }) => {
+const CompaniesManager = ({ companies, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: '', logo_url: '' });
@@ -726,10 +743,13 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
-
+      
+      const authConfig = await getAuthConfig();
       const response = await axios.post(`${API}/admin/upload-image`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          ...authConfig.headers
+        }
       });
 
       setFormData(prev => ({ ...prev, logo_url: response.data.url }));
@@ -746,10 +766,10 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
     try {
       const data = { ...formData, question_count: 0 };
       if (editing) {
-        await axios.put(`${API}/admin/companies/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        await axios.put(`${API}/admin/companies/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
         toast.success('Company updated');
       } else {
-        await axios.post(`${API}/admin/companies`, data, { withCredentials: true });
+        await axios.post(`${API}/admin/companies`, data, await getAuthConfig());
         toast.success('Company created');
       }
       setOpen(false);
@@ -764,7 +784,7 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure? This will delete all company questions.')) return;
     try {
-      await axios.delete(`${API}/admin/companies/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/companies/${id}`, await getAuthConfig());
       toast.success('Company deleted');
       fetchAllData();
     } catch (error) {
@@ -853,7 +873,7 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
 };
 
 // Experiences Manager Component
-const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
+const ExperiencesManager = ({ experiences, companies, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [rounds, setRounds] = useState([{ title: 'Round 1', description: '' }]);
@@ -886,10 +906,10 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
       };
 
       if (editing) {
-        await axios.put(`${API}/admin/experiences/${editing.id}`, { ...editing, ...dataToSubmit }, { withCredentials: true });
+        await axios.put(`${API}/admin/experiences/${editing.id}`, { ...editing, ...dataToSubmit }, await getAuthConfig());
         toast.success('Experience updated');
       } else {
-        await axios.post(`${API}/admin/experiences`, dataToSubmit, { withCredentials: true });
+        await axios.post(`${API}/admin/experiences`, dataToSubmit, await getAuthConfig());
         toast.success('Experience created');
       }
       setOpen(false);
@@ -973,7 +993,7 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/experiences/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/experiences/${id}`, await getAuthConfig());
       toast.success('Experience deleted');
       fetchAllData();
     } catch (error) {
@@ -1134,8 +1154,7 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
 };
 
 // Users Manager Component
-const UsersManager = ({ users, onRefresh }) => {
-  const { user: currentUser } = useContext(AuthContext);
+const UsersManager = ({ users, onRefresh, currentUser, getAuthConfig }) => {
   
   const handleGrantAdmin = async (userId, userName) => {
     if (!window.confirm(`Grant admin access to ${userName}? They will also get premium access.`)) {
@@ -1143,7 +1162,7 @@ const UsersManager = ({ users, onRefresh }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/users/${userId}/grant-admin`, {}, { withCredentials: true });
+      await axios.post(`${API}/admin/users/${userId}/grant-admin`, {}, await getAuthConfig());
       toast.success('Admin access granted successfully');
       onRefresh();
     } catch (error) {
@@ -1157,7 +1176,7 @@ const UsersManager = ({ users, onRefresh }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/users/${userId}/revoke-admin`, {}, { withCredentials: true });
+      await axios.post(`${API}/admin/users/${userId}/revoke-admin`, {}, await getAuthConfig());
       toast.success('Admin access revoked successfully');
       onRefresh();
     } catch (error) {
@@ -1172,7 +1191,7 @@ const UsersManager = ({ users, onRefresh }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/users/${userId}/toggle-premium`, {}, { withCredentials: true });
+      await axios.post(`${API}/admin/users/${userId}/toggle-premium`, {}, await getAuthConfig());
       toast.success(`Premium access ${action === 'grant' ? 'granted' : 'revoked'} successfully`);
       onRefresh();
     } catch (error) {

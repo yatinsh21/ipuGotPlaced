@@ -1,9 +1,8 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
+from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -16,8 +15,7 @@ import razorpay
 import json
 import cloudinary
 import cloudinary.uploader
-from authlib.integrations.starlette_client import OAuth
-from itsdangerous import URLSafeTimedSerializer
+from clerk_backend_api import Clerk
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -37,6 +35,14 @@ db = client[os.environ['DB_NAME']]
 # MongoDB-based cache collection
 cache_collection = db.cache
 
+# Clerk client
+clerk_secret = os.environ.get('CLERK_SECRET_KEY', '')
+if clerk_secret:
+    clerk_client = Clerk(bearer_auth=clerk_secret)
+else:
+    clerk_client = None
+    logging.warning("CLERK_SECRET_KEY not set")
+
 # Cloudinary configuration
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'demo'),
@@ -50,29 +56,13 @@ razorpay_client = razorpay.Client(auth=(
     os.environ.get('RAZORPAY_KEY_SECRET', '')
 ))
 
-# Admin emails
-ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
-
-# Session serializer for secure cookies
-serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'your-secret-key-change-this'))
-
-# OAuth setup
-oauth = OAuth()
-oauth.register(
-    name='google',
-    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
-
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    clerk_id: str
     email: str
     name: str
     picture: Optional[str] = None
@@ -80,12 +70,8 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-class Session(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    session_token: str
-    user_id: str
-    expires_at: str
+    bookmarked_questions: List[str] = []
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -177,134 +163,122 @@ async def invalidate_cache_pattern(pattern: str):
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
-# Auth dependency
-async def get_current_user(request: Request) -> Optional[User]:
-    session_token = request.cookies.get('session_token')
-    if not session_token:
-        auth_header = request.headers.get('Authorization')
-        if auth_header and auth_header.startswith('Bearer '):
-            session_token = auth_header.split(' ')[1]
+# Auth dependency using Clerk - REWRITTEN
+async def get_current_user(authorization: str = Header(None, alias="Authorization")) -> Optional[User]:
+    """Verify Clerk session token and get/create user - SIMPLIFIED VERSION"""
     
-    if not session_token:
+    # Check if authorization header exists
+    if not authorization:
+        logging.warning("No Authorization header provided")
         return None
     
-    session = await db.sessions.find_one({"session_token": session_token})
-    if not session:
+    # Check if it's a Bearer token
+    if not authorization.startswith('Bearer '):
+        logging.warning(f"Invalid Authorization format: {authorization[:20]}")
         return None
     
-    expires_at = datetime.fromisoformat(session['expires_at'])
-    if expires_at < datetime.now(timezone.utc):
-        await db.sessions.delete_one({"session_token": session_token})
+    # Check if Clerk client is initialized
+    if not clerk_client:
+        logging.error("Clerk client not initialized")
         return None
     
-    user = await db.users.find_one({"id": session['user_id']}, {"_id": 0})
-    if not user:
+    # Extract token
+    token = authorization.replace('Bearer ', '').strip()
+    
+    if not token:
+        logging.warning("Empty token after Bearer prefix")
         return None
     
-    return User(**user)
+    try:
+        # Decode JWT to get clerk_user_id
+        import jwt
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        clerk_user_id = decoded.get('sub')
+        
+        if not clerk_user_id:
+            logging.warning("No 'sub' claim in token")
+            return None
+        
+        logging.info(f"✓ Token decoded successfully for clerk_id: {clerk_user_id}")
+        
+        # Get or create user in our database
+        user_doc = await db.users.find_one({"clerk_id": clerk_user_id}, {"_id": 0})
+        
+        if not user_doc:
+            # Get user info from Clerk
+            try:
+                clerk_user = clerk_client.users.get(user_id=clerk_user_id)
+                
+                # Create new user in our database
+                new_user = {
+                    "clerk_id": clerk_user_id,
+                    "email": clerk_user.email_addresses[0].email_address if clerk_user.email_addresses else "",
+                    "name": f"{clerk_user.first_name or ''} {clerk_user.last_name or ''}".strip() or "User",
+                    "picture": clerk_user.image_url if hasattr(clerk_user, 'image_url') else None,
+                    "is_premium": clerk_user.public_metadata.get('isPremium', False) if hasattr(clerk_user, 'public_metadata') else False,
+                    "is_admin": clerk_user.public_metadata.get('isAdmin', False) if hasattr(clerk_user, 'public_metadata') else False,
+                    "bookmarked_questions": [],
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                await db.users.insert_one(new_user)
+                user_doc = new_user
+                logging.info(f"✓ Created new user: {new_user['email']}")
+            except Exception as e:
+                logging.error(f"Failed to get Clerk user: {e}")
+                return None
+        else:
+            # Update user metadata from Clerk on each request
+            try:
+                clerk_user = clerk_client.users.get(user_id=clerk_user_id)
+                is_premium = clerk_user.public_metadata.get('isPremium', False) if hasattr(clerk_user, 'public_metadata') else False
+                is_admin = clerk_user.public_metadata.get('isAdmin', False) if hasattr(clerk_user, 'public_metadata') else False
+                
+                # Update if changed
+                if user_doc.get('is_premium') != is_premium or user_doc.get('is_admin') != is_admin:
+                    await db.users.update_one(
+                        {"clerk_id": clerk_user_id},
+                        {"$set": {"is_premium": is_premium, "is_admin": is_admin}}
+                    )
+                    user_doc['is_premium'] = is_premium
+                    user_doc['is_admin'] = is_admin
+                logging.info(f"✓ User authenticated: {user_doc['email']}")
+            except Exception as e:
+                logging.error(f"Failed to update user metadata: {e}")
+        
+        return User(**user_doc)
+        
+    except Exception as e:
+        logging.error(f"❌ Auth error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        return None
 
-async def require_auth(request: Request) -> User:
-    user = await get_current_user(request)
+async def require_auth(user: User = Depends(get_current_user)) -> User:
+    """Require authenticated user"""
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+        logging.warning("❌ Authentication required but no user found")
+        raise HTTPException(status_code=401, detail="Authentication required")
     return user
 
-async def require_premium(request: Request) -> User:
-    user = await require_auth(request)
+async def require_premium(user: User = Depends(require_auth)) -> User:
+    """Require premium user"""
     if not user.is_premium and not user.is_admin:
         raise HTTPException(status_code=403, detail="Premium subscription required")
     return user
 
-async def require_admin(request: Request) -> User:
-    user = await require_auth(request)
+async def require_admin(user: User = Depends(require_auth)) -> User:
+    """Require admin user"""
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
 # Auth endpoints
-@api_router.get("/auth/login")
-async def login(request: Request):
-    redirect_uri = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/auth/callback"
-    return await oauth.google.authorize_redirect(request, redirect_uri)
-
-@api_router.get("/auth/callback")
-async def auth_callback(request: Request):
-    try:
-        # Get token from Google
-        token = await oauth.google.authorize_access_token(request)
-        user_info = token.get('userinfo')
-        
-        if not user_info:
-            raise HTTPException(status_code=400, detail="Failed to get user info")
-        
-        email = user_info.get('email')
-        name = user_info.get('name')
-        picture = user_info.get('picture')
-        
-        # Check if user exists
-        existing_user = await db.users.find_one({"email": email}, {"_id": 0})
-        
-        if existing_user:
-            user = User(**existing_user)
-            # Update admin status if email is in admin list
-            if email in ADMIN_EMAILS and not user.is_admin:
-                user.is_admin = True
-                user.is_premium = True
-                await db.users.update_one({"id": user.id}, {"$set": {"is_admin": True, "is_premium": True}})
-        else:
-            # Create new user
-            is_admin = email in ADMIN_EMAILS
-            user = User(
-                email=email,
-                name=name,
-                picture=picture,
-                is_admin=is_admin,
-                is_premium=is_admin
-            )
-            await db.users.insert_one(user.model_dump())
-        
-        # Create session
-        session_token = serializer.dumps({'user_id': user.id})
-        expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-        session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
-        await db.sessions.insert_one(session.model_dump())
-        
-        # Redirect to frontend with cookie
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        response = RedirectResponse(url=frontend_url, status_code=302)
-        
-        # Set cookie with proper settings for production
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=True,  # Always use secure in production
-            samesite="none",  # Required for cross-site cookies
-            max_age=7*24*60*60,
-            domain=None,  # Let browser handle domain
-            path="/"
-        )
-        
-        return response
-    except Exception as e:
-        logging.error(f"Auth callback failed: {e}")
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
-
 @api_router.get("/auth/me")
-async def get_me(request: Request):
-    user = await get_current_user(request)
+async def get_current_user_info(user: User = Depends(get_current_user)):
+    """Get current user info"""
     if not user:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    return {"user": user.model_dump()}
-
-@api_router.post("/auth/logout")
-async def logout(request: Request, response: Response):
-    session_token = request.cookies.get('session_token')
-    if session_token:
-        await db.sessions.delete_one({"session_token": session_token})
-    response.delete_cookie("session_token", path="/", domain=None, samesite="none", secure=True)
-    return {"success": True}
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return user.model_dump()
 
 # Free endpoints
 @api_router.get("/topics", response_model=List[Topic])
@@ -362,8 +336,12 @@ async def get_companies(user: User = Depends(require_auth)):
     return companies
 
 @api_router.get("/company-questions/{company_id}")
-async def get_company_questions(company_id: str, category: Optional[str] = None, request: Request = None):
-    user = await get_current_user(request) if request else None
+async def get_company_questions(
+    company_id: str, 
+    category: Optional[str] = None,
+    authorization: str = Header(None)
+):
+    user = await get_current_user(authorization) if authorization else None
     is_premium = user and (user.is_premium or user.is_admin)
     
     cache_key = generate_cache_key("company_questions", company_id=company_id, category=category)
@@ -391,12 +369,12 @@ async def get_company_questions(company_id: str, category: Optional[str] = None,
 @api_router.post("/bookmark/{question_id}")
 async def toggle_bookmark(question_id: str, user: User = Depends(require_premium)):
     if question_id in user.bookmarked_questions:
-        await db.users.update_one({"id": user.id}, {"$pull": {"bookmarked_questions": question_id}})
-        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$pull": {"bookmarked_questions": question_id}})
+        await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
         return {"bookmarked": False}
     else:
-        await db.users.update_one({"id": user.id}, {"$addToSet": {"bookmarked_questions": question_id}})
-        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$addToSet": {"bookmarked_questions": question_id}})
+        await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
         return {"bookmarked": True}
 
 @api_router.get("/bookmarks")
@@ -404,7 +382,7 @@ async def get_bookmarks(user: User = Depends(require_premium)):
     if not user.bookmarked_questions:
         return []
     
-    cache_key = f"bookmarks_user:{user.id}"
+    cache_key = f"bookmarks_user:{user.clerk_id}"
     cached = await get_cached_data(cache_key)
     if cached:
         return cached
@@ -428,30 +406,80 @@ async def get_experiences(company_id: Optional[str] = None):
     await set_cached_data(cache_key, experiences, ttl=3600)
     return experiences
 
-# Payment endpoints
+# Payment endpoints - REWRITTEN FROM SCRATCH
 @api_router.post("/payment/create-order")
 async def create_order(order_req: CreateOrderRequest, user: User = Depends(require_auth)):
+    """Create Razorpay order for payment"""
     try:
+        logging.info(f"💰 Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
+        logging.info(f"💰 Amount requested: ₹{order_req.amount / 100}")
+        
+        # Create Razorpay order
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
             "currency": "INR",
             "payment_capture": 1
         })
+        
+        logging.info(f"✓ Razorpay order created: {razor_order['id']}")
         return razor_order
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"❌ Payment order creation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 @api_router.post("/payment/verify")
 async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(require_auth)):
+    """Verify Razorpay payment and upgrade user to premium"""
     try:
+        logging.info(f"💰 Payment verification request from user: {user.email}")
+        
         params_dict = {
             'razorpay_order_id': payment.razorpay_order_id,
             'razorpay_payment_id': payment.razorpay_payment_id,
             'razorpay_signature': payment.razorpay_signature
         }
-        razorpay_client.utility.verify_payment_signature(params_dict)
         
-        await db.users.update_one({"id": user.id}, {"$set": {"is_premium": True}})
+        # Verify payment signature
+        razorpay_client.utility.verify_payment_signature(params_dict)
+        logging.info(f"✓ Payment signature verified")
+        
+        # Update user to premium in MongoDB
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
+        logging.info(f"✓ User upgraded to premium in MongoDB")
+        
+        # Update Clerk user metadata
+        if clerk_client:
+            try:
+                clerk_client.users.update_metadata(
+                    user_id=user.clerk_id,
+                    public_metadata={"isPremium": True}
+                )
+                logging.info(f"✓ User metadata updated in Clerk")
+            except Exception as e:
+                logging.error(f"⚠️ Failed to update Clerk metadata (non-critical): {e}")
+        
+        return {
+            "success": True,
+            "message": "Payment verified and premium access granted"
+        }
+        
+    except Exception as e:
+        logging.error(f"❌ Payment verification failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Payment verification failed: {str(e)}")
+        
+        # Update user to premium in MongoDB
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
+        
+        # Update Clerk user metadata
+        if clerk_client:
+            try:
+                clerk_client.users.update_metadata(
+                    user_id=user.clerk_id,
+                    public_metadata={"isPremium": True}
+                )
+            except Exception as e:
+                logging.error(f"Failed to update Clerk metadata: {e}")
         
         return {"success": True, "message": "Payment verified successfully"}
     except Exception as e:
@@ -481,30 +509,30 @@ async def get_all_users(user: User = Depends(require_admin)):
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
+    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
     
     return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/revoke-admin")
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user_id == current_user.id:
+    if user_id == current_user.clerk_id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
-    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": False}})
+    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": False}})
     
     return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -512,7 +540,7 @@ async def toggle_premium_status(user_id: str, current_user: User = Depends(requi
         raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
     
     new_premium_status = not target_user.get('is_premium', False)
-    await db.users.update_one({"id": user_id}, {"$set": {"is_premium": new_premium_status}})
+    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_premium": new_premium_status}})
     
     status_text = "granted" if new_premium_status else "revoked"
     return {"success": True, "message": f"Premium access {status_text} for {target_user['email']}"}
@@ -666,15 +694,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# 2. Session middleware
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this'),
-    https_only=True,  # Force HTTPS for cookies
-    same_site="none"  # Allow cross-site
-)
-
-# 3. GZip compression last
+# 2. GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 logging.basicConfig(
@@ -701,15 +721,14 @@ async def startup_db():
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        await db.users.create_index("id", unique=True)
+        # Users indexes
+        await db.users.create_index("clerk_id", unique=True)
         try:
             await db.users.create_index("email", unique=True)
         except Exception:
             pass
         
-        await db.sessions.create_index("session_token", unique=True)
-        await db.sessions.create_index("expires_at", expireAfterSeconds=0)
-        
+        # Cache collection indexes
         await cache_collection.create_index("key", unique=True)
         await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
