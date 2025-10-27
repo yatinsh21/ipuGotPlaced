@@ -45,8 +45,7 @@ const GoldminePage = () => {
 
   const handlePayment = async () => {
     try {
-      // Get Clerk session token
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
