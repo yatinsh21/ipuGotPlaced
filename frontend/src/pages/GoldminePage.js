@@ -219,7 +219,7 @@ const GoldminePage = () => {
           </p>
           <p className="text-xl font-semibold text-gray-900">The Only Set You Need</p>
           
-          {user && !user.is_premium && (
+          {isSignedIn && !isPremium && (
             <Button 
               onClick={() => setShowPayment(true)}
               className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 mt-4"
@@ -230,7 +230,7 @@ const GoldminePage = () => {
           )}
         </div>
 
-        {!user && (
+        {!isSignedIn && (
           <div className="mb-8 bg-yellow-50 border-2 border-yellow-200 p-6 text-center">
             <p className="text-gray-900 font-medium">Sign in to unlock premium company-wise questions</p>
           </div>
