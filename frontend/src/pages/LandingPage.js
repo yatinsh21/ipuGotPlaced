@@ -47,13 +47,13 @@ const LandingPage = () => {
         {/* Company Logos */}
         <div className="mb-12 md:mb-20">
           <p className="text-center text-xs sm:text-sm text-gray-500 mb-6 md:mb-8 uppercase tracking-wide">Questions from Top Companies</p>
-          <div className="flex justify-center items-center gap-6 md:gap-12 flex-wrap px-4">
+          <div className="flex justify-center items-center gap-8 md:gap-16 flex-wrap px-4">
             {companies.map((company) => (
-              <div key={company.name} className="grayscale hover:grayscale-0 transition-all">
+              <div key={company.name} className="transition-transform hover:scale-110">
                 <img 
                   src={company.logo} 
                   alt={company.name} 
-                  className="h-8 sm:h-10 md:h-12 w-auto object-contain"
+                  className="h-16 sm:h-20 md:h-24 lg:h-28 w-auto object-contain"
                 />
               </div>
             ))}
