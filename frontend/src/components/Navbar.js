@@ -11,8 +11,7 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const handleLogin = () => {
-    const redirectUrl = encodeURIComponent(window.location.origin + '/goldmine');
-    window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
+    window.location.href = `${BACKEND_URL}/api/auth/login`;
   };
 
   const handleLogout = async () => {
