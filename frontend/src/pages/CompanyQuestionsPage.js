@@ -324,19 +324,43 @@ const CompanyQuestionsPage = () => {
             </Tabs>
 
             <div className="bg-white border border-gray-200 shadow-sm">
+              {!isPremiumUser && filteredQuestions.length > 3 && (
+                <div className="bg-yellow-50 border-b-2 border-yellow-200 p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Lock className="h-5 w-5 text-yellow-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Preview Mode - Only first 3 questions shown</p>
+                      <p className="text-sm text-gray-600">Unlock all questions and answers with premium</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => setShowUpgradeModal(true)}
+                    className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+                  >
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Premium
+                  </Button>
+                </div>
+              )}
+              
               <Accordion type="single" collapsible className="w-full">
                 {filteredQuestions.map((question, index) => (
-                  <AccordionItem key={question.id} value={question.id}>
+                  <AccordionItem 
+                    key={question.id} 
+                    value={question.id}
+                    className={question.locked ? 'locked-question opacity-60' : ''}
+                  >
                     <AccordionTrigger 
                       data-testid={`question-${index}`}
-                      className={`px-6 py-4 hover:bg-gray-50 text-left ${!isPremiumUser ? 'cursor-default' : ''}`}
-                      onClick={!isPremiumUser ? handleQuestionClick : undefined}
+                      className="px-6 py-4 hover:bg-gray-50 text-left no-copy"
+                      disabled={question.locked}
+                      onClick={question.locked ? handleQuestionClick : undefined}
                     >
                       <div className="flex items-center justify-between flex-1 gap-4">
                         <div className="flex items-center gap-3 flex-1">
-                          {!isPremiumUser && <Lock className="h-4 w-4 text-gray-400" />}
+                          {question.locked && <Lock className="h-4 w-4 text-gray-400" />}
                           <span className="text-gray-500 font-medium">Q{index + 1}.</span>
-                          <span className={`font-medium ${!isPremiumUser ? 'text-gray-500' : 'text-gray-900'}`}>
+                          <span className={`font-medium ${question.locked ? 'text-gray-500' : 'text-gray-900'}`}>
                             {question.question}
                           </span>
                         </div>
@@ -344,12 +368,18 @@ const CompanyQuestionsPage = () => {
                           <Badge className={getDifficultyColor(question.difficulty)}>
                             {question.difficulty}
                           </Badge>
+                          {question.locked && (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Premium
+                            </Badge>
+                          )}
                           {question.tags?.map((tag) => (
                             <Badge key={tag} className={getTagColor(tag)}>
                               {tag}
                             </Badge>
                           ))}
-                          {isPremiumUser && (
+                          {isPremiumUser && !question.locked && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -366,9 +396,9 @@ const CompanyQuestionsPage = () => {
                         </div>
                       </div>
                     </AccordionTrigger>
-                    {isPremiumUser && (
+                    {!question.locked && (
                       <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                        <div className="prose max-w-none">
+                        <div className="prose max-w-none no-copy">
                           <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
                         </div>
                       </AccordionContent>
