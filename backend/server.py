@@ -351,21 +351,29 @@ async def get_companies(user: User = Depends(require_auth)):
     if not user.is_premium and not user.is_admin:
         raise HTTPException(status_code=403, detail="Premium subscription required")
     
-    cached = await redis_client.get("companies")
+    cache_key = "companies"
+    cached = await get_cached_data(cache_key)
     if cached:
-        return json.loads(cached)
+        return cached
     
     companies = await db.companies.find({}, {"_id": 0}).to_list(1000)
-    await redis_client.set("companies", json.dumps(companies), ex=3600)
+    await set_cached_data(cache_key, companies, ttl=7200)
     return companies
 
 @api_router.get("/company-questions/{company_id}")
 async def get_company_questions(company_id: str, category: Optional[str] = None, user: User = Depends(require_premium)):
+    # Generate cache key with category
+    cache_key = generate_cache_key("company_questions", company_id=company_id, category=category)
+    cached = await get_cached_data(cache_key)
+    if cached:
+        return cached
+    
     query = {"company_id": company_id}
     if category:
         query["category"] = category
     
     questions = await db.questions.find(query, {"_id": 0}).to_list(1000)
+    await set_cached_data(cache_key, questions, ttl=3600)
     return questions
 
 @api_router.post("/bookmark/{question_id}")
