@@ -25,17 +25,14 @@ const LandingPage = () => {
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 py-12 sm:py-16 md:py-20">
         <div className="text-center mb-12 md:mb-16">
-          <div className="mb-4 md:mb-6">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-2">
-              IGP
+          <div className="mb-6 md:mb-8">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 md:mb-4">
+              Trust IGP — He Knows Interviews !
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl text-gray-600 font-medium">
-              IPU GOT PLACED
+            <p className="text-lg sm:text-xl md:text-2xl text-gray-600 font-medium max-w-3xl mx-auto px-4">
+              We can't change luck — but we can be ready when it arrives.
             </p>
           </div>
-          <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-6 md:mb-8 max-w-3xl mx-auto px-4">
-            Practice with real interview questions from top tech companies. Master data structures, algorithms, system design, and more.
-          </p>
           <Button 
             size="lg" 
             onClick={() => navigate('/topics')}
