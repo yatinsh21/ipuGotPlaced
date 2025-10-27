@@ -425,6 +425,23 @@ async def delete_question(question_id: str, user: User = Depends(require_admin))
     return {"success": True}
 
 # Admin - Companies
+@api_router.post("/admin/upload-image")
+async def upload_image(file: UploadFile = File(...), user: User = Depends(require_admin)):
+    try:
+        # Read file content
+        contents = await file.read()
+        
+        # Upload to Cloudinary
+        upload_result = cloudinary.uploader.upload(
+            contents,
+            folder="interview_prep/companies",
+            resource_type="auto"
+        )
+        
+        return {"url": upload_result['secure_url']}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
 @api_router.post("/admin/companies")
 async def create_company(company: Company, user: User = Depends(require_admin)):
     await db.companies.insert_one(company.model_dump())
