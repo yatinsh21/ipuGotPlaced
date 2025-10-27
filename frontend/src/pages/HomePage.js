@@ -204,22 +204,49 @@ const HomePage = () => {
 
             {/* Questions Accordion */}
             <div className="bg-white border border-gray-200 shadow-sm">
+              {!user?.is_premium && questions.length > 3 && (
+                <div className="bg-yellow-50 border-b-2 border-yellow-200 p-4 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Lock className="h-5 w-5 text-yellow-600" />
+                    <div>
+                      <p className="font-medium text-gray-900">Preview Mode - Only first 3 questions shown</p>
+                      <p className="text-sm text-gray-600">Unlock all questions and answers with premium</p>
+                    </div>
+                  </div>
+                  <Button className="bg-yellow-500 hover:bg-yellow-600 text-gray-900">
+                    <Crown className="h-4 w-4 mr-2" />
+                    Upgrade to Premium
+                  </Button>
+                </div>
+              )}
+              
               <Accordion type="single" collapsible className="w-full">
                 {questions.map((question, index) => (
-                  <AccordionItem key={question.id} value={question.id}>
+                  <AccordionItem 
+                    key={question.id} 
+                    value={question.id}
+                    className={question.locked ? 'locked-question opacity-60' : ''}
+                  >
                     <AccordionTrigger 
                       data-testid={`question-${index}`}
                       className="px-6 py-4 hover:bg-gray-50 text-left"
+                      disabled={question.locked}
                     >
-                      <div className="flex items-center gap-3 flex-1 justify-between">
+                      <div className="flex items-center gap-3 flex-1 justify-between no-copy">
                         <div className="flex items-center gap-3 flex-1">
                           <span className="text-gray-500 font-medium">Q{index + 1}.</span>
                           <span className="font-medium text-gray-900">{question.question}</span>
                           <Badge className={getDifficultyColor(question.difficulty)}>
                             {question.difficulty}
                           </Badge>
+                          {question.locked && (
+                            <Badge className="bg-yellow-100 text-yellow-800">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Premium
+                            </Badge>
+                          )}
                         </div>
-                        {user?.is_premium && (
+                        {user?.is_premium && !question.locked && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -237,7 +264,7 @@ const HomePage = () => {
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                      <div className="prose max-w-none">
+                      <div className="prose max-w-none no-copy">
                         <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
                       </div>
                     </AccordionContent>
