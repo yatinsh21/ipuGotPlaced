@@ -327,21 +327,40 @@ async def get_companies_preview():
     return companies
 
 @api_router.get("/questions")
-async def get_questions(topic_id: Optional[str] = None, difficulty: Optional[str] = None):
+async def get_questions(
+    topic_id: Optional[str] = None, 
+    difficulty: Optional[str] = None,
+    request: Request = None
+):
+    # Check if user is authenticated and premium
+    user = await get_current_user(request) if request else None
+    is_premium = user and (user.is_premium or user.is_admin)
+    
     # Generate cache key based on query params
     cache_key = generate_cache_key("questions", topic_id=topic_id, difficulty=difficulty)
     cached = await get_cached_data(cache_key)
     if cached:
-        return cached
+        questions = cached
+    else:
+        query = {"topic_id": {"$ne": None}}
+        if topic_id:
+            query["topic_id"] = topic_id
+        if difficulty:
+            query["difficulty"] = difficulty
+        
+        questions = await db.questions.find(query, {"_id": 0}).to_list(1000)
+        await set_cached_data(cache_key, questions, ttl=3600)
     
-    query = {"topic_id": {"$ne": None}}
-    if topic_id:
-        query["topic_id"] = topic_id
-    if difficulty:
-        query["difficulty"] = difficulty
+    # For non-premium users, limit to 3 questions as preview
+    if not is_premium and len(questions) > 3:
+        preview_questions = questions[:3]
+        # Mark remaining questions as locked
+        locked_questions = [
+            {**q, "answer": "🔒 Unlock premium to see the answer", "locked": True} 
+            for q in questions[3:]
+        ]
+        return preview_questions + locked_questions
     
-    questions = await db.questions.find(query, {"_id": 0}).to_list(1000)
-    await set_cached_data(cache_key, questions, ttl=3600)
     return questions
 
 # Premium endpoints - Companies & Questions
