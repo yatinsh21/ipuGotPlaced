@@ -6,8 +6,9 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { Bookmark, BookmarkCheck, Lock, Crown } from 'lucide-react';
 import { toast } from 'sonner';
+import '../copyProtection.css';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -33,6 +34,51 @@ const HomePage = () => {
       fetchQuestions();
     }
   }, [selectedTopic, difficulty]);
+
+  // Disable copy/paste functionality
+  useEffect(() => {
+    const preventCopy = (e) => {
+      e.preventDefault();
+      toast.error('Copying is disabled to protect content');
+      return false;
+    };
+
+    const preventCut = (e) => {
+      e.preventDefault();
+      toast.error('Cutting is disabled to protect content');
+      return false;
+    };
+
+    const preventContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const preventKeyboardShortcuts = (e) => {
+      // Prevent Ctrl+C, Ctrl+X, Ctrl+A, Ctrl+U, F12
+      if (
+        (e.ctrlKey && (e.key === 'c' || e.key === 'x' || e.key === 'a' || e.key === 'u')) ||
+        (e.metaKey && (e.key === 'c' || e.key === 'x' || e.key === 'a')) ||
+        e.key === 'F12'
+      ) {
+        e.preventDefault();
+        toast.error('This action is disabled to protect content');
+        return false;
+      }
+    };
+
+    document.addEventListener('copy', preventCopy);
+    document.addEventListener('cut', preventCut);
+    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('keydown', preventKeyboardShortcuts);
+
+    return () => {
+      document.removeEventListener('copy', preventCopy);
+      document.removeEventListener('cut', preventCut);
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('keydown', preventKeyboardShortcuts);
+    };
+  }, []);
 
   const fetchTopics = async () => {
     try {
