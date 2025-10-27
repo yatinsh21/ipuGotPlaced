@@ -370,9 +370,10 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
 
   return (
     <Card className="border-2 border-gray-200">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Questions Management ({questions.length})</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Questions Management ({questions.length})</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-question-btn">
               <Plus className="h-4 w-4 mr-2" /> Add Question
