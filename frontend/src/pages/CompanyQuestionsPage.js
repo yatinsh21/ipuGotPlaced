@@ -37,7 +37,7 @@ const CompanyQuestionsPage = () => {
 
   const fetchUserBookmarks = async () => {
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       const response = await axios.get(`${API}/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -103,7 +103,7 @@ const CompanyQuestionsPage = () => {
       // Fetch questions (backend will handle preview for non-premium)
       const config = isPremiumUser && isSignedIn ? {
         headers: {
-          Authorization: `Bearer ${await user.getClerkSessionToken()}`
+          Authorization: `Bearer ${await getToken()}`
         }
       } : {};
       const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, config);
@@ -124,7 +124,7 @@ const CompanyQuestionsPage = () => {
 
   const handlePayment = async () => {
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
         { amount: 100 }, // ₹1
@@ -187,7 +187,7 @@ const CompanyQuestionsPage = () => {
     }
 
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
         {},
