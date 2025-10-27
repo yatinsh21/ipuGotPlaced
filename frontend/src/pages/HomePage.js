@@ -1,6 +1,6 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -14,13 +14,15 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const HomePage = () => {
-  const { user } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [difficulty, setDifficulty] = useState('all');
   const [loading, setLoading] = useState(true);
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
+  
+  const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
     fetchTopics();
