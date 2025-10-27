@@ -318,26 +318,25 @@ const TopicsManager = ({ topics, fetchAllData }) => {
   );
 };
 
-// Questions Manager Component
-const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
+// Topic Questions Manager Component (Free Questions)
+const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [filterType, setFilterType] = useState('all'); // all, topic, company
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     question: '',
     answer: '',
     difficulty: 'medium',
     topic_id: '',
-    company_id: '',
-    category: '',
+    company_id: null,
+    category: null,
     tags: []
   });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const data = { ...formData, topic_id: formData.topic_id || null, company_id: formData.company_id || null };
+      const data = { ...formData, company_id: null, category: null };
       if (editing) {
         await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
         toast.success('Question updated');
@@ -360,6 +359,187 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
       answer: '',
       difficulty: 'medium',
       topic_id: '',
+      company_id: null,
+      category: null,
+      tags: []
+    });
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure?')) return;
+    try {
+      await axios.delete(`${API}/admin/questions/${id}`, { withCredentials: true });
+      toast.success('Question deleted');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Delete failed');
+    }
+  };
+
+  const getTopicName = (topicId) => {
+    const topic = topics.find(t => t.id === topicId);
+    return topic?.name || 'Unknown';
+  };
+
+  const filteredQuestions = questions.filter(q => {
+    if (searchTerm && !q.question.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
+
+  return (
+    <Card className="border-2 border-gray-200">
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Topic Questions - Free ({questions.length} total)</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-question-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add Question
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>{editing ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label>Question</Label>
+                <Textarea 
+                  value={formData.question} 
+                  onChange={(e) => setFormData({...formData, question: e.target.value})} 
+                  data-testid="question-input"
+                  required 
+                />
+              </div>
+              <div>
+                <Label>Answer</Label>
+                <Textarea 
+                  value={formData.answer} 
+                  onChange={(e) => setFormData({...formData, answer: e.target.value})} 
+                  data-testid="answer-input"
+                  rows={5}
+                  required 
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Difficulty</Label>
+                  <Select value={formData.difficulty} onValueChange={(val) => setFormData({...formData, difficulty: val})}>
+                    <SelectTrigger data-testid="difficulty-select">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Topic</Label>
+                  <Select value={formData.topic_id} onValueChange={(val) => setFormData({...formData, topic_id: val})}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select topic" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {topics.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button type="submit" data-testid="submit-question-btn">Save</Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* Search */}
+        <div className="mb-4">
+          <Label className="text-xs">Search</Label>
+          <Input 
+            placeholder="Search questions..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        <div className="text-sm text-gray-600 mb-2">
+          Showing {filteredQuestions.length} of {questions.length} questions
+        </div>
+
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {filteredQuestions.map((q) => (
+            <div key={q.id} className="border border-gray-200 p-4 flex justify-between items-start">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Badge className="bg-blue-100 text-blue-800">
+                    Topic: {getTopicName(q.topic_id)}
+                  </Badge>
+                </div>
+                <p className="font-medium text-gray-900 mb-1">{q.question}</p>
+                <div className="flex gap-2 flex-wrap">
+                  <Badge variant="outline">{q.difficulty}</Badge>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || [], topic_id: q.topic_id || '', company_id: null, category: null}); setOpen(true); }}>
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)}>
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// Company Questions Manager Component (Premium Goldmine Questions)
+const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [selectedCompany, setSelectedCompany] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [formData, setFormData] = useState({
+    question: '',
+    answer: '',
+    difficulty: 'medium',
+    topic_id: null,
+    company_id: '',
+    category: '',
+    tags: []
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = { ...formData, topic_id: null };
+      if (editing) {
+        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        toast.success('Question updated');
+      } else {
+        await axios.post(`${API}/admin/questions`, data, { withCredentials: true });
+        toast.success('Question created');
+      }
+      setOpen(false);
+      setEditing(null);
+      resetForm();
+      fetchAllData();
+    } catch (error) {
+      toast.error('Operation failed');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      question: '',
+      answer: '',
+      difficulty: 'medium',
+      topic_id: null,
       company_id: '',
       category: '',
       tags: []
@@ -382,15 +562,9 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
     return company?.name || 'Unknown';
   };
 
-  const getTopicName = (topicId) => {
-    const topic = topics.find(t => t.id === topicId);
-    return topic?.name || 'Unknown';
-  };
-
   const filteredQuestions = questions.filter(q => {
-    // Filter by type
-    if (filterType === 'topic' && !q.topic_id) return false;
-    if (filterType === 'company' && !q.company_id) return false;
+    // Filter by company
+    if (selectedCompany !== 'all' && q.company_id !== selectedCompany) return false;
     
     // Filter by search
     if (searchTerm && !q.question.toLowerCase().includes(searchTerm.toLowerCase())) return false;
@@ -402,7 +576,7 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
     <Card className="border-2 border-gray-200">
       <CardHeader>
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>Questions Management ({questions.length} total)</CardTitle>
+          <CardTitle>Company Questions - Premium ({questions.length} total)</CardTitle>
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-question-btn">
