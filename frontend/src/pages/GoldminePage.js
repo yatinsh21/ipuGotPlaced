@@ -24,18 +24,9 @@ const GoldminePage = () => {
 
   const fetchCompaniesPreview = async () => {
     try {
-      // Fetch companies without auth for preview
-      const response = await axios.get(`${API}/topics`);
-      // Mock company data for preview - in real scenario, make a public endpoint
-      const mockCompanies = [
-        { id: '1', name: 'Google', logo_url: 'https://cdn.worldvectorlogo.com/logos/google-icon.svg', question_count: 45 },
-        { id: '2', name: 'Microsoft', logo_url: 'https://cdn.worldvectorlogo.com/logos/microsoft-5.svg', question_count: 38 },
-        { id: '3', name: 'Amazon', logo_url: 'https://cdn.worldvectorlogo.com/logos/amazon-icon-1.svg', question_count: 52 },
-        { id: '4', name: 'Meta', logo_url: 'https://cdn.worldvectorlogo.com/logos/meta-icon-new.svg', question_count: 41 },
-        { id: '5', name: 'Apple', logo_url: 'https://cdn.worldvectorlogo.com/logos/apple-14.svg', question_count: 35 },
-        { id: '6', name: 'Netflix', logo_url: 'https://cdn.worldvectorlogo.com/logos/netflix-3.svg', question_count: 28 },
-      ];
-      setCompanies(mockCompanies);
+      // Fetch real companies for preview
+      const response = await axios.get(`${API}/companies-preview`);
+      setCompanies(response.data);
     } catch (error) {
       console.error('Failed to fetch preview:', error);
     } finally {
