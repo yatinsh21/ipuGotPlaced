@@ -195,7 +195,7 @@ const AdminPanel = () => {
               </TabsContent>
 
               <TabsContent value="users">
-                <UsersManager users={users} />
+                <UsersManager users={users} onRefresh={fetchAllData} />
               </TabsContent>
             </Tabs>
           </>
