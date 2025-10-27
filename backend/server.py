@@ -645,15 +645,14 @@ async def startup_db():
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        await db.users.create_index("id", unique=True)
+        # Users indexes
+        await db.users.create_index("clerk_id", unique=True)
         try:
             await db.users.create_index("email", unique=True)
         except Exception:
             pass
         
-        await db.sessions.create_index("session_token", unique=True)
-        await db.sessions.create_index("expires_at", expireAfterSeconds=0)
-        
+        # Cache collection indexes
         await cache_collection.create_index("key", unique=True)
         await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
