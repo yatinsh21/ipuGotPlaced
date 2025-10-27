@@ -198,8 +198,7 @@ const CompanyQuestionsPage = () => {
               </div>
               <Button 
                 onClick={() => {
-                  const redirectUrl = encodeURIComponent(window.location.href);
-                  window.location.href = `https://auth.emergentagent.com/?redirect=${redirectUrl}`;
+                  window.location.href = `${BACKEND_URL}/api/auth/login`;
                 }}
                 className="bg-gray-900 hover:bg-gray-800 text-white"
               >
