@@ -132,7 +132,7 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_signature: str
 
-# Cache helper functions
+# MongoDB-based cache helper functions
 def generate_cache_key(prefix: str, **kwargs) -> str:
     """Generate a cache key based on prefix and query parameters"""
     if not kwargs:
@@ -142,30 +142,45 @@ def generate_cache_key(prefix: str, **kwargs) -> str:
     return f"{prefix}_{params}" if params else prefix
 
 async def get_cached_data(key: str):
-    """Get data from cache"""
+    """Get data from MongoDB cache"""
     try:
-        cached = await redis_client.get(key)
-        if cached:
-            return json.loads(cached)
+        cached_doc = await cache_collection.find_one({"key": key})
+        if cached_doc:
+            # Check if cache is still valid
+            if datetime.fromisoformat(cached_doc['expires_at']) > datetime.now(timezone.utc):
+                return json.loads(cached_doc['data'])
+            else:
+                # Cache expired, delete it
+                await cache_collection.delete_one({"key": key})
     except Exception as e:
         logging.warning(f"Cache get failed for {key}: {e}")
     return None
 
 async def set_cached_data(key: str, data, ttl: int = 3600):
-    """Set data in cache with TTL"""
+    """Set data in MongoDB cache with TTL"""
     try:
-        await redis_client.set(key, json.dumps(data), ex=ttl)
+        expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
+        await cache_collection.update_one(
+            {"key": key},
+            {
+                "$set": {
+                    "key": key,
+                    "data": json.dumps(data),
+                    "expires_at": expires_at.isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
     except Exception as e:
         logging.warning(f"Cache set failed for {key}: {e}")
 
 async def invalidate_cache_pattern(pattern: str):
     """Invalidate cache keys matching a pattern"""
     try:
-        keys = []
-        async for key in redis_client.scan_iter(match=pattern):
-            keys.append(key)
-        if keys:
-            await redis_client.delete(*keys)
+        # Convert glob pattern to regex
+        regex_pattern = pattern.replace("*", ".*")
+        await cache_collection.delete_many({"key": {"$regex": f"^{regex_pattern}$"}})
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
