@@ -1145,11 +1145,56 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
 };
 
 // Users Manager Component
-const UsersManager = ({ users }) => {
+const UsersManager = ({ users, onRefresh }) => {
+  const { user: currentUser } = useContext(AuthContext);
+  
+  const handleGrantAdmin = async (userId, userName) => {
+    if (!window.confirm(`Grant admin access to ${userName}? They will also get premium access.`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/admin/users/${userId}/grant-admin`, {}, { withCredentials: true });
+      toast.success('Admin access granted successfully');
+      onRefresh();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to grant admin access');
+    }
+  };
+  
+  const handleRevokeAdmin = async (userId, userName) => {
+    if (!window.confirm(`Revoke admin access from ${userName}? They will keep premium status.`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/admin/users/${userId}/revoke-admin`, {}, { withCredentials: true });
+      toast.success('Admin access revoked successfully');
+      onRefresh();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to revoke admin access');
+    }
+  };
+  
+  const handleTogglePremium = async (userId, userName, isPremium) => {
+    const action = isPremium ? 'revoke' : 'grant';
+    if (!window.confirm(`${action === 'grant' ? 'Grant' : 'Revoke'} premium access ${action === 'grant' ? 'to' : 'from'} ${userName}?`)) {
+      return;
+    }
+    
+    try {
+      await axios.post(`${API}/admin/users/${userId}/toggle-premium`, {}, { withCredentials: true });
+      toast.success(`Premium access ${action === 'grant' ? 'granted' : 'revoked'} successfully`);
+      onRefresh();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update premium status');
+    }
+  };
+  
   return (
     <Card className="border-2 border-gray-200">
       <CardHeader>
-        <CardTitle>Users ({users.length})</CardTitle>
+        <CardTitle>Users Management ({users.length})</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
@@ -1161,6 +1206,7 @@ const UsersManager = ({ users }) => {
                 <TableHead>Status</TableHead>
                 <TableHead>Bookmarks</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1170,13 +1216,48 @@ const UsersManager = ({ users }) => {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      {user.is_premium && <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>}
                       {user.is_admin && <Badge className="bg-gray-900 text-white">Admin</Badge>}
+                      {user.is_premium && <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>}
                       {!user.is_premium && !user.is_admin && <Badge variant="outline">Free</Badge>}
                     </div>
                   </TableCell>
                   <TableCell>{user.bookmarked_questions?.length || 0}</TableCell>
                   <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      {!user.is_admin ? (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleGrantAdmin(user.id, user.name)}
+                          className="text-xs"
+                        >
+                          Make Admin
+                        </Button>
+                      ) : (
+                        user.id !== currentUser.id && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleRevokeAdmin(user.id, user.name)}
+                            className="text-xs"
+                          >
+                            Remove Admin
+                          </Button>
+                        )
+                      )}
+                      {!user.is_admin && (
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleTogglePremium(user.id, user.name, user.is_premium)}
+                          className="text-xs"
+                        >
+                          {user.is_premium ? 'Remove Premium' : 'Make Premium'}
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
