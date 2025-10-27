@@ -599,16 +599,19 @@ async def delete_company(company_id: str, user: User = Depends(require_admin)):
 @api_router.post("/admin/experiences")
 async def create_experience(experience: Experience, user: User = Depends(require_admin)):
     await db.experiences.insert_one(experience.model_dump())
+    await invalidate_cache_pattern("experiences*")
     return experience
 
 @api_router.put("/admin/experiences/{experience_id}")
 async def update_experience(experience_id: str, experience: Experience, user: User = Depends(require_admin)):
     await db.experiences.update_one({"id": experience_id}, {"$set": experience.model_dump()})
+    await invalidate_cache_pattern("experiences*")
     return experience
 
 @api_router.delete("/admin/experiences/{experience_id}")
 async def delete_experience(experience_id: str, user: User = Depends(require_admin)):
     await db.experiences.delete_one({"id": experience_id})
+    await invalidate_cache_pattern("experiences*")
     return {"success": True}
 
 app.include_router(api_router)
