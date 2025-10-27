@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Header, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Depends, Header, UploadFile, File
 from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
@@ -13,7 +13,6 @@ import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
 import json
-import httpx
 import cloudinary
 import cloudinary.uploader
 from clerk_backend_api import Clerk
@@ -46,7 +45,7 @@ else:
 
 # Cloudinary configuration
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUD_NAME', 'demo'),
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'demo'),
     api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
     api_secret=os.environ.get('CLOUDINARY_API_SECRET', '')
 )
@@ -314,11 +313,10 @@ async def get_companies(user: User = Depends(require_auth)):
 @api_router.get("/company-questions/{company_id}")
 async def get_company_questions(
     company_id: str, 
-    category: Optional[str] = None, 
-    request: Request = None
+    category: Optional[str] = None,
+    user: Optional[User] = Depends(get_current_user)
 ):
     # Check user authentication and premium status
-    user = await get_current_user(request) if request else None
     is_premium = user and (user.is_premium or user.is_admin)
     
     # Generate cache key with category
@@ -350,19 +348,19 @@ async def get_company_questions(
 async def toggle_bookmark(question_id: str, user: User = Depends(require_premium)):
     if question_id in user.bookmarked_questions:
         await db.users.update_one(
-            {"id": user.id},
+            {"clerk_id": user.clerk_id},
             {"$pull": {"bookmarked_questions": question_id}}
         )
         # Invalidate user's bookmark cache
-        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
+        await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
         return {"bookmarked": False}
     else:
         await db.users.update_one(
-            {"id": user.id},
+            {"clerk_id": user.clerk_id},
             {"$addToSet": {"bookmarked_questions": question_id}}
         )
         # Invalidate user's bookmark cache
-        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
+        await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
         return {"bookmarked": True}
 
 @api_router.get("/bookmarks")
@@ -371,7 +369,7 @@ async def get_bookmarks(user: User = Depends(require_premium)):
         return []
     
     # Cache per user
-    cache_key = f"bookmarks_user:{user.id}"
+    cache_key = f"bookmarks_user:{user.clerk_id}"
     cached = await get_cached_data(cache_key)
     if cached:
         return cached
@@ -461,17 +459,27 @@ async def get_all_users(user: User = Depends(require_admin)):
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    """Grant admin and premium access to a user"""
+    """Grant admin and premium access to a user by clerk_id"""
     # Check if user exists
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Update user to admin and premium
+    # Update user to admin and premium in MongoDB
     await db.users.update_one(
-        {"id": user_id}, 
+        {"clerk_id": user_id}, 
         {"$set": {"is_admin": True, "is_premium": True}}
     )
+    
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_client.users.update_metadata(
+                user_id=user_id,
+                public_metadata={"isAdmin": True, "isPremium": True}
+            )
+        except Exception as e:
+            logging.error(f"Failed to update Clerk metadata: {e}")
     
     return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
 
@@ -479,26 +487,36 @@ async def grant_admin_access(user_id: str, current_user: User = Depends(require_
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
     """Revoke admin access from a user (keeps premium status)"""
     # Check if user exists
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Prevent revoking own admin access
-    if user_id == current_user.id:
+    if user_id == current_user.clerk_id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
-    # Update user to remove admin
+    # Update user to remove admin in MongoDB
     await db.users.update_one(
-        {"id": user_id}, 
+        {"clerk_id": user_id}, 
         {"$set": {"is_admin": False}}
     )
+    
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_client.users.update_metadata(
+                user_id=user_id,
+                public_metadata={"isAdmin": False, "isPremium": True}
+            )
+        except Exception as e:
+            logging.error(f"Failed to update Clerk metadata: {e}")
     
     return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
     """Toggle premium status for a user (cannot remove premium from admins)"""
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -508,9 +526,19 @@ async def toggle_premium_status(user_id: str, current_user: User = Depends(requi
     
     new_premium_status = not target_user.get('is_premium', False)
     await db.users.update_one(
-        {"id": user_id}, 
+        {"clerk_id": user_id}, 
         {"$set": {"is_premium": new_premium_status}}
     )
+    
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_client.users.update_metadata(
+                user_id=user_id,
+                public_metadata={"isPremium": new_premium_status}
+            )
+        except Exception as e:
+            logging.error(f"Failed to update Clerk metadata: {e}")
     
     status_text = "granted" if new_premium_status else "revoked"
     return {"success": True, "message": f"Premium access {status_text} for {target_user['email']}"}
@@ -662,10 +690,9 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
     await invalidate_cache_pattern("experiences*")
     return {"success": True}
 
-# Add GZip compression middleware for response optimization
+# Middleware setup
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -778,5 +805,5 @@ async def health_check():
 async def shutdown_db_client():
     client.close()
 
-# Include the API router after all endpoints are defined
+# Include the API router
 app.include_router(api_router)
