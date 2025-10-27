@@ -167,15 +167,18 @@ backend:
   
   - task: "Advanced Redis Caching - Companies"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Implemented caching for companies endpoint with 2 hour TTL"
+        - working: true
+          agent: "testing"
+          comment: "✅ Companies caching working correctly. Both /api/companies-preview (public) and /api/companies (protected) endpoints use same cache. Cache warming verified on startup."
   
   - task: "Advanced Redis Caching - Company Questions"
     implemented: true
