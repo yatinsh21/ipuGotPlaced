@@ -510,11 +510,16 @@ async def get_all_questions(user: User = Depends(require_admin)):
 async def create_question(question: Question, user: User = Depends(require_admin)):
     await db.questions.insert_one(question.model_dump())
     
+    # Invalidate all question caches
+    await invalidate_cache_pattern("questions*")
+    await invalidate_cache_pattern("company_questions*")
+    await invalidate_cache_pattern("bookmarks*")
+    
     # Update company question count if company_id exists
     if question.company_id:
         count = await db.questions.count_documents({"company_id": question.company_id})
         await db.companies.update_one({"id": question.company_id}, {"$set": {"question_count": count}})
-        await redis_client.delete("companies")
+        await invalidate_cache_pattern("companies*")
     
     return question
 
@@ -522,10 +527,15 @@ async def create_question(question: Question, user: User = Depends(require_admin
 async def update_question(question_id: str, question: Question, user: User = Depends(require_admin)):
     await db.questions.update_one({"id": question_id}, {"$set": question.model_dump()})
     
+    # Invalidate all question caches
+    await invalidate_cache_pattern("questions*")
+    await invalidate_cache_pattern("company_questions*")
+    await invalidate_cache_pattern("bookmarks*")
+    
     if question.company_id:
         count = await db.questions.count_documents({"company_id": question.company_id})
         await db.companies.update_one({"id": question.company_id}, {"$set": {"question_count": count}})
-        await redis_client.delete("companies")
+        await invalidate_cache_pattern("companies*")
     
     return question
 
@@ -534,10 +544,15 @@ async def delete_question(question_id: str, user: User = Depends(require_admin))
     question = await db.questions.find_one({"id": question_id})
     await db.questions.delete_one({"id": question_id})
     
+    # Invalidate all question caches
+    await invalidate_cache_pattern("questions*")
+    await invalidate_cache_pattern("company_questions*")
+    await invalidate_cache_pattern("bookmarks*")
+    
     if question and question.get('company_id'):
         count = await db.questions.count_documents({"company_id": question['company_id']})
         await db.companies.update_one({"id": question['company_id']}, {"$set": {"question_count": count}})
-        await redis_client.delete("companies")
+        await invalidate_cache_pattern("companies*")
     
     return {"success": True}
 
