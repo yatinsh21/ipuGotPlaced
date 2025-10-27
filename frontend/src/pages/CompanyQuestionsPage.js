@@ -186,10 +186,15 @@ const CompanyQuestionsPage = () => {
     }
 
     try {
+      const token = await user.getClerkSessionToken();
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
         {},
-        { withCredentials: true }
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
       
       if (response.data.bookmarked) {
