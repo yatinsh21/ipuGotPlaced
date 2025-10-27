@@ -497,10 +497,52 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
         </div>
       </CardHeader>
       <CardContent>
+        {/* Filters */}
+        <div className="mb-4 flex gap-4 items-center">
+          <div>
+            <Label className="text-xs">Filter by Type</Label>
+            <Select value={filterType} onValueChange={setFilterType}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Questions</SelectItem>
+                <SelectItem value="topic">Topic Questions</SelectItem>
+                <SelectItem value="company">Company Questions</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Label className="text-xs">Search</Label>
+            <Input 
+              placeholder="Search questions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="text-sm text-gray-600 mb-2">
+          Showing {filteredQuestions.length} of {questions.length} questions
+        </div>
+
         <div className="space-y-2 max-h-96 overflow-y-auto">
-          {questions.map((q) => (
+          {filteredQuestions.map((q) => (
             <div key={q.id} className="border border-gray-200 p-4 flex justify-between items-start">
               <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  {q.company_id ? (
+                    <Badge className="bg-yellow-100 text-yellow-800">
+                      Company: {getCompanyName(q.company_id)}
+                    </Badge>
+                  ) : q.topic_id ? (
+                    <Badge className="bg-blue-100 text-blue-800">
+                      Topic: {getTopicName(q.topic_id)}
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline">No Assignment</Badge>
+                  )}
+                </div>
                 <p className="font-medium text-gray-900 mb-1">{q.question}</p>
                 <div className="flex gap-2 flex-wrap">
                   <Badge variant="outline">{q.difficulty}</Badge>
@@ -509,7 +551,7 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || []}); setOpen(true); }}>
+                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || [], topic_id: q.topic_id || '', company_id: q.company_id || '', category: q.category || ''}); setOpen(true); }}>
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)}>
@@ -518,6 +560,7 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
               </div>
             </div>
           ))}
+        </div>
         </div>
       </CardContent>
     </Card>
