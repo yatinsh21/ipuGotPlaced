@@ -28,11 +28,25 @@ const CompanyQuestionsPage = () => {
   const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
-    if (user) {
-      setBookmarkedIds(user.bookmarked_questions || []);
+    if (isPremiumUser && isSignedIn) {
+      fetchUserBookmarks();
     }
     fetchCompanyAndQuestions();
-  }, [companyId, user]);
+  }, [companyId, isPremiumUser, isSignedIn]);
+
+  const fetchUserBookmarks = async () => {
+    try {
+      const token = await user.getClerkSessionToken();
+      const response = await axios.get(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setBookmarkedIds(response.data.bookmarked_questions || []);
+    } catch (error) {
+      console.error('Failed to fetch bookmarks:', error);
+    }
+  };
 
   // Disable copy/paste functionality
   useEffect(() => {
