@@ -151,19 +151,22 @@ const GoldminePage = () => {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-12 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-4">
             <Crown className="h-10 w-10 text-yellow-500" />
-            <div>
-              <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-2">Goldmine</h1>
-              <p className="text-lg text-gray-600">Company-wise interview questions</p>
-            </div>
+            <h1 className="text-4xl sm:text-5xl font-bold text-gray-900">
+              Crack Top Companies with<br />Real Interview Questions
+            </h1>
           </div>
+          <p className="text-lg text-gray-600 mb-2">
+            Questions sourced from actual placement experiences. 15+ companies • 98% match rate from recent interviews.
+          </p>
+          <p className="text-xl font-semibold text-gray-900">The Only Set You Need</p>
           
           {user && !user.is_premium && (
             <Button 
               onClick={() => setShowPayment(true)}
-              className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
+              className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 mt-4"
             >
               <Crown className="h-4 w-4 mr-2" />
               Unlock All for ₹1
