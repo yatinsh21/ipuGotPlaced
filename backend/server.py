@@ -25,13 +25,26 @@ import hashlib
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# MongoDB connection with connection pooling
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    maxPoolSize=50,
+    minPoolSize=10,
+    maxIdleTimeMS=45000,
+    connectTimeoutMS=10000,
+    serverSelectionTimeoutMS=5000
+)
 db = client[os.environ['DB_NAME']]
 
-# Redis connection
-redis_client = redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379'), decode_responses=True)
+# Redis connection with connection pooling
+redis_client = redis.from_url(
+    os.environ.get('REDIS_URL', 'redis://localhost:6379'), 
+    decode_responses=True,
+    max_connections=50,
+    socket_timeout=5,
+    socket_connect_timeout=5
+)
 
 # Cloudinary configuration
 cloudinary.config(
