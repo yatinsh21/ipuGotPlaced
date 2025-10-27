@@ -447,7 +447,7 @@ async def revoke_admin_access(user_id: str, current_user: User = Depends(require
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    if user_id == current_user.id:
+    if user_id == current_user.clerk_id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
     await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": False}})
