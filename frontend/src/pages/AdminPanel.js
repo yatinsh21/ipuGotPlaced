@@ -918,6 +918,53 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
     setTips('');
   };
 
+  const parseExperienceForEdit = (experienceText) => {
+    // Split by \n and parse rounds and tips
+    const lines = experienceText.split('\\n').filter(line => line.trim());
+    const parsedRounds = [];
+    let parsedTips = '';
+    
+    lines.forEach(line => {
+      const trimmedLine = line.trim();
+      
+      // Check if it's a round line
+      if (trimmedLine.match(/^Round \d+:/i)) {
+        const [title, ...descParts] = trimmedLine.split(':');
+        parsedRounds.push({
+          title: title.trim(),
+          description: descParts.join(':').trim()
+        });
+      } else if (trimmedLine.match(/^(Tips?|Focus):/i)) {
+        // Extract tips
+        const [, ...tipsParts] = trimmedLine.split(':');
+        parsedTips = tipsParts.join(':').trim();
+      }
+    });
+    
+    return {
+      rounds: parsedRounds.length > 0 ? parsedRounds : [{ title: 'Round 1', description: '' }],
+      tips: parsedTips
+    };
+  };
+
+  const handleEdit = (exp) => {
+    setEditing(exp);
+    setFormData({
+      company_id: exp.company_id,
+      company_name: exp.company_name,
+      role: exp.role,
+      rounds: exp.rounds,
+      experience: exp.experience,
+      status: exp.status || 'selected'
+    });
+    
+    // Parse the experience text to populate rounds and tips
+    const parsed = parseExperienceForEdit(exp.experience);
+    setRounds(parsed.rounds);
+    setTips(parsed.tips);
+    setOpen(true);
+  };
+
   const addRound = () => {
     setRounds([...rounds, { title: `Round ${rounds.length + 1}`, description: '' }]);
   };
