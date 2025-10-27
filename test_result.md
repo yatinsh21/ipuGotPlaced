@@ -348,26 +348,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Redis Connection Pooling"
-    - "MongoDB Connection Pooling"
-    - "Advanced Redis Caching - Topics"
-    - "Advanced Redis Caching - Questions"
-    - "Advanced Redis Caching - Companies"
-    - "Advanced Redis Caching - Company Questions"
-    - "Advanced Redis Caching - Experiences"
-    - "Advanced Redis Caching - Bookmarks"
-    - "Cache Invalidation Strategy"
-    - "GZip Compression Middleware"
-    - "Database Indexes"
-    - "Cache Warming on Startup"
-    - "Cache Stats Endpoint"
-    - "Health Check Endpoint"
-    - "Admin User Management - Grant Admin Access"
-    - "Admin User Management - Revoke Admin Access"
-    - "Admin User Management - Toggle Premium Status"
-    - "Admin User Management - Get All Users"
+    - "Admin Panel UI - User Management"
   stuck_tasks: []
-  test_all: true
+  test_all: false
   test_priority: "high_first"
 
   - task: "Admin User Management - Grant Admin Access"
