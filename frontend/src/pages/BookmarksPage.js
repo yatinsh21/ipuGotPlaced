@@ -13,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
 
 const BookmarksPage = () => {
   const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const [bookmarks, setBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
   
