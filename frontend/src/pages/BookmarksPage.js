@@ -27,7 +27,7 @@ const BookmarksPage = () => {
 
   const fetchBookmarks = async () => {
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       const response = await axios.get(`${API}/bookmarks`, { 
         headers: {
           Authorization: `Bearer ${token}`
@@ -44,7 +44,7 @@ const BookmarksPage = () => {
 
   const removeBookmark = async (questionId) => {
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       await axios.post(`${API}/bookmark/${questionId}`, {}, { 
         headers: {
           Authorization: `Bearer ${token}`
