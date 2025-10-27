@@ -163,32 +163,43 @@ async def invalidate_cache_pattern(pattern: str):
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
-# Auth dependency using Clerk
-async def get_current_user(request: Request) -> Optional[User]:
-    """Verify Clerk session token and get/create user"""
-    authorization = request.headers.get('Authorization') or request.headers.get('authorization')
+# Auth dependency using Clerk - REWRITTEN
+async def get_current_user(authorization: str = Header(None, alias="Authorization")) -> Optional[User]:
+    """Verify Clerk session token and get/create user - SIMPLIFIED VERSION"""
     
-    logging.info(f"Auth check - Headers present: {list(request.headers.keys())}")
-    logging.info(f"Authorization header: {authorization[:50] if authorization else 'None'}")
-    
-    if not authorization or not authorization.startswith('Bearer '):
-        logging.warning(f"Missing or invalid authorization header")
+    # Check if authorization header exists
+    if not authorization:
+        logging.warning("No Authorization header provided")
         return None
     
+    # Check if it's a Bearer token
+    if not authorization.startswith('Bearer '):
+        logging.warning(f"Invalid Authorization format: {authorization[:20]}")
+        return None
+    
+    # Check if Clerk client is initialized
     if not clerk_client:
         logging.error("Clerk client not initialized")
         return None
     
-    token = authorization.split(' ')[1]
+    # Extract token
+    token = authorization.replace('Bearer ', '').strip()
+    
+    if not token:
+        logging.warning("Empty token after Bearer prefix")
+        return None
     
     try:
-        # Decode JWT without verification to get clerk_user_id
+        # Decode JWT to get clerk_user_id
         import jwt
         decoded = jwt.decode(token, options={"verify_signature": False})
         clerk_user_id = decoded.get('sub')
         
         if not clerk_user_id:
+            logging.warning("No 'sub' claim in token")
             return None
+        
+        logging.info(f"✓ Token decoded successfully for clerk_id: {clerk_user_id}")
         
         # Get or create user in our database
         user_doc = await db.users.find_one({"clerk_id": clerk_user_id}, {"_id": 0})
@@ -211,6 +222,7 @@ async def get_current_user(request: Request) -> Optional[User]:
                 }
                 await db.users.insert_one(new_user)
                 user_doc = new_user
+                logging.info(f"✓ Created new user: {new_user['email']}")
             except Exception as e:
                 logging.error(f"Failed to get Clerk user: {e}")
                 return None
@@ -229,18 +241,22 @@ async def get_current_user(request: Request) -> Optional[User]:
                     )
                     user_doc['is_premium'] = is_premium
                     user_doc['is_admin'] = is_admin
+                logging.info(f"✓ User authenticated: {user_doc['email']}")
             except Exception as e:
                 logging.error(f"Failed to update user metadata: {e}")
         
         return User(**user_doc)
         
     except Exception as e:
-        logging.error(f"Auth error: {e}")
+        logging.error(f"❌ Auth error: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
         return None
 
 async def require_auth(user: User = Depends(get_current_user)) -> User:
     """Require authenticated user"""
     if not user:
+        logging.warning("❌ Authentication required but no user found")
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
 
