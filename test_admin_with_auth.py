@@ -270,11 +270,25 @@ class AdminUserManagementTester:
             
             # Grant admin access
             if self.test_grant_admin_access(target_id, target_email):
+                # Try to toggle premium (should fail if user is now admin)
+                print(f"🔒 Testing premium removal prevention for admin user...")
+                self.test_toggle_premium_status(target_id, target_email, is_admin_user=True)
+                
                 # Try to revoke admin access
                 self.test_revoke_admin_access(target_id, target_email)
-                
-                # Try to toggle premium (should fail if user is now admin)
-                self.test_toggle_premium_status(target_id, target_email, is_admin_user=True)
+            
+            print()
+        
+        # Step 4.5: Test with another non-admin user for premium toggle
+        if len(non_admin_users) > 1:
+            target_user = non_admin_users[1]
+            target_id = target_user.get('id')
+            target_email = target_user.get('email', 'unknown')
+            
+            print(f"💎 Testing premium toggle with non-admin user: {target_email}")
+            
+            # Toggle premium for non-admin user (should work)
+            self.test_toggle_premium_status(target_id, target_email, is_admin_user=False)
             
             print()
         
