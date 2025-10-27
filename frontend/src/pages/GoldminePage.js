@@ -44,10 +44,17 @@ const GoldminePage = () => {
 
   const handlePayment = async () => {
     try {
+      // Get Clerk session token
+      const token = await user.getClerkSessionToken();
+      
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
         { amount: 100 }, // ₹1
-        { withCredentials: true }
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
 
       const options = {
@@ -66,7 +73,11 @@ const GoldminePage = () => {
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature
               },
-              { withCredentials: true }
+              { 
+                headers: {
+                  Authorization: `Bearer ${token}`
+                }
+              }
             );
             toast.success('Payment successful! Reloading...');
             setTimeout(() => window.location.reload(), 1500);
@@ -75,8 +86,8 @@ const GoldminePage = () => {
           }
         },
         prefill: {
-          name: user?.name,
-          email: user?.email
+          name: user?.fullName,
+          email: user?.primaryEmailAddress?.emailAddress
         },
         theme: {
           color: '#000000'
