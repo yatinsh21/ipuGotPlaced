@@ -504,7 +504,7 @@ const TopicQuestionsManager = ({ questions, topics, fetchAllData, getAuthConfig 
 };
 
 // Company Questions Manager Component (Premium Goldmine Questions)
-const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
+const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [selectedCompany, setSelectedCompany] = useState('all');
