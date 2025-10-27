@@ -232,7 +232,11 @@ async def get_questions(topic_id: Optional[str] = None, difficulty: Optional[str
 
 # Premium endpoints - Companies & Questions
 @api_router.get("/companies", response_model=List[Company])
-async def get_companies(user: User = Depends(require_premium)):
+async def get_companies(user: User = Depends(require_auth)):
+    # Allow both premium users and admins
+    if not user.is_premium and not user.is_admin:
+        raise HTTPException(status_code=403, detail="Premium subscription required")
+    
     cached = await redis_client.get("companies")
     if cached:
         return json.loads(cached)
