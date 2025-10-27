@@ -35,19 +35,10 @@ const CompanyQuestionsPage = () => {
 
   const fetchCompanyAndQuestions = async () => {
     try {
-      // For preview, we'll create mock data
-      const mockCompany = {
-        id: companyId,
-        name: companyId === '1' ? 'Google' : companyId === '2' ? 'Microsoft' : companyId === '3' ? 'Amazon' : companyId === '4' ? 'Meta' : companyId === '5' ? 'Apple' : 'Netflix',
-        logo_url: companyId === '1' ? 'https://cdn.worldvectorlogo.com/logos/google-icon.svg' : 
-                   companyId === '2' ? 'https://cdn.worldvectorlogo.com/logos/microsoft-5.svg' :
-                   companyId === '3' ? 'https://cdn.worldvectorlogo.com/logos/amazon-icon-1.svg' :
-                   companyId === '4' ? 'https://cdn.worldvectorlogo.com/logos/meta-icon-new.svg' :
-                   companyId === '5' ? 'https://cdn.worldvectorlogo.com/logos/apple-14.svg' : 
-                   'https://cdn.worldvectorlogo.com/logos/netflix-3.svg'
-      };
-      
-      setCompany(mockCompany);
+      // Fetch company from preview endpoint
+      const companiesRes = await axios.get(`${API}/companies-preview`);
+      const comp = companiesRes.data.find(c => c.id === companyId);
+      setCompany(comp);
 
       // For premium users, fetch real questions
       if (isPremiumUser) {
