@@ -368,7 +368,7 @@ const GoldminePage = () => {
                 data-testid="upgrade-premium-btn"
                 className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-4 text-base mb-3"
               >
-                Upgrade to Premium for ₹1
+                Upgrade to Premium for ₹399
               </Button>
               
               <Button 
