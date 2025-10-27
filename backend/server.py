@@ -305,12 +305,13 @@ async def logout(request: Request, response: Response, user: User = Depends(requ
 @api_router.get("/topics", response_model=List[Topic])
 async def get_topics():
     # Check cache
-    cached = await redis_client.get("topics")
+    cache_key = "topics"
+    cached = await get_cached_data(cache_key)
     if cached:
-        return json.loads(cached)
+        return cached
     
     topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
-    await redis_client.set("topics", json.dumps(topics), ex=3600)
+    await set_cached_data(cache_key, topics, ttl=7200)  # 2 hour cache
     return topics
 
 @api_router.get("/companies-preview", response_model=List[Company])
