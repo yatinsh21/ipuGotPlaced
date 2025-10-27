@@ -350,6 +350,10 @@ test_plan:
     - "Cache Warming on Startup"
     - "Cache Stats Endpoint"
     - "Health Check Endpoint"
+    - "Admin User Management - Grant Admin Access"
+    - "Admin User Management - Revoke Admin Access"
+    - "Admin User Management - Toggle Premium Status"
+    - "Admin User Management - Get All Users"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
