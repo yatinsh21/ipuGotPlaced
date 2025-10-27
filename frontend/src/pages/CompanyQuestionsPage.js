@@ -18,6 +18,7 @@ const CompanyQuestionsPage = () => {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const [questions, setQuestions] = useState([]);
   const [company, setCompany] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
