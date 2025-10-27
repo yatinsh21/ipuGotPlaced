@@ -44,14 +44,7 @@ const GoldminePage = () => {
   };
 
   const handleCompanyClick = (companyId) => {
-    if (!user) {
-      toast.error('Please sign in to access company questions');
-      return;
-    }
-    if (!user.is_premium) {
-      setShowPayment(true);
-      return;
-    }
+    // Allow everyone to view company preview
     navigate(`/company/${companyId}`);
   };
 
