@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Crown, Lock } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Crown, Lock, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
