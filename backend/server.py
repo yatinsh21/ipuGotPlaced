@@ -772,6 +772,10 @@ async def startup_db():
         await db.sessions.create_index("session_token", unique=True)
         await db.sessions.create_index("expires_at", expireAfterSeconds=0)
         
+        # Cache collection indexes
+        await cache_collection.create_index("key", unique=True)
+        await cache_collection.create_index("expires_at", expireAfterSeconds=0)  # Auto-delete expired cache
+        
         logger.info("Database indexes created successfully")
         
         # Warm up cache with frequently accessed data
