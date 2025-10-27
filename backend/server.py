@@ -618,15 +618,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# 2. Session middleware
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this'),
-    https_only=True,  # Force HTTPS for cookies
-    same_site="none"  # Allow cross-site
-)
-
-# 3. GZip compression last
+# 2. GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 logging.basicConfig(
