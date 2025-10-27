@@ -102,7 +102,12 @@ const GoldminePage = () => {
       const razorpay = new window.Razorpay(options);
       razorpay.open();
     } catch (error) {
-      toast.error('Failed to initiate payment');
+      console.error('Payment initiation error:', error);
+      if (error.response?.status === 401) {
+        toast.error('Please sign in again to complete payment');
+      } else {
+        toast.error('Failed to initiate payment');
+      }
     }
   };
 
