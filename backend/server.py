@@ -1,9 +1,8 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
+from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -16,8 +15,7 @@ import razorpay
 import json
 import cloudinary
 import cloudinary.uploader
-from authlib.integrations.starlette_client import OAuth
-from itsdangerous import URLSafeTimedSerializer
+from clerk_backend_api import Clerk
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -37,6 +35,14 @@ db = client[os.environ['DB_NAME']]
 # MongoDB-based cache collection
 cache_collection = db.cache
 
+# Clerk client
+clerk_secret = os.environ.get('CLERK_SECRET_KEY', '')
+if clerk_secret:
+    clerk_client = Clerk(bearer_auth=clerk_secret)
+else:
+    clerk_client = None
+    logging.warning("CLERK_SECRET_KEY not set")
+
 # Cloudinary configuration
 cloudinary.config(
     cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'demo'),
@@ -50,34 +56,20 @@ razorpay_client = razorpay.Client(auth=(
     os.environ.get('RAZORPAY_KEY_SECRET', '')
 ))
 
-# Admin emails
-ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
-
-# Session serializer for secure cookies
-serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'your-secret-key-change-this'))
-
-# OAuth setup
-oauth = OAuth()
-oauth.register(
-    name='google',
-    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
-
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    clerk_id: str
     email: str
     name: str
     picture: Optional[str] = None
     is_premium: bool = False
     is_admin: bool = False
+    bookmarked_questions: List[str] = []
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
