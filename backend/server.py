@@ -479,6 +479,62 @@ async def get_all_users(user: User = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0}).to_list(10000)
     return users
 
+@api_router.post("/admin/users/{user_id}/grant-admin")
+async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+    """Grant admin and premium access to a user"""
+    # Check if user exists
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update user to admin and premium
+    await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"is_admin": True, "is_premium": True}}
+    )
+    
+    return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
+
+@api_router.post("/admin/users/{user_id}/revoke-admin")
+async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+    """Revoke admin access from a user (keeps premium status)"""
+    # Check if user exists
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent revoking own admin access
+    if user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
+    
+    # Update user to remove admin
+    await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"is_admin": False}}
+    )
+    
+    return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
+
+@api_router.post("/admin/users/{user_id}/toggle-premium")
+async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
+    """Toggle premium status for a user (cannot remove premium from admins)"""
+    target_user = await db.users.find_one({"id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent removing premium from admin users
+    if target_user.get('is_admin') and target_user.get('is_premium'):
+        raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
+    
+    new_premium_status = not target_user.get('is_premium', False)
+    await db.users.update_one(
+        {"id": user_id}, 
+        {"$set": {"is_premium": new_premium_status}}
+    )
+    
+    status_text = "granted" if new_premium_status else "revoked"
+    return {"success": True, "message": f"Premium access {status_text} for {target_user['email']}"}
+
 # Admin - Topics
 @api_router.post("/admin/topics")
 async def create_topic(topic: Topic, user: User = Depends(require_admin)):
