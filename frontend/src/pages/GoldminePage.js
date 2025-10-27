@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '@clerk/clerk-react';
+import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -13,6 +13,7 @@ const API = `${BACKEND_URL}/api`;
 
 const GoldminePage = () => {
   const { isSignedIn, user } = useUser();
+  const { getToken } = useAuth();
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
