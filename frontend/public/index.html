@@ -46,8 +46,7 @@
     <title>IPU Got Placed | Crack Your Dream Job</title>
 
     <!-- ✅ Critical Scripts -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
-    <script src="https://assets.emergent.sh/scripts/emergent-main.js" defer></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
 
     <!-- ✅ rrweb (recording) -->
     <script src="https://unpkg.com/rrweb@latest/dist/rrweb.min.js" defer></script>
@@ -56,9 +55,7 @@
     <!-- ✅ Conditional Visual Edit Scripts -->
     <script>
       if (window.self !== window.top && "%REACT_APP_ENABLE_VISUAL_EDITS%" === "true") {
-        const debugScript = document.createElement("script");
-        debugScript.src = "https://assets.emergent.sh/scripts/debug-monitor.js";
-        document.head.appendChild(debugScript);
+  // visual-edit debug monitor removed (was loading from emergent assets)
 
         window.tailwind = { corePlugins: { preflight: false } };
 
