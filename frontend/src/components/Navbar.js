@@ -1,27 +1,16 @@
-import { useContext, useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AuthContext } from '@/App';
+import { useUser, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { User, LogOut, Crown, Bookmark, Shield, Menu, X } from 'lucide-react';
-
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+import { Crown, Bookmark, Shield, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLogin = () => {
-    window.location.href = `${BACKEND_URL}/api/auth/login`;
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/');
-    setMobileMenuOpen(false);
-  };
+  const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
+  const isAdmin = user?.publicMetadata?.isAdmin;
 
   return (
     <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
