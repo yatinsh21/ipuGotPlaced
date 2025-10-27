@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bookmark, BookmarkCheck, ArrowLeft } from 'lucide-react';
+import { Bookmark, BookmarkCheck, ArrowLeft, Lock, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -22,33 +22,118 @@ const CompanyQuestionsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const isPremiumUser = user?.is_premium || user?.is_admin;
 
   useEffect(() => {
     if (user) {
       setBookmarkedIds(user.bookmarked_questions || []);
-      fetchCompanyAndQuestions();
     }
+    fetchCompanyAndQuestions();
   }, [companyId, user]);
 
   const fetchCompanyAndQuestions = async () => {
     try {
-      const [companiesRes, questionsRes] = await Promise.all([
-        axios.get(`${API}/companies`, { withCredentials: true }),
-        axios.get(`${API}/company-questions/${companyId}`, { withCredentials: true })
-      ]);
+      // For preview, we'll create mock data
+      const mockCompany = {
+        id: companyId,
+        name: companyId === '1' ? 'Google' : companyId === '2' ? 'Microsoft' : companyId === '3' ? 'Amazon' : companyId === '4' ? 'Meta' : companyId === '5' ? 'Apple' : 'Netflix',
+        logo_url: companyId === '1' ? 'https://cdn.worldvectorlogo.com/logos/google-icon.svg' : 
+                   companyId === '2' ? 'https://cdn.worldvectorlogo.com/logos/microsoft-5.svg' :
+                   companyId === '3' ? 'https://cdn.worldvectorlogo.com/logos/amazon-icon-1.svg' :
+                   companyId === '4' ? 'https://cdn.worldvectorlogo.com/logos/meta-icon-new.svg' :
+                   companyId === '5' ? 'https://cdn.worldvectorlogo.com/logos/apple-14.svg' : 
+                   'https://cdn.worldvectorlogo.com/logos/netflix-3.svg'
+      };
       
-      const comp = companiesRes.data.find(c => c.id === companyId);
-      setCompany(comp);
-      setQuestions(questionsRes.data);
+      setCompany(mockCompany);
+
+      // For premium users, fetch real questions
+      if (isPremiumUser) {
+        const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, { withCredentials: true });
+        setQuestions(questionsRes.data);
+      } else {
+        // For non-premium, show preview questions (locked)
+        const previewQuestions = [
+          { id: '1', question: 'Design a scalable system for...', category: 'technical', difficulty: 'hard', tags: ['v.imp'] },
+          { id: '2', question: 'Implement a data structure that...', category: 'coding', difficulty: 'medium', tags: ['fav'] },
+          { id: '3', question: 'Tell me about your most challenging project', category: 'project', difficulty: 'easy', tags: [] },
+          { id: '4', question: 'Why do you want to work at this company?', category: 'HR', difficulty: 'easy', tags: ['just-read'] },
+          { id: '5', question: 'Explain the concept of distributed systems', category: 'technical', difficulty: 'hard', tags: ['v.imp'] },
+          { id: '6', question: 'Write code to reverse a linked list', category: 'coding', difficulty: 'medium', tags: [] },
+        ];
+        setQuestions(previewQuestions);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
-      toast.error('Failed to load questions');
+      toast.error('Failed to load company data');
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleBookmark = async (questionId) => {
+  const handleQuestionClick = () => {
+    if (!isPremiumUser) {
+      setShowUpgradeModal(true);
+    }
+  };
+
+  const handlePayment = async () => {
+    try {
+      const orderResponse = await axios.post(
+        `${API}/payment/create-order`,
+        { amount: 100 }, // ₹1
+        { withCredentials: true }
+      );
+
+      const options = {
+        key: 'rzp_live_RVGaTvsyo82E4p',
+        amount: orderResponse.data.amount,
+        currency: 'INR',
+        order_id: orderResponse.data.id,
+        name: 'InterviewPrep Premium',
+        description: 'Lifetime access to company-wise questions',
+        handler: async (response) => {
+          try {
+            await axios.post(
+              `${API}/payment/verify`,
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              },
+              { withCredentials: true }
+            );
+            toast.success('Payment successful! Reloading...');
+            setTimeout(() => window.location.reload(), 1500);
+          } catch (error) {
+            toast.error('Payment verification failed');
+          }
+        },
+        prefill: {
+          name: user?.name,
+          email: user?.email
+        },
+        theme: {
+          color: '#000000'
+        }
+      };
+
+      const razorpay = new window.Razorpay(options);
+      razorpay.open();
+    } catch (error) {
+      toast.error('Failed to initiate payment');
+    }
+  };
+
+  const toggleBookmark = async (questionId, e) => {
+    e.stopPropagation();
+    if (!isPremiumUser) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     try {
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
@@ -102,6 +187,7 @@ const CompanyQuestionsPage = () => {
         <Navbar />
         <div className="max-w-4xl mx-auto px-4 py-20 text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Please sign in</h1>
+          <p className="text-gray-600 mb-6">Sign in to view company questions</p>
         </div>
       </div>
     );
@@ -122,6 +208,28 @@ const CompanyQuestionsPage = () => {
           Back to Goldmine
         </Button>
 
+        {/* Premium Banner for non-premium users */}
+        {!isPremiumUser && (
+          <div className="mb-6 bg-yellow-50 border-2 border-yellow-200 p-6 rounded">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <Lock className="h-5 w-5" />
+                  Preview Mode - Unlock Full Access
+                </h3>
+                <p className="text-gray-700">You're viewing the question structure. Upgrade to see all answers and bookmark questions.</p>
+              </div>
+              <Button 
+                onClick={handlePayment}
+                className="bg-gray-900 hover:bg-gray-800 text-white"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                Upgrade for ₹1
+              </Button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -129,12 +237,8 @@ const CompanyQuestionsPage = () => {
         ) : (
           <>
             <div className="mb-8 flex items-center gap-4">
-              {company?.logo_url ? (
+              {company?.logo_url && (
                 <img src={company.logo_url} alt={company.name} className="h-16 w-16 object-contain" />
-              ) : (
-                <div className="h-16 w-16 bg-gray-200 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-gray-600">{company?.name.charAt(0)}</span>
-                </div>
               )}
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">{company?.name}</h1>
@@ -163,12 +267,16 @@ const CompanyQuestionsPage = () => {
                   <AccordionItem key={question.id} value={question.id}>
                     <AccordionTrigger 
                       data-testid={`question-${index}`}
-                      className="px-6 py-4 hover:bg-gray-50 text-left"
+                      className={`px-6 py-4 hover:bg-gray-50 text-left ${!isPremiumUser ? 'cursor-default' : ''}`}
+                      onClick={!isPremiumUser ? handleQuestionClick : undefined}
                     >
                       <div className="flex items-center justify-between flex-1 gap-4">
                         <div className="flex items-center gap-3 flex-1">
+                          {!isPremiumUser && <Lock className="h-4 w-4 text-gray-400" />}
                           <span className="text-gray-500 font-medium">Q{index + 1}.</span>
-                          <span className="font-medium text-gray-900">{question.question}</span>
+                          <span className={`font-medium ${!isPremiumUser ? 'text-gray-500' : 'text-gray-900'}`}>
+                            {question.question}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge className={getDifficultyColor(question.difficulty)}>
@@ -179,29 +287,30 @@ const CompanyQuestionsPage = () => {
                               {tag}
                             </Badge>
                           ))}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleBookmark(question.id);
-                            }}
-                            data-testid={`bookmark-${index}`}
-                          >
-                            {bookmarkedIds.includes(question.id) ? (
-                              <BookmarkCheck className="h-5 w-5 text-gray-900" />
-                            ) : (
-                              <Bookmark className="h-5 w-5 text-gray-400" />
-                            )}
-                          </Button>
+                          {isPremiumUser && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => toggleBookmark(question.id, e)}
+                              data-testid={`bookmark-${index}`}
+                            >
+                              {bookmarkedIds.includes(question.id) ? (
+                                <BookmarkCheck className="h-5 w-5 text-gray-900" />
+                              ) : (
+                                <Bookmark className="h-5 w-5 text-gray-400" />
+                              )}
+                            </Button>
+                          )}
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                      <div className="prose max-w-none">
-                        <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
-                      </div>
-                    </AccordionContent>
+                    {isPremiumUser && (
+                      <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                        <div className="prose max-w-none">
+                          <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
+                        </div>
+                      </AccordionContent>
+                    )}
                   </AccordionItem>
                 ))}
               </Accordion>
@@ -215,6 +324,38 @@ const CompanyQuestionsPage = () => {
           </>
         )}
       </div>
+
+      {/* Upgrade Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowUpgradeModal(false)}>
+          <div className="bg-white p-8 max-w-md mx-4 border-2 border-gray-900" onClick={e => e.stopPropagation()}>
+            <Crown className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Unlock Full Access</h2>
+            <p className="text-gray-600 mb-6 text-center">
+              Upgrade to premium to view complete answers, bookmark questions, and access all features.
+            </p>
+            <div className="mb-6 text-center">
+              <div className="text-4xl font-bold text-gray-900 mb-1">₹1</div>
+              <div className="text-gray-600">One-time payment • Lifetime access</div>
+            </div>
+            <Button 
+              onClick={handlePayment}
+              className="w-full bg-gray-900 hover:bg-gray-800 text-white mb-3"
+            >
+              Upgrade Now
+            </Button>
+            <Button 
+              variant="ghost"
+              onClick={() => setShowUpgradeModal(false)}
+              className="w-full"
+            >
+              Continue Preview
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     </div>
   );
 };
