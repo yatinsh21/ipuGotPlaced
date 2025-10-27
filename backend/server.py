@@ -296,7 +296,7 @@ async def get_me(request: Request):
     user = await get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    return user.model_dump()
+    return {"user": user.model_dump()}
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
