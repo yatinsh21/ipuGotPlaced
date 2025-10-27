@@ -92,54 +92,105 @@ const GoldminePage = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 py-20">
-          <div className="bg-white border-2 border-gray-900 p-12 text-center">
-            <Crown className="h-20 w-20 mx-auto mb-6 text-yellow-500" />
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Upgrade to Premium</h1>
-            <p className="text-lg text-gray-600 mb-8">
-              Get access to company-wise interview questions, bookmarks, and more
-            </p>
-            
-            <div className="mb-8">
-              <div className="text-5xl font-bold text-gray-900 mb-2">₹1</div>
-              <div className="text-gray-600">One-time payment • Lifetime access</div>
+        <div className="max-w-6xl mx-auto px-4 py-20">
+          <div className="bg-white border-2 border-gray-900 p-12">
+            <div className="text-center mb-8">
+              <Crown className="h-20 w-20 mx-auto mb-6 text-yellow-500" />
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">Upgrade to Premium</h1>
+              <p className="text-lg text-gray-600 mb-8">
+                Unlock company-wise questions and premium features
+              </p>
+              
+              <div className="mb-8">
+                <div className="text-5xl font-bold text-gray-900 mb-2">₹1</div>
+                <div className="text-gray-600">One-time payment • Lifetime access</div>
+              </div>
             </div>
 
-            <ul className="text-left max-w-md mx-auto mb-8 space-y-3">
-              <li className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-gray-900"></div>
-                <span className="text-gray-700">Access to 100+ companies</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-gray-900"></div>
-                <span className="text-gray-700">Company-wise categorized questions</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-gray-900"></div>
-                <span className="text-gray-700">Bookmark important questions</span>
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="h-2 w-2 bg-gray-900"></div>
-                <span className="text-gray-700">Question tags and filters</span>
-              </li>
-            </ul>
+            {/* Comparison Table */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4 text-center">Free vs Premium</h3>
+              <div className="grid grid-cols-3 gap-4 border-2 border-gray-200">
+                {/* Header */}
+                <div className="p-4 bg-gray-50 font-semibold">Features</div>
+                <div className="p-4 bg-gray-50 font-semibold text-center">Free</div>
+                <div className="p-4 bg-yellow-50 font-semibold text-center border-l-2 border-yellow-500">Premium</div>
+                
+                {/* Topic-wise Questions */}
+                <div className="p-4 border-t">Topic-wise Questions</div>
+                <div className="p-4 border-t text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+                <div className="p-4 border-t border-l-2 border-yellow-500 text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+                
+                {/* All Question Answers */}
+                <div className="p-4 border-t">All Question Answers</div>
+                <div className="p-4 border-t text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+                <div className="p-4 border-t border-l-2 border-yellow-500 text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+                
+                {/* Company-wise Questions */}
+                <div className="p-4 border-t">Company-wise Questions</div>
+                <div className="p-4 border-t text-center">
+                  <span className="text-sm text-gray-500">Preview only (3 questions)</span>
+                </div>
+                <div className="p-4 border-t border-l-2 border-yellow-500 text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                  <span className="text-sm">All questions</span>
+                </div>
+                
+                {/* 15+ Companies */}
+                <div className="p-4 border-t">15+ Top Companies</div>
+                <div className="p-4 border-t text-center">
+                  <X className="h-5 w-5 text-red-500 mx-auto" />
+                </div>
+                <div className="p-4 border-t border-l-2 border-yellow-500 text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+                
+                {/* Bookmark Questions */}
+                <div className="p-4 border-t">Bookmark Questions</div>
+                <div className="p-4 border-t text-center">
+                  <X className="h-5 w-5 text-red-500 mx-auto" />
+                </div>
+                <div className="p-4 border-t border-l-2 border-yellow-500 text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+                
+                {/* Question Tags */}
+                <div className="p-4 border-t">Question Tags & Filters</div>
+                <div className="p-4 border-t text-center">
+                  <X className="h-5 w-5 text-red-500 mx-auto" />
+                </div>
+                <div className="p-4 border-t border-l-2 border-yellow-500 text-center">
+                  <Check className="h-5 w-5 text-green-600 mx-auto" />
+                </div>
+              </div>
+            </div>
 
-            <Button 
-              size="lg" 
-              onClick={handlePayment}
-              data-testid="upgrade-premium-btn"
-              className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg"
-            >
-              Upgrade to Premium for ₹1
-            </Button>
-            
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowPayment(false)}
-              className="mt-4"
-            >
-              Continue browsing
-            </Button>
+            <div className="text-center">
+              <Button 
+                size="lg" 
+                onClick={handlePayment}
+                data-testid="upgrade-premium-btn"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 text-lg"
+              >
+                Upgrade to Premium for ₹1
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                onClick={() => setShowPayment(false)}
+                className="mt-4"
+              >
+                Continue browsing
+              </Button>
+            </div>
           </div>
         </div>
       </div>
