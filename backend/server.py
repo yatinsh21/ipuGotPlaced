@@ -44,6 +44,19 @@ razorpay_client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.enviro
 # Admin emails
 ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
 
+# Session serializer for secure cookies
+serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'your-secret-key-change-this'))
+
+# OAuth setup
+oauth = OAuth()
+oauth.register(
+    name='google',
+    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
+    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={'scope': 'openid email profile'}
+)
+
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
