@@ -324,7 +324,7 @@ const TopicsManager = ({ topics, fetchAllData, getAuthConfig }) => {
 };
 
 // Topic Questions Manager Component (Free Questions)
-const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
+const TopicQuestionsManager = ({ questions, topics, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
