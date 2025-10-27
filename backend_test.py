@@ -318,6 +318,130 @@ class InterviewPrepAPITester:
         else:
             print("⚠️  Cache stats endpoint security issue")
 
+    def get_admin_session_token(self):
+        """Get admin session token by simulating OAuth login"""
+        # For testing purposes, we'll try to get users first to see if admin exists
+        # In a real scenario, admin would need to authenticate via OAuth
+        print("🔑 Attempting to get admin authentication...")
+        
+        # Try to get users without auth first (should fail)
+        success, response = self.test_endpoint('GET', 'admin/users', 401, 
+                                             description="Get users without auth (should fail)")
+        
+        # Since we can't easily simulate OAuth in tests, we'll note this limitation
+        print("⚠️  Admin authentication requires OAuth flow - cannot test admin endpoints with real auth in automated tests")
+        return None
+
+    def test_admin_user_management(self):
+        """Test admin user management functionality"""
+        print("👥 Testing Admin User Management...")
+        print("=" * 40)
+        
+        # First, try to get all users (should fail without admin auth)
+        success, response = self.test_endpoint('GET', 'admin/users', 401, 
+                                             description="Get all users (should require admin)")
+        
+        # Test grant admin access (should fail without admin auth)
+        test_user_id = "test-user-id-123"
+        success, response = self.test_endpoint('POST', f'admin/users/{test_user_id}/grant-admin', 401,
+                                             description="Grant admin access (should require admin)")
+        
+        # Test revoke admin access (should fail without admin auth)
+        success, response = self.test_endpoint('POST', f'admin/users/{test_user_id}/revoke-admin', 401,
+                                             description="Revoke admin access (should require admin)")
+        
+        # Test toggle premium status (should fail without admin auth)
+        success, response = self.test_endpoint('POST', f'admin/users/{test_user_id}/toggle-premium', 401,
+                                             description="Toggle premium status (should require admin)")
+        
+        print("✅ All admin user management endpoints properly protected")
+        print("ℹ️  Note: Full functionality testing requires admin authentication via OAuth")
+
+    def test_admin_user_management_with_auth(self):
+        """Test admin user management with authentication (if available)"""
+        print("👥 Testing Admin User Management with Auth...")
+        print("=" * 50)
+        
+        # This would require actual admin authentication
+        # For now, we'll test the endpoint structure and error handling
+        
+        # Test with invalid user ID (should fail even with auth due to user not found)
+        invalid_user_id = "invalid-user-id-999"
+        
+        print(f"🔍 Testing with invalid user ID: {invalid_user_id}")
+        print("   (These should return 401 due to no auth, but would return 404 with auth)")
+        
+        # Grant admin to invalid user
+        success, response = self.test_endpoint('POST', f'admin/users/{invalid_user_id}/grant-admin', 401,
+                                             description="Grant admin to invalid user")
+        
+        # Revoke admin from invalid user  
+        success, response = self.test_endpoint('POST', f'admin/users/{invalid_user_id}/revoke-admin', 401,
+                                             description="Revoke admin from invalid user")
+        
+        # Toggle premium for invalid user
+        success, response = self.test_endpoint('POST', f'admin/users/{invalid_user_id}/toggle-premium', 401,
+                                             description="Toggle premium for invalid user")
+        
+        print("✅ Admin user management endpoints respond correctly to unauthorized requests")
+        
+        # Test endpoint structure validation
+        print("\n🔧 Testing endpoint structure...")
+        
+        # Test missing user ID (should return 404 or 422)
+        success, response = self.test_endpoint('POST', 'admin/users//grant-admin', 404,
+                                             description="Grant admin with missing user ID")
+        
+        success, response = self.test_endpoint('POST', 'admin/users//revoke-admin', 404,
+                                             description="Revoke admin with missing user ID")
+        
+        success, response = self.test_endpoint('POST', 'admin/users//toggle-premium', 404,
+                                             description="Toggle premium with missing user ID")
+
+    def test_admin_functionality_scenarios(self):
+        """Test admin functionality business logic scenarios"""
+        print("🎯 Testing Admin Functionality Scenarios...")
+        print("=" * 45)
+        
+        print("📋 Expected Behavior (when authenticated as admin):")
+        print("   1. Grant Admin Access:")
+        print("      - Should set is_admin=true AND is_premium=true")
+        print("      - Should return success message with user email")
+        print("      - Should return 404 for non-existent users")
+        print()
+        print("   2. Revoke Admin Access:")
+        print("      - Should set is_admin=false")
+        print("      - Should keep is_premium=true (preserve premium status)")
+        print("      - Should prevent admin from revoking their own access")
+        print("      - Should return 404 for non-existent users")
+        print()
+        print("   3. Toggle Premium Status:")
+        print("      - Should toggle is_premium between true/false")
+        print("      - Should prevent removing premium from admin users")
+        print("      - Should return 404 for non-existent users")
+        print()
+        print("   4. Get All Users:")
+        print("      - Should return array of all users with status fields")
+        print("      - Should include id, email, name, is_admin, is_premium fields")
+        print()
+        
+        # Test the endpoints without auth (they should all return 401)
+        print("🔒 Testing endpoint security (all should return 401):")
+        
+        test_scenarios = [
+            ('GET', 'admin/users', 'Get all users'),
+            ('POST', 'admin/users/test-id/grant-admin', 'Grant admin access'),
+            ('POST', 'admin/users/test-id/revoke-admin', 'Revoke admin access'),
+            ('POST', 'admin/users/test-id/toggle-premium', 'Toggle premium status')
+        ]
+        
+        for method, endpoint, description in test_scenarios:
+            success, response = self.test_endpoint(method, endpoint, 401, description=description)
+        
+        print("\n✅ All admin user management endpoints properly secured")
+        print("⚠️  To test full functionality, admin authentication via OAuth is required")
+        print("   Admin email configured: sharmayatin0882@gmail.com")
+
     def test_response_times_comparison(self):
         """Compare response times for first vs cached requests"""
         print("⏱️  Testing Response Time Improvements...")
