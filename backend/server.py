@@ -577,20 +577,22 @@ async def upload_image(file: UploadFile = File(...), user: User = Depends(requir
 @api_router.post("/admin/companies")
 async def create_company(company: Company, user: User = Depends(require_admin)):
     await db.companies.insert_one(company.model_dump())
-    await redis_client.delete("companies")
+    await invalidate_cache_pattern("companies*")
     return company
 
 @api_router.put("/admin/companies/{company_id}")
 async def update_company(company_id: str, company: Company, user: User = Depends(require_admin)):
     await db.companies.update_one({"id": company_id}, {"$set": company.model_dump()})
-    await redis_client.delete("companies")
+    await invalidate_cache_pattern("companies*")
     return company
 
 @api_router.delete("/admin/companies/{company_id}")
 async def delete_company(company_id: str, user: User = Depends(require_admin)):
     await db.companies.delete_one({"id": company_id})
     await db.questions.delete_many({"company_id": company_id})
-    await redis_client.delete("companies")
+    await invalidate_cache_pattern("companies*")
+    await invalidate_cache_pattern("questions*")
+    await invalidate_cache_pattern("company_questions*")
     return {"success": True}
 
 # Admin - Experiences
