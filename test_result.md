@@ -152,15 +152,18 @@ backend:
   
   - task: "Advanced Redis Caching - Questions"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Implemented query-specific caching for questions with topic_id and difficulty filters"
+        - working: true
+          agent: "testing"
+          comment: "✅ Questions caching working correctly with all filter combinations. Tested: no filters, topic_id filter, difficulty filter, and both filters. Each creates unique cache keys and shows performance improvements."
   
   - task: "Advanced Redis Caching - Companies"
     implemented: true
