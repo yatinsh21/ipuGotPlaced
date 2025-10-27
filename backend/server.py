@@ -1,9 +1,8 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Header, UploadFile, File
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
@@ -17,9 +16,7 @@ import json
 import httpx
 import cloudinary
 import cloudinary.uploader
-from authlib.integrations.starlette_client import OAuth
-from itsdangerous import URLSafeTimedSerializer
-import hashlib
+from clerk_backend_api import Clerk
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -39,15 +36,26 @@ db = client[os.environ['DB_NAME']]
 # MongoDB-based cache collection
 cache_collection = db.cache
 
+# Clerk client
+clerk_secret = os.environ.get('CLERK_SECRET_KEY', '')
+if clerk_secret:
+    clerk_client = Clerk(bearer_auth=clerk_secret)
+else:
+    clerk_client = None
+    logging.warning("CLERK_SECRET_KEY not set")
+
 # Cloudinary configuration
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'demo'),
+    cloud_name=os.environ.get('CLOUD_NAME', 'demo'),
     api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
     api_secret=os.environ.get('CLOUDINARY_API_SECRET', '')
 )
 
 # Razorpay client
-razorpay_client = razorpay.Client(auth=(os.environ['RAZORPAY_KEY_ID'], os.environ['RAZORPAY_KEY_SECRET']))
+razorpay_client = razorpay.Client(auth=(
+    os.environ.get('RAZORPAY_KEY_ID', ''), 
+    os.environ.get('RAZORPAY_KEY_SECRET', '')
+))
 
 # Admin emails
 ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
