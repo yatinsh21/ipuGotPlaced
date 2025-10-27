@@ -5,7 +5,7 @@ import time
 from datetime import datetime
 
 class InterviewPrepAPITester:
-    def __init__(self, base_url="https://interviewace-app.preview.emergentagent.com"):
+    def __init__(self, base_url="https://igp-placement-app.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.session = requests.Session()
