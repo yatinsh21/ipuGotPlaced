@@ -614,8 +614,6 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
     await invalidate_cache_pattern("experiences*")
     return {"success": True}
 
-app.include_router(api_router)
-
 # Add GZip compression middleware for response optimization
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
