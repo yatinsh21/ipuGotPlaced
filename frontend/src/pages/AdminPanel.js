@@ -471,6 +471,7 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-2 max-h-96 overflow-y-auto">
