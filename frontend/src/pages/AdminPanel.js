@@ -506,6 +506,30 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: '', logo_url: '' });
+  const [uploading, setUploading] = useState(false);
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/admin/upload-image`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+
+      setFormData(prev => ({ ...prev, logo_url: response.data.url }));
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      toast.error('Image upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -542,7 +566,7 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
     <Card className="border-2 border-gray-200">
       <CardHeader>
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>Companies Management</CardTitle>
+          <CardTitle>Companies Management (Goldmine)</CardTitle>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button onClick={() => { setEditing(null); setFormData({ name: '', logo_url: '' }); }} data-testid="add-company-btn">
@@ -564,15 +588,31 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
                   />
                 </div>
                 <div>
-                  <Label>Logo URL (Optional)</Label>
+                  <Label>Logo Image</Label>
+                  <Input 
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={uploading}
+                    data-testid="company-logo-upload"
+                  />
+                  {uploading && <p className="text-sm text-gray-500 mt-1">Uploading...</p>}
+                </div>
+                <div>
+                  <Label>Or Logo URL</Label>
                   <Input 
                     value={formData.logo_url} 
                     onChange={(e) => setFormData({...formData, logo_url: e.target.value})} 
                     data-testid="company-logo-input"
                     placeholder="https://example.com/logo.png"
                   />
+                  {formData.logo_url && (
+                    <img src={formData.logo_url} alt="Preview" className="mt-2 h-16 w-16 object-contain border border-gray-200 p-2" />
+                  )}
                 </div>
-                <Button type="submit" data-testid="submit-company-btn">Save</Button>
+                <Button type="submit" data-testid="submit-company-btn" disabled={uploading}>
+                  {uploading ? 'Uploading...' : 'Save'}
+                </Button>
               </form>
             </DialogContent>
           </Dialog>
