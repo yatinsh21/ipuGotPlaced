@@ -9,7 +9,7 @@ You need to set admin metadata in Clerk Dashboard for your user account.
 ## 📋 Step-by-Step Guide
 
 ### Step 1: Sign In to Your App
-1. Go to https://igp-placement-app.preview.emergentagent.com
+1. Go to https://clerk-auth-igp.preview.emergentagent.com
 2. Click **"Sign in"** button
 3. Sign in with Google (or create account if first time)
 4. Complete the sign-in process
@@ -64,7 +64,7 @@ console.log(window.Clerk.user.publicMetadata)
 
 3. **Access Admin Panel:**
 - Click the "Admin" button, OR
-- Go directly to: https://igp-placement-app.preview.emergentagent.com/admin
+- Go directly to: https://clerk-auth-igp.preview.emergentagent.com/admin
 
 ---
 
@@ -177,11 +177,11 @@ If you still can't see the admin button after following all steps:
    ```
 
 2. **Check if services are running:**
-   - Frontend: https://igp-placement-app.preview.emergentagent.com
+   - Frontend: https://clerk-auth-igp.preview.emergentagent.com
    - Backend: https://ipugotplaced-1.onrender.com/api/health
 
 3. **Test the admin route directly:**
-   - Go to: https://igp-placement-app.preview.emergentagent.com/admin
+   - Go to: https://clerk-auth-igp.preview.emergentagent.com/admin
    - If you get redirected to `/`, it means metadata isn't set correctly
 
 4. **Share screenshot** of your Clerk user's Public Metadata section

@@ -45,7 +45,7 @@ Sign in with your Clerk account
 Click the **"Save"** button (usually blue button)
 
 ### Step 7: Refresh Your App
-1. Go back to your app: https://igp-placement-app.preview.emergentagent.com
+1. Go back to your app: https://clerk-auth-igp.preview.emergentagent.com
 2. Press **Ctrl+Shift+R** (Windows) or **Cmd+Shift+R** (Mac) for hard refresh
 3. The admin button should appear!
 

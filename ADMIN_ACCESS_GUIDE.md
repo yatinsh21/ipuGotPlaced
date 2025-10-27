@@ -3,7 +3,7 @@
 ## 🔐 How to Access Admin Panel
 
 ### Step 1: Sign In with Google
-1. Go to your application: https://igp-placement-app.preview.emergentagent.com
+1. Go to your application: https://clerk-auth-igp.preview.emergentagent.com
 2. Click the **"Sign in with Google"** button in the top-right navbar
 3. Choose your Google account: **sharmayatin0882@gmail.com**
 4. Complete the Google OAuth authorization
@@ -12,7 +12,7 @@
 After successful login, you have **two ways** to access the admin panel:
 
 #### Option A: Direct URL
-Navigate directly to: https://igp-placement-app.preview.emergentagent.com/admin
+Navigate directly to: https://clerk-auth-igp.preview.emergentagent.com/admin
 
 #### Option B: Via Navbar
 1. Look for the **"Admin"** button in the navbar (top-right area)
@@ -129,7 +129,7 @@ Once you access the admin panel, you'll see these tabs:
 - [ ] Signed in with Google account
 - [ ] Using whitelisted email: `sharmayatin0882@gmail.com`
 - [ ] Backend is running (check: https://ipugotplaced-1.onrender.com/api/health)
-- [ ] Frontend is loaded (check: https://igp-placement-app.preview.emergentagent.com)
+- [ ] Frontend is loaded (check: https://clerk-auth-igp.preview.emergentagent.com)
 - [ ] No console errors in browser DevTools
 
 ✅ **To verify admin access:**
@@ -170,7 +170,7 @@ If you still can't access the admin panel:
 
 ## 🎯 Direct Links
 
-- **Frontend**: https://igp-placement-app.preview.emergentagent.com
-- **Admin Panel**: https://igp-placement-app.preview.emergentagent.com/admin
+- **Frontend**: https://clerk-auth-igp.preview.emergentagent.com
+- **Admin Panel**: https://clerk-auth-igp.preview.emergentagent.com/admin
 - **Backend API**: https://ipugotplaced-1.onrender.com/api
 - **Health Check**: https://ipugotplaced-1.onrender.com/api/health
