@@ -255,6 +255,8 @@ async def login(request: Request):
     redirect_uri = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/auth/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
+import urllib.parse
+
 @api_router.get("/auth/callback")
 async def auth_callback(request: Request):
     try:
@@ -297,106 +299,37 @@ async def auth_callback(request: Request):
         session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
         await db.sessions.insert_one(session.model_dump())
         
-        # === FIXED COOKIE LOGIC ===
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        # === FIXED: PROPER COOKIE SETUP FOR RENDER ===
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://yourapp.onrender.com')
         response = RedirectResponse(url=frontend_url)
 
-        # Parse domain properly (no port, no path)
-        import urllib.parse
+        # Parse domain correctly (no port, no path)
         parsed = urllib.parse.urlparse(frontend_url)
-        domain = parsed.hostname  # e.g., "yourapp.onrender.com" or "localhost"
+        domain = parsed.hostname  # e.g. "yourapp.onrender.com" or "localhost"
 
-        # Detect production
+        # Detect production: HTTPS or Render domain
         backend_url = os.environ.get('BACKEND_URL', '')
-        is_prod = backend_url.startswith('https://')
+        is_prod = backend_url.startswith('https://') or 'onrender.com' in domain
 
-        # Set cookie
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=is_prod,                    # Required for SameSite=None
-            samesite="none" if is_prod else "lax",
+            secure=True,                    # ← ALWAYS TRUE on Render
+            samesite="none",                # ← ALWAYS "none" on Render
             max_age=7 * 24 * 60 * 60,
             path="/",
-            # Only set domain for cross-subdomain (e.g. app.example.com → api.example.com)
-            # On Render: same domain → DO NOT set domain
-            domain=None  # ← SAFE: let browser use current domain
+            # DO NOT set domain on same-origin (Render)
+            # Only needed for subdomains: app.example.com → api.example.com
+            domain=None
         )
         
         return response
 
     except Exception as e:
         logging.error(f"Auth callback failed: {e}")
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://yourapp.onrender.com')
         return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
-    try:
-        # Get token from Google
-        token = await oauth.google.authorize_access_token(request)
-        user_info = token.get('userinfo')
-        
-        if not user_info:
-            raise HTTPException(status_code=400, detail="Failed to get user info")
-        
-        email = user_info.get('email')
-        name = user_info.get('name')
-        picture = user_info.get('picture')
-        
-        # Check if user exists
-        existing_user = await db.users.find_one({"email": email}, {"_id": 0})
-        
-        if existing_user:
-            user = User(**existing_user)
-            # Update admin status if email is in admin list
-            if email in ADMIN_EMAILS and not user.is_admin:
-                user.is_admin = True
-                user.is_premium = True
-                await db.users.update_one({"id": user.id}, {"$set": {"is_admin": True, "is_premium": True}})
-        else:
-            # Create new user
-            is_admin = email in ADMIN_EMAILS
-            user = User(
-                email=email,
-                name=name,
-                picture=picture,
-                is_admin=is_admin,
-                is_premium=is_admin  # Admins are premium by default
-            )
-            await db.users.insert_one(user.model_dump())
-        
-        # Create session
-        session_token = serializer.dumps({'user_id': user.id})
-        expires_at = (datetime.now(timezone.utc) + timedelta(days=7)).isoformat()
-        session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
-        await db.sessions.insert_one(session.model_dump())
-        
-        # Redirect to frontend with cookie
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        response = RedirectResponse(url=frontend_url)
-        # Get the frontend domain from env for cookie domain setting
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        frontend_domain = frontend_url.split('://')[1] if '://' in frontend_url else frontend_url
-        
-        # In production, set secure=True and domain to match frontend
-        is_prod = os.environ.get('BACKEND_URL', '').startswith('https://')
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=is_prod,  # True in production (HTTPS)
-            samesite="none" if is_prod else "lax",  # none for cross-domain in production
-            max_age=7*24*60*60,
-            path="/",
-            domain=frontend_domain if is_prod else None
-        )
-        
-        return response
-    except Exception as e:
-        logging.error(f"Auth callback failed: {e}")
-        # Redirect to frontend with error
-        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
-        return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
-
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(require_auth)):
     return {"user": user.model_dump()}
@@ -817,10 +750,10 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Add session middleware
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
-)
+# app.add_middleware(
+#     SessionMiddleware, 
+#     secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
+# )
 
 app.add_middleware(
     CORSMiddleware,
