@@ -45,13 +45,17 @@ const GoldminePage = () => {
 
   const handlePayment = async () => {
     try {
+      console.log('Getting token from Clerk...');
       const token = await getToken();
+      console.log('Token received:', token ? 'Yes (length: ' + token.length + ')' : 'No');
       
       if (!token) {
+        console.error('No token available');
         toast.error('Authentication required. Please sign in again.');
         return;
       }
       
+      console.log('Making payment order request...');
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
         { amount: 39900 }, // ₹399 (amount in paise)
