@@ -82,20 +82,20 @@ const HomePage = () => {
             {/* Topics Grid */}
             <div className="mb-8">
               <h2 className="text-2xl font-semibold mb-4 text-gray-900">Select Topic</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                 {topics.map((topic) => (
                   <div
                     key={topic.id}
                     onClick={() => setSelectedTopic(topic.id)}
                     data-testid={`topic-${topic.id}`}
-                    className={`p-6 border-2 cursor-pointer transition-all ${
+                    className={`p-4 border-2 cursor-pointer transition-all ${
                       selectedTopic === topic.id
                         ? 'border-gray-900 bg-white shadow-md'
                         : 'border-gray-200 bg-white hover:border-gray-400'
                     }`}
                   >
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">{topic.name}</h3>
-                    <p className="text-sm text-gray-600">{topic.description}</p>
+                    <h3 className="text-base font-semibold text-gray-900 mb-1">{topic.name}</h3>
+                    <p className="text-xs text-gray-600 line-clamp-2">{topic.description}</p>
                   </div>
                 ))}
               </div>
