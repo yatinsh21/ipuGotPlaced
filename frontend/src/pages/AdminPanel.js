@@ -579,13 +579,13 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
           <CardTitle>Company Questions - Premium ({questions.length} total)</CardTitle>
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-question-btn">
-              <Plus className="h-4 w-4 mr-2" /> Add Question
+            <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-company-question-btn">
+              <Plus className="h-4 w-4 mr-2" /> Add Company Question
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>{editing ? 'Edit Question' : 'Add New Question'}</DialogTitle>
+              <DialogTitle>{editing ? 'Edit Company Question' : 'Add New Company Question'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -593,7 +593,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
                 <Textarea 
                   value={formData.question} 
                   onChange={(e) => setFormData({...formData, question: e.target.value})} 
-                  data-testid="question-input"
+                  data-testid="company-question-input"
                   required 
                 />
               </div>
@@ -602,7 +602,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
                 <Textarea 
                   value={formData.answer} 
                   onChange={(e) => setFormData({...formData, answer: e.target.value})} 
-                  data-testid="answer-input"
+                  data-testid="company-answer-input"
                   rows={5}
                   required 
                 />
@@ -611,7 +611,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
                 <div>
                   <Label>Difficulty</Label>
                   <Select value={formData.difficulty} onValueChange={(val) => setFormData({...formData, difficulty: val})}>
-                    <SelectTrigger data-testid="difficulty-select">
+                    <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -622,46 +622,30 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
                   </Select>
                 </div>
                 <div>
-                  <Label>Topic (Optional)</Label>
-                  <Select value={formData.topic_id} onValueChange={(val) => setFormData({...formData, topic_id: val})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select topic" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {topics.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Company (Optional)</Label>
+                  <Label>Company</Label>
                   <Select value={formData.company_id} onValueChange={(val) => setFormData({...formData, company_id: val})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select company" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
                       {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Category (Optional)</Label>
-                  <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      <SelectItem value="technical">Technical</SelectItem>
-                      <SelectItem value="coding">Coding</SelectItem>
-                      <SelectItem value="project">Project</SelectItem>
-                      <SelectItem value="HR">HR</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              </div>
+              <div>
+                <Label>Category</Label>
+                <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="technical">Technical</SelectItem>
+                    <SelectItem value="coding">Coding</SelectItem>
+                    <SelectItem value="project">Project</SelectItem>
+                    <SelectItem value="HR">HR</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label>Tags (comma-separated: v.imp, just-read, fav)</Label>
@@ -671,7 +655,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
                   placeholder="v.imp, fav"
                 />
               </div>
-              <Button type="submit" data-testid="submit-question-btn">Save</Button>
+              <Button type="submit" data-testid="submit-company-question-btn">Save</Button>
             </form>
           </DialogContent>
         </Dialog>
@@ -681,15 +665,14 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
         {/* Filters */}
         <div className="mb-4 flex gap-4 items-center">
           <div>
-            <Label className="text-xs">Filter by Type</Label>
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-40">
+            <Label className="text-xs">Filter by Company</Label>
+            <Select value={selectedCompany} onValueChange={setSelectedCompany}>
+              <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Questions</SelectItem>
-                <SelectItem value="topic">Topic Questions</SelectItem>
-                <SelectItem value="company">Company Questions</SelectItem>
+                <SelectItem value="all">All Companies</SelectItem>
+                {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -712,27 +695,19 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
             <div key={q.id} className="border border-gray-200 p-4 flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  {q.company_id ? (
-                    <Badge className="bg-yellow-100 text-yellow-800">
-                      Company: {getCompanyName(q.company_id)}
-                    </Badge>
-                  ) : q.topic_id ? (
-                    <Badge className="bg-blue-100 text-blue-800">
-                      Topic: {getTopicName(q.topic_id)}
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">No Assignment</Badge>
-                  )}
+                  <Badge className="bg-yellow-100 text-yellow-800">
+                    {getCompanyName(q.company_id)}
+                  </Badge>
+                  {q.category && <Badge className="bg-purple-100 text-purple-800">{q.category}</Badge>}
                 </div>
                 <p className="font-medium text-gray-900 mb-1">{q.question}</p>
                 <div className="flex gap-2 flex-wrap">
                   <Badge variant="outline">{q.difficulty}</Badge>
-                  {q.category && <Badge variant="outline">{q.category}</Badge>}
                   {q.tags?.map(tag => <Badge key={tag} variant="secondary">{tag}</Badge>)}
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || [], topic_id: q.topic_id || '', company_id: q.company_id || '', category: q.category || ''}); setOpen(true); }}>
+                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || [], topic_id: null, company_id: q.company_id || '', category: q.category || ''}); setOpen(true); }}>
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)}>
