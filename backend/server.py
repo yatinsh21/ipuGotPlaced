@@ -504,6 +504,12 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
 
 app.include_router(api_router)
 
+# Add session middleware
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
+)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
