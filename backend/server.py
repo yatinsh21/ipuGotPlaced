@@ -343,11 +343,11 @@ async def get_company_questions(company_id: str, category: Optional[str] = None,
 @api_router.post("/bookmark/{question_id}")
 async def toggle_bookmark(question_id: str, user: User = Depends(require_premium)):
     if question_id in user.bookmarked_questions:
-        await db.users.update_one({"id": user.id}, {"$pull": {"bookmarked_questions": question_id}})
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$pull": {"bookmarked_questions": question_id}})
         await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
         return {"bookmarked": False}
     else:
-        await db.users.update_one({"id": user.id}, {"$addToSet": {"bookmarked_questions": question_id}})
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$addToSet": {"bookmarked_questions": question_id}})
         await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
         return {"bookmarked": True}
 
@@ -403,7 +403,7 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
         }
         razorpay_client.utility.verify_payment_signature(params_dict)
         
-        await db.users.update_one({"id": user.id}, {"$set": {"is_premium": True}})
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
         
         return {"success": True, "message": "Payment verified successfully"}
     except Exception as e:
@@ -433,30 +433,30 @@ async def get_all_users(user: User = Depends(require_admin)):
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
+    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
     
     return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/revoke-admin")
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
     if user_id == current_user.id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
-    await db.users.update_one({"id": user_id}, {"$set": {"is_admin": False}})
+    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": False}})
     
     return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
 
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-    target_user = await db.users.find_one({"id": user_id})
+    target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
@@ -464,7 +464,7 @@ async def toggle_premium_status(user_id: str, current_user: User = Depends(requi
         raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
     
     new_premium_status = not target_user.get('is_premium', False)
-    await db.users.update_one({"id": user_id}, {"$set": {"is_premium": new_premium_status}})
+    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_premium": new_premium_status}})
     
     status_text = "granted" if new_premium_status else "revoked"
     return {"success": True, "message": f"Premium access {status_text} for {target_user['email']}"}
