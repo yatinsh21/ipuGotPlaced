@@ -84,11 +84,13 @@ function App() {
       <div className="App">
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/topics" element={<HomePage />} />
             <Route path="/goldmine" element={<GoldminePage />} />
             <Route path="/company/:companyId" element={<CompanyQuestionsPage />} />
             <Route path="/bookmarks" element={<BookmarksPage />} />
             <Route path="/experiences" element={<ExperiencesPage />} />
+            <Route path="/experience/:experienceId" element={<ExperienceDetailPage />} />
             <Route path="/admin" element={user?.is_admin ? <AdminPanel /> : <Navigate to="/" />} />
           </Routes>
         </BrowserRouter>
