@@ -228,10 +228,10 @@ const TopicsManager = ({ topics, fetchAllData }) => {
     e.preventDefault();
     try {
       if (editing) {
-        await axios.put(`${API}/admin/topics/${editing.id}`, { ...editing, ...formData }, { withCredentials: true });
+        await axios.put(`${API}/admin/topics/${editing.id}`, { ...editing, ...formData }, await getAuthConfig());
         toast.success('Topic updated');
       } else {
-        await axios.post(`${API}/admin/topics`, formData, { withCredentials: true });
+        await axios.post(`${API}/admin/topics`, formData, await getAuthConfig());
         toast.success('Topic created');
       }
       setOpen(false);
@@ -246,7 +246,7 @@ const TopicsManager = ({ topics, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/topics/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/topics/${id}`, await getAuthConfig());
       toast.success('Topic deleted');
       fetchAllData();
     } catch (error) {
@@ -340,10 +340,10 @@ const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
     try {
       const data = { ...formData, company_id: null, category: null };
       if (editing) {
-        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
         toast.success('Question updated');
       } else {
-        await axios.post(`${API}/admin/questions`, data, { withCredentials: true });
+        await axios.post(`${API}/admin/questions`, data, await getAuthConfig());
         toast.success('Question created');
       }
       setOpen(false);
@@ -370,7 +370,7 @@ const TopicQuestionsManager = ({ questions, topics, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/questions/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/questions/${id}`, await getAuthConfig());
       toast.success('Question deleted');
       fetchAllData();
     } catch (error) {
@@ -521,10 +521,10 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
     try {
       const data = { ...formData, topic_id: null };
       if (editing) {
-        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
         toast.success('Question updated');
       } else {
-        await axios.post(`${API}/admin/questions`, data, { withCredentials: true });
+        await axios.post(`${API}/admin/questions`, data, await getAuthConfig());
         toast.success('Question created');
       }
       setOpen(false);
@@ -551,7 +551,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/questions/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/questions/${id}`, await getAuthConfig());
       toast.success('Question deleted');
       fetchAllData();
     } catch (error) {
@@ -759,10 +759,10 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
     try {
       const data = { ...formData, question_count: 0 };
       if (editing) {
-        await axios.put(`${API}/admin/companies/${editing.id}`, { ...editing, ...data }, { withCredentials: true });
+        await axios.put(`${API}/admin/companies/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
         toast.success('Company updated');
       } else {
-        await axios.post(`${API}/admin/companies`, data, { withCredentials: true });
+        await axios.post(`${API}/admin/companies`, data, await getAuthConfig());
         toast.success('Company created');
       }
       setOpen(false);
@@ -777,7 +777,7 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure? This will delete all company questions.')) return;
     try {
-      await axios.delete(`${API}/admin/companies/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/companies/${id}`, await getAuthConfig());
       toast.success('Company deleted');
       fetchAllData();
     } catch (error) {
@@ -899,10 +899,10 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
       };
 
       if (editing) {
-        await axios.put(`${API}/admin/experiences/${editing.id}`, { ...editing, ...dataToSubmit }, { withCredentials: true });
+        await axios.put(`${API}/admin/experiences/${editing.id}`, { ...editing, ...dataToSubmit }, await getAuthConfig());
         toast.success('Experience updated');
       } else {
-        await axios.post(`${API}/admin/experiences`, dataToSubmit, { withCredentials: true });
+        await axios.post(`${API}/admin/experiences`, dataToSubmit, await getAuthConfig());
         toast.success('Experience created');
       }
       setOpen(false);
@@ -986,7 +986,7 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure?')) return;
     try {
-      await axios.delete(`${API}/admin/experiences/${id}`, { withCredentials: true });
+      await axios.delete(`${API}/admin/experiences/${id}`, await getAuthConfig());
       toast.success('Experience deleted');
       fetchAllData();
     } catch (error) {
@@ -1156,7 +1156,7 @@ const UsersManager = ({ users, onRefresh }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/users/${userId}/grant-admin`, {}, { withCredentials: true });
+      await axios.post(`${API}/admin/users/${userId}/grant-admin`, {}, await getAuthConfig());
       toast.success('Admin access granted successfully');
       onRefresh();
     } catch (error) {
@@ -1170,7 +1170,7 @@ const UsersManager = ({ users, onRefresh }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/users/${userId}/revoke-admin`, {}, { withCredentials: true });
+      await axios.post(`${API}/admin/users/${userId}/revoke-admin`, {}, await getAuthConfig());
       toast.success('Admin access revoked successfully');
       onRefresh();
     } catch (error) {
@@ -1185,7 +1185,7 @@ const UsersManager = ({ users, onRefresh }) => {
     }
     
     try {
-      await axios.post(`${API}/admin/users/${userId}/toggle-premium`, {}, { withCredentials: true });
+      await axios.post(`${API}/admin/users/${userId}/toggle-premium`, {}, await getAuthConfig());
       toast.success(`Premium access ${action === 'grant' ? 'granted' : 'revoked'} successfully`);
       onRefresh();
     } catch (error) {
