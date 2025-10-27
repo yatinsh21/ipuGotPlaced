@@ -49,7 +49,7 @@ const GoldminePage = () => {
       
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 100 }, // ₹1
+        { amount: 39900 }, // ₹399 (amount in paise)
         { 
           headers: {
             Authorization: `Bearer ${token}`
