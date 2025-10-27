@@ -70,6 +70,38 @@ const HomePage = () => {
     }
   };
 
+  const toggleBookmark = async (questionId, e) => {
+    e.stopPropagation();
+    
+    if (!user) {
+      toast.error('Please sign in to bookmark questions');
+      return;
+    }
+    
+    if (!user.is_premium) {
+      toast.error('Premium subscription required to bookmark questions');
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${API}/bookmark/${questionId}`,
+        {},
+        { withCredentials: true }
+      );
+      
+      if (response.data.bookmarked) {
+        setBookmarkedIds([...bookmarkedIds, questionId]);
+        toast.success('Question bookmarked');
+      } else {
+        setBookmarkedIds(bookmarkedIds.filter(id => id !== questionId));
+        toast.success('Bookmark removed');
+      }
+    } catch (error) {
+      toast.error('Failed to update bookmark');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
