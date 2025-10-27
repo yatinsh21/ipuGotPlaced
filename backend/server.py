@@ -68,26 +68,6 @@ oauth.register(
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-
-@app.get("/", include_in_schema=False)
-async def root(request: Request):
-    """Root route / health check returning status and docs URL."""
-    backend_url = os.environ.get("BACKEND_URL")
-    docs_path = "/docs"
-    if backend_url:
-        docs_url = backend_url.rstrip("/") + docs_path
-    else:
-        # Build docs URL from request if BACKEND_URL not set
-        scheme = request.url.scheme
-        host = request.headers.get("host", "localhost")
-        docs_url = f"{scheme}://{host}{docs_path}"
-
-    return JSONResponse({
-        "status": "ok",
-        "message": "IPU Got Placed backend is running",
-        "docs": docs_url,
-    })
-
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -255,8 +235,6 @@ async def login(request: Request):
     redirect_uri = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/auth/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
-import urllib.parse
-
 @api_router.get("/auth/callback")
 async def auth_callback(request: Request):
     try:
@@ -289,7 +267,7 @@ async def auth_callback(request: Request):
                 name=name,
                 picture=picture,
                 is_admin=is_admin,
-                is_premium=is_admin
+                is_premium=is_admin  # Admins are premium by default
             )
             await db.users.insert_one(user.model_dump())
         
@@ -299,37 +277,26 @@ async def auth_callback(request: Request):
         session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
         await db.sessions.insert_one(session.model_dump())
         
-        # === FIXED: PROPER COOKIE SETUP FOR RENDER ===
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://yourapp.onrender.com')
+        # Redirect to frontend with cookie
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         response = RedirectResponse(url=frontend_url)
-
-        # Parse domain correctly (no port, no path)
-        parsed = urllib.parse.urlparse(frontend_url)
-        domain = parsed.hostname  # e.g. "yourapp.onrender.com" or "localhost"
-
-        # Detect production: HTTPS or Render domain
-        backend_url = os.environ.get('BACKEND_URL', '')
-        is_prod = backend_url.startswith('https://') or 'onrender.com' in domain
-
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,                    # ← ALWAYS TRUE on Render
-            samesite="none",                # ← ALWAYS "none" on Render
-            max_age=7 * 24 * 60 * 60,
-            path="/",
-            # DO NOT set domain on same-origin (Render)
-            # Only needed for subdomains: app.example.com → api.example.com
-            domain=None
+            secure=False,  # Set to True in production with HTTPS
+            samesite="lax",
+            max_age=7*24*60*60,
+            path="/"
         )
         
         return response
-
     except Exception as e:
         logging.error(f"Auth callback failed: {e}")
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://yourapp.onrender.com')
+        # Redirect to frontend with error
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
+
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(require_auth)):
     return {"user": user.model_dump()}
@@ -750,10 +717,10 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # Add session middleware
-# app.add_middleware(
-#     SessionMiddleware, 
-#     secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
-# )
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
+)
 
 app.add_middleware(
     CORSMiddleware,
