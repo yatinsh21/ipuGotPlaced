@@ -100,9 +100,12 @@ const CompanyQuestionsPage = () => {
       setCompany(comp);
 
       // Fetch questions (backend will handle preview for non-premium)
-      const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, 
-        isPremiumUser ? { withCredentials: true } : {}
-      );
+      const config = isPremiumUser && isSignedIn ? {
+        headers: {
+          Authorization: `Bearer ${await user.getClerkSessionToken()}`
+        }
+      } : {};
+      const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, config);
       setQuestions(questionsRes.data);
     } catch (error) {
       console.error('Failed to fetch data:', error);
