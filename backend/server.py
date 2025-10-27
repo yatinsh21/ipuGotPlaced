@@ -13,7 +13,6 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
-import redis.asyncio as redis
 import json
 import httpx
 import cloudinary
@@ -37,14 +36,8 @@ client = AsyncIOMotorClient(
 )
 db = client[os.environ['DB_NAME']]
 
-# Redis connection with connection pooling
-redis_client = redis.from_url(
-    os.environ.get('REDIS_URL', 'redis://localhost:6379'), 
-    decode_responses=True,
-    max_connections=50,
-    socket_timeout=5,
-    socket_connect_timeout=5
-)
+# MongoDB-based cache collection
+cache_collection = db.cache
 
 # Cloudinary configuration
 cloudinary.config(
