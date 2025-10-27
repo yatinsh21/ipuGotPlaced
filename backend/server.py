@@ -225,6 +225,17 @@ async def get_topics():
     await redis_client.set("topics", json.dumps(topics), ex=3600)
     return topics
 
+@api_router.get("/companies-preview", response_model=List[Company])
+async def get_companies_preview():
+    # Public endpoint for browsing companies without auth
+    cached = await redis_client.get("companies")
+    if cached:
+        return json.loads(cached)
+    
+    companies = await db.companies.find({}, {"_id": 0}).to_list(1000)
+    await redis_client.set("companies", json.dumps(companies), ex=3600)
+    return companies
+
 @api_router.get("/questions")
 async def get_questions(topic_id: Optional[str] = None, difficulty: Optional[str] = None):
     query = {"topic_id": {"$ne": None}}
