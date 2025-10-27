@@ -348,7 +348,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Admin Panel UI - User Management"
+    - "Payment Order Creation - Fix 401 Error"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
