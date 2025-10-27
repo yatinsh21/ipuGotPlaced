@@ -125,6 +125,12 @@ const CompanyQuestionsPage = () => {
   const handlePayment = async () => {
     try {
       const token = await getToken();
+      
+      if (!token) {
+        toast.error('Authentication required. Please sign in again.');
+        return;
+      }
+      
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
         { amount: 39900 }, // ₹399
