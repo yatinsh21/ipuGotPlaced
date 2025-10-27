@@ -24,3 +24,9 @@ httpx==0.28.1
 
 # Environment Variables
 python-dotenv==1.1.1
+
+# Dependencies (auto-installed with above packages)
+pydantic==2.12.3
+pydantic_core==2.41.4
+starlette==0.37.2
+typing_extensions==4.15.0
