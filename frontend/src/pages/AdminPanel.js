@@ -236,41 +236,43 @@ const TopicsManager = ({ topics, fetchAllData }) => {
 
   return (
     <Card className="border-2 border-gray-200">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Topics Management</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { setEditing(null); setFormData({ name: '', description: '' }); }} data-testid="add-topic-btn">
-              <Plus className="h-4 w-4 mr-2" /> Add Topic
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editing ? 'Edit Topic' : 'Add New Topic'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Name</Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  data-testid="topic-name-input"
-                  required 
-                />
-              </div>
-              <div>
-                <Label>Description</Label>
-                <Textarea 
-                  value={formData.description} 
-                  onChange={(e) => setFormData({...formData, description: e.target.value})} 
-                  data-testid="topic-description-input"
-                  required 
-                />
-              </div>
-              <Button type="submit" data-testid="submit-topic-btn">Save</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Topics Management</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { setEditing(null); setFormData({ name: '', description: '' }); }} data-testid="add-topic-btn">
+                <Plus className="h-4 w-4 mr-2" /> Add Topic
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editing ? 'Edit Topic' : 'Add New Topic'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label>Name</Label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    data-testid="topic-name-input"
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label>Description</Label>
+                  <Textarea 
+                    value={formData.description} 
+                    onChange={(e) => setFormData({...formData, description: e.target.value})} 
+                    data-testid="topic-description-input"
+                    required 
+                  />
+                </div>
+                <Button type="submit" data-testid="submit-topic-btn">Save</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
