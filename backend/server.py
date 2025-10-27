@@ -171,12 +171,12 @@ async def require_admin(request: Request) -> User:
 # Auth endpoints
 @api_router.get("/auth/login")
 async def login(request: Request):
-    # Redirect to Google OAuth
-    redirect_uri = request.url_for('auth_callback')
+    # Store the redirect URL in session for after auth
+    redirect_uri = f"{os.environ.get('BACKEND_URL', 'http://localhost:8001')}/api/auth/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @api_router.get("/auth/callback")
-async def auth_callback(request: Request, response: Response):
+async def auth_callback(request: Request):
     try:
         # Get token from Google
         token = await oauth.google.authorize_access_token(request)
@@ -217,14 +217,14 @@ async def auth_callback(request: Request, response: Response):
         session = Session(session_token=session_token, user_id=user.id, expires_at=expires_at)
         await db.sessions.insert_one(session.model_dump())
         
-        # Set cookie
+        # Redirect to frontend with cookie
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         response = RedirectResponse(url=frontend_url)
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=True,
+            secure=False,  # Set to True in production with HTTPS
             samesite="lax",
             max_age=7*24*60*60,
             path="/"
@@ -233,7 +233,9 @@ async def auth_callback(request: Request, response: Response):
         return response
     except Exception as e:
         logging.error(f"Auth callback failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        # Redirect to frontend with error
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        return RedirectResponse(url=f"{frontend_url}?error=auth_failed")
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(require_auth)):
