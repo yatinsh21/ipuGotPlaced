@@ -18,7 +18,7 @@ const GoldminePage = () => {
   const [showPayment, setShowPayment] = useState(false);
 
   useEffect(() => {
-    // Always fetch companies for preview
+    // Always fetch companies for everyone
     fetchCompaniesPreview();
   }, [user]);
 
