@@ -1153,7 +1153,7 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData, getAuthConfi
 };
 
 // Users Manager Component
-const UsersManager = ({ users, onRefresh, currentUser }) => {
+const UsersManager = ({ users, onRefresh, currentUser, getAuthConfig }) => {
   
   const handleGrantAdmin = async (userId, userName) => {
     if (!window.confirm(`Grant admin access to ${userName}? They will also get premium access.`)) {
