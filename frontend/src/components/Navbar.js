@@ -28,8 +28,9 @@ const Navbar = () => {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-4 md:gap-8">
-            <Link to="/" className="text-xl md:text-2xl font-bold text-gray-900">
-              InterviewPrep
+            <Link to="/" className="flex flex-col text-xl md:text-2xl font-bold text-gray-900">
+              <span>IGP</span>
+              <span className="text-[10px] md:text-xs font-normal text-gray-600 -mt-1">IPU GOT PLACED</span>
             </Link>
             
             {/* Desktop Navigation */}
