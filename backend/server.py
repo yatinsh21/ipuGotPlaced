@@ -665,12 +665,7 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
 # Add GZip compression middleware for response optimization
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-# Add session middleware
-app.add_middleware(
-    SessionMiddleware, 
-    secret_key=os.environ.get('SECRET_KEY', 'your-secret-key-change-this')
-)
-
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
