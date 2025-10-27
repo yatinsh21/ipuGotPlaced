@@ -35,7 +35,7 @@ const HomePage = () => {
 
   const fetchUserBookmarks = async () => {
     try {
-      const token = await user.getClerkSessionToken();
+      const token = await getToken();
       const response = await axios.get(`${API}/auth/me`, {
         headers: {
           Authorization: `Bearer ${token}`
