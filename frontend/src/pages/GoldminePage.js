@@ -23,7 +23,7 @@ const GoldminePage = () => {
   useEffect(() => {
     // Always fetch companies for everyone
     fetchCompaniesPreview();
-  }, [user]);
+  }, [isSignedIn]);
 
   const fetchCompaniesPreview = async () => {
     try {
