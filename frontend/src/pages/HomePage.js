@@ -165,12 +165,29 @@ const HomePage = () => {
                       data-testid={`question-${index}`}
                       className="px-6 py-4 hover:bg-gray-50 text-left"
                     >
-                      <div className="flex items-center gap-3 flex-1">
-                        <span className="text-gray-500 font-medium">Q{index + 1}.</span>
-                        <span className="font-medium text-gray-900">{question.question}</span>
-                        <Badge className={getDifficultyColor(question.difficulty)}>
-                          {question.difficulty}
-                        </Badge>
+                      <div className="flex items-center gap-3 flex-1 justify-between">
+                        <div className="flex items-center gap-3 flex-1">
+                          <span className="text-gray-500 font-medium">Q{index + 1}.</span>
+                          <span className="font-medium text-gray-900">{question.question}</span>
+                          <Badge className={getDifficultyColor(question.difficulty)}>
+                            {question.difficulty}
+                          </Badge>
+                        </div>
+                        {user?.is_premium && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => toggleBookmark(question.id, e)}
+                            data-testid={`bookmark-${index}`}
+                            className="ml-2"
+                          >
+                            {bookmarkedIds.includes(question.id) ? (
+                              <BookmarkCheck className="h-5 w-5 text-gray-900" />
+                            ) : (
+                              <Bookmark className="h-5 w-5 text-gray-400" />
+                            )}
+                          </Button>
+                        )}
                       </div>
                     </AccordionTrigger>
                     <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
