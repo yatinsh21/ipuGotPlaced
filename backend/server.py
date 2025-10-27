@@ -344,11 +344,11 @@ async def get_company_questions(company_id: str, category: Optional[str] = None,
 async def toggle_bookmark(question_id: str, user: User = Depends(require_premium)):
     if question_id in user.bookmarked_questions:
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$pull": {"bookmarked_questions": question_id}})
-        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
+        await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
         return {"bookmarked": False}
     else:
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$addToSet": {"bookmarked_questions": question_id}})
-        await invalidate_cache_pattern(f"bookmarks_user:{user.id}")
+        await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
         return {"bookmarked": True}
 
 @api_router.get("/bookmarks")
@@ -356,7 +356,7 @@ async def get_bookmarks(user: User = Depends(require_premium)):
     if not user.bookmarked_questions:
         return []
     
-    cache_key = f"bookmarks_user:{user.id}"
+    cache_key = f"bookmarks_user:{user.clerk_id}"
     cached = await get_cached_data(cache_key)
     if cached:
         return cached
