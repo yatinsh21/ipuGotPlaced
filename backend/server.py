@@ -97,6 +97,7 @@ class Experience(BaseModel):
     role: str
     rounds: int
     experience: str
+    status: str = "selected"  # selected, not selected, pending
     posted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class CreateOrderRequest(BaseModel):
