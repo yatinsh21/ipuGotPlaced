@@ -407,7 +407,18 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
         }
         razorpay_client.utility.verify_payment_signature(params_dict)
         
+        # Update user to premium in MongoDB
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
+        
+        # Update Clerk user metadata
+        if clerk_client:
+            try:
+                clerk_client.users.update_metadata(
+                    user_id=user.clerk_id,
+                    public_metadata={"isPremium": True}
+                )
+            except Exception as e:
+                logging.error(f"Failed to update Clerk metadata: {e}")
         
         return {"success": True, "message": "Payment verified successfully"}
     except Exception as e:
