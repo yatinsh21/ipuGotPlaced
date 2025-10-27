@@ -96,7 +96,7 @@ const GoldminePage = () => {
     }
   };
 
-  if (showPayment || (user && !user.is_premium && !loading)) {
+  if (showPayment) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
