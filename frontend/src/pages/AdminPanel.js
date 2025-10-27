@@ -539,41 +539,43 @@ const CompaniesManager = ({ companies, fetchAllData }) => {
 
   return (
     <Card className="border-2 border-gray-200">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Companies Management</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { setEditing(null); setFormData({ name: '', logo_url: '' }); }} data-testid="add-company-btn">
-              <Plus className="h-4 w-4 mr-2" /> Add Company
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editing ? 'Edit Company' : 'Add New Company'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Company Name</Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  data-testid="company-name-input"
-                  required 
-                />
-              </div>
-              <div>
-                <Label>Logo URL (Optional)</Label>
-                <Input 
-                  value={formData.logo_url} 
-                  onChange={(e) => setFormData({...formData, logo_url: e.target.value})} 
-                  data-testid="company-logo-input"
-                  placeholder="https://example.com/logo.png"
-                />
-              </div>
-              <Button type="submit" data-testid="submit-company-btn">Save</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Companies Management</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { setEditing(null); setFormData({ name: '', logo_url: '' }); }} data-testid="add-company-btn">
+                <Plus className="h-4 w-4 mr-2" /> Add Company
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editing ? 'Edit Company' : 'Add New Company'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label>Company Name</Label>
+                  <Input 
+                    value={formData.name} 
+                    onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                    data-testid="company-name-input"
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label>Logo URL (Optional)</Label>
+                  <Input 
+                    value={formData.logo_url} 
+                    onChange={(e) => setFormData({...formData, logo_url: e.target.value})} 
+                    data-testid="company-logo-input"
+                    placeholder="https://example.com/logo.png"
+                  />
+                </div>
+                <Button type="submit" data-testid="submit-company-btn">Save</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
