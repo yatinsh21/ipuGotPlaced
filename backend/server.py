@@ -57,29 +57,13 @@ razorpay_client = razorpay.Client(auth=(
     os.environ.get('RAZORPAY_KEY_SECRET', '')
 ))
 
-# Admin emails
-ADMIN_EMAILS = os.environ.get('ADMIN_EMAILS', '').split(',')
-
-# Session serializer for secure cookies
-serializer = URLSafeTimedSerializer(os.environ.get('SECRET_KEY', 'your-secret-key-change-this'))
-
-# OAuth setup
-oauth = OAuth()
-oauth.register(
-    name='google',
-    client_id=os.environ.get('GOOGLE_CLIENT_ID'),
-    client_secret=os.environ.get('GOOGLE_CLIENT_SECRET'),
-    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-    client_kwargs={'scope': 'openid email profile'}
-)
-
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    clerk_id: str
     email: str
     name: str
     picture: Optional[str] = None
@@ -87,12 +71,6 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
-class Session(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-    session_token: str
-    user_id: str
-    expires_at: str
 
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
