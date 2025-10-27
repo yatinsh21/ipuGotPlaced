@@ -197,15 +197,18 @@ backend:
   
   - task: "Advanced Redis Caching - Experiences"
     implemented: true
-    working: "NA"
+    working: true
     file: "backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: "NA"
           agent: "main"
           comment: "Implemented caching for experiences with company_id filter support"
+        - working: true
+          agent: "testing"
+          comment: "✅ Experiences caching working correctly. Tested both without filter and with company_id filter. Significant performance improvements observed (48ms → 7ms for first scenario)."
   
   - task: "Advanced Redis Caching - Bookmarks"
     implemented: true
