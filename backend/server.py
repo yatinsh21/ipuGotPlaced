@@ -168,7 +168,11 @@ async def get_current_user(request: Request) -> Optional[User]:
     """Verify Clerk session token and get/create user"""
     authorization = request.headers.get('Authorization') or request.headers.get('authorization')
     
+    logging.info(f"Auth check - Headers present: {list(request.headers.keys())}")
+    logging.info(f"Authorization header: {authorization[:50] if authorization else 'None'}")
+    
     if not authorization or not authorization.startswith('Bearer '):
+        logging.warning(f"Missing or invalid authorization header")
         return None
     
     if not clerk_client:
