@@ -4,7 +4,10 @@ import { AuthContext } from '@/App';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bookmark, BookmarkCheck } from 'lucide-react';
+import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -16,10 +19,14 @@ const HomePage = () => {
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [difficulty, setDifficulty] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [bookmarkedIds, setBookmarkedIds] = useState([]);
 
   useEffect(() => {
     fetchTopics();
-  }, []);
+    if (user?.is_premium) {
+      setBookmarkedIds(user.bookmarked_questions || []);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (selectedTopic) {
