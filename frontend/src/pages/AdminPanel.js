@@ -73,7 +73,7 @@ const AdminPanel = () => {
     }
   };
 
-  if (!user?.is_admin) {
+  if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
