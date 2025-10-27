@@ -1,6 +1,6 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { AuthContext } from '@/App';
+import { useUser } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -12,19 +12,26 @@ const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
 const BookmarksPage = () => {
-  const { user } = useContext(AuthContext);
+  const { isSignedIn, user } = useUser();
   const [bookmarks, setBookmarks] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
-    if (user?.is_premium) {
+    if (isPremium && isSignedIn) {
       fetchBookmarks();
     }
-  }, [user]);
+  }, [isPremium, isSignedIn]);
 
   const fetchBookmarks = async () => {
     try {
-      const response = await axios.get(`${API}/bookmarks`, { withCredentials: true });
+      const token = await user.getClerkSessionToken();
+      const response = await axios.get(`${API}/bookmarks`, { 
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       setBookmarks(response.data);
     } catch (error) {
       console.error('Failed to fetch bookmarks:', error);
@@ -36,7 +43,12 @@ const BookmarksPage = () => {
 
   const removeBookmark = async (questionId) => {
     try {
-      await axios.post(`${API}/bookmark/${questionId}`, {}, { withCredentials: true });
+      const token = await user.getClerkSessionToken();
+      await axios.post(`${API}/bookmark/${questionId}`, {}, { 
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       setBookmarks(bookmarks.filter(q => q.id !== questionId));
       toast.success('Bookmark removed');
     } catch (error) {
