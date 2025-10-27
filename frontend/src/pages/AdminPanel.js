@@ -315,6 +315,8 @@ const TopicsManager = ({ topics, fetchAllData }) => {
 const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [filterType, setFilterType] = useState('all'); // all, topic, company
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     question: '',
     answer: '',
@@ -368,11 +370,32 @@ const QuestionsManager = ({ questions, topics, companies, fetchAllData }) => {
     }
   };
 
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company?.name || 'Unknown';
+  };
+
+  const getTopicName = (topicId) => {
+    const topic = topics.find(t => t.id === topicId);
+    return topic?.name || 'Unknown';
+  };
+
+  const filteredQuestions = questions.filter(q => {
+    // Filter by type
+    if (filterType === 'topic' && !q.topic_id) return false;
+    if (filterType === 'company' && !q.company_id) return false;
+    
+    // Filter by search
+    if (searchTerm && !q.question.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    
+    return true;
+  });
+
   return (
     <Card className="border-2 border-gray-200">
       <CardHeader>
         <div className="flex flex-row items-center justify-between">
-          <CardTitle>Questions Management ({questions.length})</CardTitle>
+          <CardTitle>Questions Management ({questions.length} total)</CardTitle>
           <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-question-btn">
