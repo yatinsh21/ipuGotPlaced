@@ -136,21 +136,26 @@ const HomePage = () => {
   const toggleBookmark = async (questionId, e) => {
     e.stopPropagation();
     
-    if (!user) {
+    if (!isSignedIn) {
       toast.error('Please sign in to bookmark questions');
       return;
     }
     
-    if (!user.is_premium) {
+    if (!isPremium) {
       toast.error('Premium subscription required to bookmark questions');
       return;
     }
 
     try {
+      const token = await user.getClerkSessionToken();
       const response = await axios.post(
         `${API}/bookmark/${questionId}`,
         {},
-        { withCredentials: true }
+        { 
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
       );
       
       if (response.data.bookmarked) {
