@@ -406,29 +406,67 @@ async def get_experiences(company_id: Optional[str] = None):
     await set_cached_data(cache_key, experiences, ttl=3600)
     return experiences
 
-# Payment endpoints
+# Payment endpoints - REWRITTEN FROM SCRATCH
 @api_router.post("/payment/create-order")
 async def create_order(order_req: CreateOrderRequest, user: User = Depends(require_auth)):
+    """Create Razorpay order for payment"""
     try:
-        logging.info(f"Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
+        logging.info(f"💰 Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
+        logging.info(f"💰 Amount requested: ₹{order_req.amount / 100}")
+        
+        # Create Razorpay order
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
             "currency": "INR",
             "payment_capture": 1
         })
+        
+        logging.info(f"✓ Razorpay order created: {razor_order['id']}")
         return razor_order
+        
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logging.error(f"❌ Payment order creation failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 @api_router.post("/payment/verify")
 async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(require_auth)):
+    """Verify Razorpay payment and upgrade user to premium"""
     try:
+        logging.info(f"💰 Payment verification request from user: {user.email}")
+        
         params_dict = {
             'razorpay_order_id': payment.razorpay_order_id,
             'razorpay_payment_id': payment.razorpay_payment_id,
             'razorpay_signature': payment.razorpay_signature
         }
+        
+        # Verify payment signature
         razorpay_client.utility.verify_payment_signature(params_dict)
+        logging.info(f"✓ Payment signature verified")
+        
+        # Update user to premium in MongoDB
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
+        logging.info(f"✓ User upgraded to premium in MongoDB")
+        
+        # Update Clerk user metadata
+        if clerk_client:
+            try:
+                clerk_client.users.update_metadata(
+                    user_id=user.clerk_id,
+                    public_metadata={"isPremium": True}
+                )
+                logging.info(f"✓ User metadata updated in Clerk")
+            except Exception as e:
+                logging.error(f"⚠️ Failed to update Clerk metadata (non-critical): {e}")
+        
+        return {
+            "success": True,
+            "message": "Payment verified and premium access granted"
+        }
+        
+    except Exception as e:
+        logging.error(f"❌ Payment verification failed: {e}")
+        raise HTTPException(status_code=400, detail=f"Payment verification failed: {str(e)}")
         
         # Update user to premium in MongoDB
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
