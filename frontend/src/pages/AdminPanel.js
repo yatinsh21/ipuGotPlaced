@@ -1127,7 +1127,7 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
                   <p className="text-sm text-gray-600">{exp.role} • {exp.rounds} rounds</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => { setEditing(exp); setFormData(exp); setOpen(true); }}>
+                  <Button variant="ghost" size="sm" onClick={() => handleEdit(exp)}>
                     <Edit className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(exp.id)}>
