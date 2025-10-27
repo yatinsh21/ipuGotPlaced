@@ -705,7 +705,7 @@ async def startup_db():
         await db.experiences.create_index([("posted_at", -1)])
         
         # Users indexes
-        await db.users.create_index("id", unique=True)
+        await db.users.create_index("clerk_id", unique=True)
         try:
             await db.users.create_index("email", unique=True)
         except Exception:
