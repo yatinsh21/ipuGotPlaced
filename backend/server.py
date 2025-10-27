@@ -730,3 +730,6 @@ async def health_check():
 async def shutdown_db_client():
     client.close()
     await redis_client.close()
+
+# Include the API router after all endpoints are defined
+app.include_router(api_router)
