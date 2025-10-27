@@ -789,14 +789,19 @@ async def startup_db():
 # Cache stats endpoint for monitoring
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
-    """Get Redis cache statistics"""
+    """Get MongoDB cache statistics"""
     try:
-        info = await redis_client.info()
+        total_keys = await cache_collection.count_documents({})
+        # Count valid vs expired keys
+        now = datetime.now(timezone.utc).isoformat()
+        valid_keys = await cache_collection.count_documents({"expires_at": {"$gt": now}})
+        expired_keys = total_keys - valid_keys
+        
         return {
-            "connected_clients": info.get('connected_clients', 0),
-            "used_memory_human": info.get('used_memory_human', 'N/A'),
-            "total_keys": await redis_client.dbsize(),
-            "uptime_seconds": info.get('uptime_in_seconds', 0)
+            "total_keys": total_keys,
+            "valid_keys": valid_keys,
+            "expired_keys": expired_keys,
+            "cache_type": "MongoDB"
         }
     except Exception as e:
         return {"error": str(e)}
@@ -812,23 +817,22 @@ async def health_check():
     except Exception as e:
         mongo_status = f"unhealthy: {str(e)}"
     
+    # Check cache collection
     try:
-        # Check Redis
-        await redis_client.ping()
-        redis_status = "healthy"
+        await cache_collection.count_documents({})
+        cache_status = "healthy"
     except Exception as e:
-        redis_status = f"unhealthy: {str(e)}"
+        cache_status = f"unhealthy: {str(e)}"
     
     return {
-        "status": "healthy" if mongo_status == "healthy" and redis_status == "healthy" else "degraded",
+        "status": "healthy" if mongo_status == "healthy" and cache_status == "healthy" else "degraded",
         "mongodb": mongo_status,
-        "redis": redis_status
+        "cache": cache_status
     }
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-    await redis_client.close()
 
 # Include the API router after all endpoints are defined
 app.include_router(api_router)
