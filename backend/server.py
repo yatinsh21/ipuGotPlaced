@@ -300,14 +300,21 @@ async def auth_callback(request: Request):
         # Redirect to frontend with cookie
         frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
         response = RedirectResponse(url=frontend_url)
+        # Get the frontend domain from env for cookie domain setting
+        frontend_url = os.environ.get('FRONTEND_URL', 'http://localhost:3000')
+        frontend_domain = frontend_url.split('://')[1] if '://' in frontend_url else frontend_url
+        
+        # In production, set secure=True and domain to match frontend
+        is_prod = os.environ.get('BACKEND_URL', '').startswith('https://')
         response.set_cookie(
             key="session_token",
             value=session_token,
             httponly=True,
-            secure=False,  # Set to True in production with HTTPS
-            samesite="lax",
+            secure=is_prod,  # True in production (HTTPS)
+            samesite="none" if is_prod else "lax",  # none for cross-domain in production
             max_age=7*24*60*60,
-            path="/"
+            path="/",
+            domain=frontend_domain if is_prod else None
         )
         
         return response
