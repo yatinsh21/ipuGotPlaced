@@ -154,8 +154,9 @@ const AdminPanel = () => {
             <Tabs defaultValue="topics" className="space-y-4">
               <TabsList className="bg-white border border-gray-200">
                 <TabsTrigger value="topics">Topics</TabsTrigger>
-                <TabsTrigger value="questions">Questions</TabsTrigger>
-                <TabsTrigger value="companies">Companies</TabsTrigger>
+                <TabsTrigger value="questions">Questions (Free)</TabsTrigger>
+                <TabsTrigger value="companies">Companies (Goldmine)</TabsTrigger>
+                <TabsTrigger value="company-questions">Company Questions (Premium)</TabsTrigger>
                 <TabsTrigger value="experiences">Experiences</TabsTrigger>
                 <TabsTrigger value="users">Users</TabsTrigger>
               </TabsList>
@@ -165,17 +166,23 @@ const AdminPanel = () => {
               </TabsContent>
 
               <TabsContent value="questions">
-                <QuestionsManager 
-                  questions={questions} 
-                  setQuestions={setQuestions} 
+                <TopicQuestionsManager 
+                  questions={questions.filter(q => q.topic_id && !q.company_id)} 
                   topics={topics}
-                  companies={companies}
                   fetchAllData={fetchAllData} 
                 />
               </TabsContent>
 
               <TabsContent value="companies">
                 <CompaniesManager companies={companies} setCompanies={setCompanies} fetchAllData={fetchAllData} />
+              </TabsContent>
+
+              <TabsContent value="company-questions">
+                <CompanyQuestionsManager 
+                  questions={questions.filter(q => q.company_id)} 
+                  companies={companies}
+                  fetchAllData={fetchAllData} 
+                />
               </TabsContent>
 
               <TabsContent value="experiences">
