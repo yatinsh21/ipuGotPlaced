@@ -7,11 +7,12 @@ python-multipart==0.0.20
 motor==3.3.1
 pymongo==4.5.0
 
-# Authentication & Security
-python-jose[cryptography]==3.5.0
+# Authentication - Clerk
+clerk-backend-api==1.2.8
+
+# Security
 passlib[bcrypt]==1.7.4
 itsdangerous==2.2.0
-authlib==1.4.0
 
 # Payment Integration
 razorpay==2.0.0
