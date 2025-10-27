@@ -13,8 +13,7 @@ const LandingPage = () => {
     { name: 'TCS', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/hdc4u34c_tcs.png' },
     { name: 'Cvent', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/yncdtcih_cvent.jpg' },
     { name: 'IVP', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/2jfnamkw_ivp.jpg' },
-    { name: 'TTN', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/bvknwmxb_ttn.jpg' },
-    { name: 'Unthinkable', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/33ca93na_unthinkable.png' }
+    { name: 'TTN', logo: 'https://customer-assets.emergentagent.com/job_interviewace-app/artifacts/bvknwmxb_ttn.jpg' }
   ];
 
   return (
