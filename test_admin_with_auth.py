@@ -36,8 +36,8 @@ class AdminUserManagementTester:
         """Try to use existing session token from logs"""
         print("🔑 Attempting to use existing session token...")
         
-        # Session token from logs
-        session_token = "T0INgSigrhyn6luuFQUlqr0N8vuDSV6plt6EVOGtc9E"
+        # Admin session token from database
+        session_token = "oW5LtFoRHu-N1whQgtNB566XNPXY6uM_6MIafBkO4-w"
         
         # Try with Authorization header
         headers = {'Authorization': f'Bearer {session_token}'}
