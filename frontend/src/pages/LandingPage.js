@@ -65,7 +65,7 @@ const LandingPage = () => {
           <Link to="/topics" className="group">
             <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
               <BookOpen className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Free Questions</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Free Question Banks</h3>
               <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Practice 100+ interview questions organized by topics like Data Structures, Algorithms, and System Design</p>
               <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">Browse Topics →</span>
             </div>
@@ -74,8 +74,8 @@ const LandingPage = () => {
           <Link to="/goldmine" className="group">
             <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
               <Crown className="h-10 w-10 md:h-12 md:w-12 text-yellow-500 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Premium Goldmine</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Company-wise questions with insider tips, categorized by interview types. Bookmark your favorites</p>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Company-Wise Prep</h3>
+              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Real questions from top companies. Practice what actually gets asked in interviews</p>
               <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">View Companies →</span>
             </div>
           </Link>
@@ -83,8 +83,8 @@ const LandingPage = () => {
           <Link to="/experiences" className="group">
             <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
               <FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Interview Experiences</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Real interview experiences from candidates who got offers from top tech companies</p>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Real Experiences</h3>
+              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Learn from students who got placed. Real stories, real insights</p>
               <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">Read Stories →</span>
             </div>
           </Link>
