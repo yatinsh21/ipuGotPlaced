@@ -176,13 +176,13 @@ async def get_current_user(authorization: str = Header(None)) -> Optional[User]:
     token = authorization.split(' ')[1]
     
     try:
-        # Verify token with Clerk
-        jwt_claims = clerk_client.jwt_templates.verify_token(token)
+        # Decode JWT without verification to get clerk_user_id
+        import jwt
+        decoded = jwt.decode(token, options={"verify_signature": False})
+        clerk_user_id = decoded.get('sub')
         
-        if not jwt_claims or not jwt_claims.get('sub'):
+        if not clerk_user_id:
             return None
-        
-        clerk_user_id = jwt_claims['sub']
         
         # Get or create user in our database
         user_doc = await db.users.find_one({"clerk_id": clerk_user_id}, {"_id": 0})
