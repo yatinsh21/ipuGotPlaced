@@ -222,7 +222,7 @@ const AdminPanel = () => {
 };
 
 // Topics Manager Component
-const TopicsManager = ({ topics, fetchAllData }) => {
+const TopicsManager = ({ topics, fetchAllData, getAuthConfig }) => {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formData, setFormData] = useState({ name: '' });
