@@ -101,7 +101,7 @@ const GoldminePage = () => {
     }
   };
 
-  if (showPayment && user && !user.is_premium) {
+  if (showPayment && isSignedIn && !isPremium) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
         <div className="bg-white max-w-3xl w-full p-6 max-h-[95vh] overflow-y-auto">
