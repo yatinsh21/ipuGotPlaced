@@ -649,72 +649,74 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData }) => {
 
   return (
     <Card className="border-2 border-gray-200">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Interview Experiences Management</CardTitle>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-experience-btn">
-              <Plus className="h-4 w-4 mr-2" /> Add Experience
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>{editing ? 'Edit Experience' : 'Add New Experience'}</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Company</Label>
-                <Select 
-                  value={formData.company_id} 
-                  onValueChange={(val) => {
-                    const company = companies.find(c => c.id === val);
-                    setFormData({...formData, company_id: val, company_name: company?.name || ''});
-                  }}
-                >
-                  <SelectTrigger data-testid="experience-company-select">
-                    <SelectValue placeholder="Select company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Role</Label>
-                <Input 
-                  value={formData.role} 
-                  onChange={(e) => setFormData({...formData, role: e.target.value})} 
-                  data-testid="experience-role-input"
-                  placeholder="Software Engineer"
-                  required 
-                />
-              </div>
-              <div>
-                <Label>Number of Rounds</Label>
-                <Input 
-                  type="number" 
-                  value={formData.rounds} 
-                  onChange={(e) => setFormData({...formData, rounds: parseInt(e.target.value)})} 
-                  data-testid="experience-rounds-input"
-                  min="1"
-                  required 
-                />
-              </div>
-              <div>
-                <Label>Experience</Label>
-                <Textarea 
-                  value={formData.experience} 
-                  onChange={(e) => setFormData({...formData, experience: e.target.value})} 
-                  data-testid="experience-text-input"
-                  rows={8}
-                  placeholder="Describe the interview experience..."
-                  required 
-                />
-              </div>
-              <Button type="submit" data-testid="submit-experience-btn">Save</Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+      <CardHeader>
+        <div className="flex flex-row items-center justify-between">
+          <CardTitle>Interview Experiences Management</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { setEditing(null); resetForm(); }} data-testid="add-experience-btn">
+                <Plus className="h-4 w-4 mr-2" /> Add Experience
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{editing ? 'Edit Experience' : 'Add New Experience'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <Label>Company</Label>
+                  <Select 
+                    value={formData.company_id} 
+                    onValueChange={(val) => {
+                      const company = companies.find(c => c.id === val);
+                      setFormData({...formData, company_id: val, company_name: company?.name || ''});
+                    }}
+                  >
+                    <SelectTrigger data-testid="experience-company-select">
+                      <SelectValue placeholder="Select company" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Role</Label>
+                  <Input 
+                    value={formData.role} 
+                    onChange={(e) => setFormData({...formData, role: e.target.value})} 
+                    data-testid="experience-role-input"
+                    placeholder="Software Engineer"
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label>Number of Rounds</Label>
+                  <Input 
+                    type="number" 
+                    value={formData.rounds} 
+                    onChange={(e) => setFormData({...formData, rounds: parseInt(e.target.value)})} 
+                    data-testid="experience-rounds-input"
+                    min="1"
+                    required 
+                  />
+                </div>
+                <div>
+                  <Label>Experience</Label>
+                  <Textarea 
+                    value={formData.experience} 
+                    onChange={(e) => setFormData({...formData, experience: e.target.value})} 
+                    data-testid="experience-text-input"
+                    rows={8}
+                    placeholder="Describe the interview experience..."
+                    required 
+                  />
+                </div>
+                <Button type="submit" data-testid="submit-experience-btn">Save</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-4 max-h-96 overflow-y-auto">
