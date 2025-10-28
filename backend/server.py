@@ -6,6 +6,7 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+from bson import ObjectId
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
@@ -139,12 +140,27 @@ async def get_cached_data(key: str):
 async def set_cached_data(key: str, data, ttl: int = 3600):
     try:
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
+        
+        # Convert datetime objects to ISO format strings before caching
+        def serialize_data(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, ObjectId):
+                return str(obj)
+            elif isinstance(obj, dict):
+                return {k: serialize_data(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [serialize_data(item) for item in obj]
+            return obj
+        
+        serialized_data = serialize_data(data)
+        
         await cache_collection.update_one(
             {"key": key},
             {
                 "$set": {
                     "key": key,
-                    "data": json.dumps(data),
+                    "data": json.dumps(serialized_data),
                     "expires_at": expires_at.isoformat(),
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
@@ -153,7 +169,6 @@ async def set_cached_data(key: str, data, ttl: int = 3600):
         )
     except Exception as e:
         logging.warning(f"Cache set failed for {key}: {e}")
-
 async def invalidate_cache_pattern(pattern: str):
     try:
         regex_pattern = pattern.replace("*", ".*")
@@ -508,14 +523,16 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 async def get_all_users(user: User = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0}).to_list(10000)
     
-    # Clean users data to ensure JSON serializability
-    cleaned_users = []
+    # Ensure all data is JSON serializable
     for user_doc in users:
-        # Remove any remaining _id or ObjectId fields
-        cleaned_user = {k: v for k, v in user_doc.items() if k != '_id' and not k.startswith('_')}
-        cleaned_users.append(cleaned_user)
+        for key, value in list(user_doc.items()):
+            if isinstance(value, ObjectId):
+                user_doc[key] = str(value)
+            elif isinstance(value, datetime):
+                user_doc[key] = value.isoformat()
     
-    return cleaned_users
+    return users
+
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
@@ -716,6 +733,11 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup_db():
     try:
+        await db.questions.delete_many({"id": None})
+        await db.topics.delete_many({"id": None})
+        await db.companies.delete_many({"id": None})
+        await db.experiences.delete_many({"id": None})
+        
         await db.topics.create_index("id", unique=True)
         
         await db.questions.create_index("id", unique=True)
