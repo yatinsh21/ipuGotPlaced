@@ -24,7 +24,6 @@ const CompanyQuestionsPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
@@ -100,14 +99,19 @@ const CompanyQuestionsPage = () => {
       const comp = companiesRes.data.find(c => c.id === companyId);
       setCompany(comp);
 
-      // Fetch questions (backend will handle preview for non-premium)
-      const config = isPremiumUser && isSignedIn ? {
-        headers: {
-          Authorization: `Bearer ${await getToken()}`
-        }
-      } : {};
-      const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, config);
-      setQuestions(questionsRes.data);
+      // Only fetch questions if user is premium
+      if (isPremiumUser && isSignedIn) {
+        const token = await getToken();
+        const questionsRes = await axios.get(`${API}/company-questions/${companyId}`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+        setQuestions(questionsRes.data);
+      } else {
+        // For non-premium users, just set empty questions
+        setQuestions([]);
+      }
     } catch (error) {
       console.error('Failed to fetch data:', error);
       toast.error('Failed to load company data');
@@ -116,13 +120,7 @@ const CompanyQuestionsPage = () => {
     }
   };
 
-  const handleQuestionClick = () => {
-    if (!isPremiumUser) {
-      setShowUpgradeModal(true);
-    }
-  };
-
-  // PAYMENT HANDLER - REWRITTEN FROM SCRATCH
+  // PAYMENT HANDLER
   const handlePayment = async () => {
     console.log('=== PAYMENT FLOW STARTED (Company Page) ===');
     
@@ -242,7 +240,6 @@ const CompanyQuestionsPage = () => {
   const toggleBookmark = async (questionId, e) => {
     e.stopPropagation();
     if (!isPremiumUser) {
-      setShowUpgradeModal(true);
       return;
     }
 
@@ -276,9 +273,10 @@ const CompanyQuestionsPage = () => {
 
   const categories = ['all', 'technical', 'coding', 'project', 'HR'];
   const getCategoryCount = (cat) => {
-    if (cat === 'all') return questions.length;
-    return questions.filter(q => q.category === cat).length;
-  };
+  if (!isPremiumUser) return <Lock size={16} />;
+  if (cat === 'all') return questions.length;
+  return questions.filter(q => q.category === cat).length;
+};
 
   const getDifficultyColor = (diff) => {
     switch(diff) {
@@ -318,9 +316,9 @@ const CompanyQuestionsPage = () => {
               <div>
                 <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
                   <Lock className="h-5 w-5" />
-                  Sign in to unlock preview
+                  Sign in to view this page
                 </h3>
-                <p className="text-gray-700">Sign in with Google to see company questions structure and upgrade to premium for full access.</p>
+                <p className="text-gray-700">Sign in with Google to access company questions.</p>
               </div>
               <Button 
                 onClick={() => {
@@ -362,28 +360,6 @@ const CompanyQuestionsPage = () => {
           Back to Goldmine
         </Button>
 
-        {/* Premium Banner for non-premium users */}
-        {!isPremiumUser && (
-          <div className="mb-6 bg-yellow-50 border-2 border-yellow-200 p-6 rounded">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Preview Mode - Unlock Full Access
-                </h3>
-                <p className="text-gray-700">You're viewing the question structure. Upgrade to see all answers and bookmark questions.</p>
-              </div>
-              <Button 
-                onClick={handlePayment}
-                className="bg-gray-900 hover:bg-gray-800 text-white"
-              >
-                <Crown className="h-4 w-4 mr-2" />
-                Upgrade for ₹399
-              </Button>
-            </div>
-          </div>
-        )}
-
         {loading ? (
           <div className="flex justify-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
@@ -396,10 +372,15 @@ const CompanyQuestionsPage = () => {
               )}
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">{company?.name}</h1>
-                <p className="text-gray-600">{questions.length} interview questions</p>
+                {isPremiumUser ? (
+                  <p className="text-gray-600">{questions.length} interview questions</p>
+                ) : (
+                  <p className="text-gray-600">Premium content • Upgrade to view</p>
+                )}
               </div>
             </div>
 
+            {/* Category Tabs - Always visible */}
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
               <TabsList className="bg-white border border-gray-200">
                 {categories.map((cat) => (
@@ -415,63 +396,35 @@ const CompanyQuestionsPage = () => {
               </TabsList>
             </Tabs>
 
-            <div className="bg-white border border-gray-200 shadow-sm">
-              {!isPremiumUser && filteredQuestions.length > 3 && (
-                <div className="bg-yellow-50 border-b-2 border-yellow-200 p-4 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Lock className="h-5 w-5 text-yellow-600" />
-                    <div>
-                      <p className="font-medium text-gray-900">Preview Mode - Only first 3 questions shown</p>
-                      <p className="text-sm text-gray-600">Unlock all questions and answers with premium</p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={() => setShowUpgradeModal(true)}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-gray-900"
-                  >
-                    <Crown className="h-4 w-4 mr-2" />
-                    Upgrade to Premium
-                  </Button>
-                </div>
-              )}
-              
-              <Accordion type="single" collapsible className="w-full">
-                {filteredQuestions.map((question, index) => (
-                  <AccordionItem 
-                    key={question.id} 
-                    value={question.id}
-                    className={question.locked ? 'locked-question opacity-60' : ''}
-                  >
-                    <AccordionTrigger 
-                      data-testid={`question-${index}`}
-                      className="px-6 py-4 hover:bg-gray-50 text-left no-copy"
-                      disabled={question.locked}
-                      onClick={question.locked ? handleQuestionClick : undefined}
+            {/* Premium users see questions */}
+            {isPremiumUser ? (
+              <div className="bg-white border border-gray-200 shadow-sm">
+                <Accordion type="single" collapsible className="w-full">
+                  {filteredQuestions.map((question, index) => (
+                    <AccordionItem 
+                      key={question.id} 
+                      value={question.id}
                     >
-                      <div className="flex items-center justify-between flex-1 gap-4">
-                        <div className="flex items-center gap-3 flex-1">
-                          {question.locked && <Lock className="h-4 w-4 text-gray-400" />}
-                          <span className="text-gray-500 font-medium">Q{index + 1}.</span>
-                          <span className={`font-medium ${question.locked ? 'text-gray-500' : 'text-gray-900'}`}>
-                            {question.question}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge className={getDifficultyColor(question.difficulty)}>
-                            {question.difficulty}
-                          </Badge>
-                          {question.locked && (
-                            <Badge className="bg-yellow-100 text-yellow-800">
-                              <Lock className="h-3 w-3 mr-1" />
-                              Premium
+                      <AccordionTrigger 
+                        data-testid={`question-${index}`}
+                        className="px-6 py-4 hover:bg-gray-50 text-left no-copy"
+                      >
+                        <div className="flex items-center justify-between flex-1 gap-4">
+                          <div className="flex items-center gap-3 flex-1">
+                            <span className="text-gray-500 font-medium">Q{index + 1}.</span>
+                            <span className="font-medium text-gray-900">
+                              {question.question}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={getDifficultyColor(question.difficulty)}>
+                              {question.difficulty}
                             </Badge>
-                          )}
-                          {question.tags?.map((tag) => (
-                            <Badge key={tag} className={getTagColor(tag)}>
-                              {tag}
-                            </Badge>
-                          ))}
-                          {isPremiumUser && !question.locked && (
+                            {question.tags?.map((tag) => (
+                              <Badge key={tag} className={getTagColor(tag)}>
+                                {tag}
+                              </Badge>
+                            ))}
                             <Button
                               variant="ghost"
                               size="sm"
@@ -484,60 +437,99 @@ const CompanyQuestionsPage = () => {
                                 <Bookmark className="h-5 w-5 text-gray-400" />
                               )}
                             </Button>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    </AccordionTrigger>
-                    {!question.locked && (
+                      </AccordionTrigger>
                       <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
                         <div className="prose max-w-none no-copy">
                           <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
                         </div>
                       </AccordionContent>
-                    )}
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
 
-            {filteredQuestions.length === 0 && (
-              <div className="text-center py-12 bg-white border border-gray-200">
-                <p className="text-gray-500">No questions found in this category.</p>
+                {filteredQuestions.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">No questions found in this category.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Non-premium users see locked state */
+              <div className="bg-white border-2 border-gray-200 shadow-lg">
+                {/* Premium Upgrade Banner */}
+                  <div className="p-6 space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div 
+                      key={i}
+                      className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-300 rounded w-3/4 mb-2"></div>
+                          <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                      <Badge className="bg-gray-200 text-gray-500">
+                        <Lock className="h-3 w-3 mr-1" />
+                        Premium
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b-2 border-yellow-200 p-8">
+                  <div className="max-w-2xl mx-auto text-center">
+                    <Crown className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
+                    <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                      Unlock Premium Content
+                    </h2>
+                    <p className="text-lg text-gray-700 mb-6">
+                      Get lifetime access to {company?.question_count || 'all'} carefully curated interview questions from {company?.name}
+                    </p>
+                    
+                    <div className="bg-white border-2 border-yellow-400 rounded-lg p-6 mb-6 inline-block">
+                      <div className="text-5xl font-bold text-gray-900 mb-2">₹399</div>
+                      <div className="text-gray-600 text-lg">One-time payment • Lifetime access</div>
+                    </div>
+                    
+                    <Button 
+                      onClick={handlePayment}
+                      size="lg"
+                      className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold text-lg px-8 py-6 h-auto"
+                    >
+                      <Crown className="h-5 w-5 mr-2" />
+                      Upgrade to Premium Now
+                    </Button>
+                    
+                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
+                        <div className="font-semibold text-gray-900 mb-1">✓ All Questions</div>
+                        <div className="text-sm text-gray-600">Access complete Q&A database</div>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
+                        <div className="font-semibold text-gray-900 mb-1">✓ Bookmark Feature</div>
+                        <div className="text-sm text-gray-600">Save important questions</div>
+                      </div>
+                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
+                        <div className="font-semibold text-gray-900 mb-1">✓ Lifetime Access</div>
+                        <div className="text-sm text-gray-600">Pay once, access forever</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Locked Questions Preview */}
+              
+
+                {/* Bottom CTA */}
+                
               </div>
             )}
           </>
         )}
       </div>
-
-      {/* Upgrade Modal */}
-      {showUpgradeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowUpgradeModal(false)}>
-          <div className="bg-white p-8 max-w-md mx-4 border-2 border-gray-900" onClick={e => e.stopPropagation()}>
-            <Crown className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-4 text-center">Unlock Full Access</h2>
-            <p className="text-gray-600 mb-6 text-center">
-              Upgrade to premium to view complete answers, bookmark questions, and access all features.
-            </p>
-            <div className="mb-6 text-center">
-              <div className="text-4xl font-bold text-gray-900 mb-1">₹399</div>
-              <div className="text-gray-600">One-time payment • Lifetime access</div>
-            </div>
-            <Button 
-              onClick={handlePayment}
-              className="w-full bg-gray-900 hover:bg-gray-800 text-white mb-3"
-            >
-              Upgrade Now
-            </Button>
-            <Button 
-              variant="ghost"
-              onClick={() => setShowUpgradeModal(false)}
-              className="w-full"
-            >
-              Continue Preview
-            </Button>
-          </div>
-        </div>
-      )}
       
       <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     </div>
