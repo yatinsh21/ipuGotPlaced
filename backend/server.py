@@ -70,6 +70,8 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    bookmarked_questions: List[str] = []
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -465,6 +467,23 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
     except Exception as e:
         logging.error(f"❌ Payment verification failed: {e}")
         raise HTTPException(status_code=400, detail=f"Payment verification failed: {str(e)}")
+        
+        # Update user to premium in MongoDB
+        await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
+        
+        # Update Clerk user metadata
+        if clerk_client:
+            try:
+                clerk_client.users.update_metadata(
+                    user_id=user.clerk_id,
+                    public_metadata={"isPremium": True}
+                )
+            except Exception as e:
+                logging.error(f"Failed to update Clerk metadata: {e}")
+        
+        return {"success": True, "message": "Payment verified successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Payment verification failed")
 
 # Admin endpoints
 @api_router.get("/admin/stats")
