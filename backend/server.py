@@ -561,44 +561,208 @@ async def get_all_users(user: User = Depends(require_admin)):
     safe_users = [make_json_safe(user) for user in users]
     return JSONResponse(content=safe_users)
 
-
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+    # Validate user_id
+    if not user_id or user_id == "undefined" or user_id == "null":
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid user_id provided"
+        )
+    
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
+    # Update MongoDB - admins automatically get premium
+    await db.users.update_one(
+        {"clerk_id": user_id}, 
+        {"$set": {"is_admin": True, "is_premium": True}}
+    )
     
-    return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_user = clerk_client.users.get(user_id=user_id)
+            clerk_client.users.update(
+                user_id=user_id,
+                public_metadata={
+                    **clerk_user.public_metadata,
+                    'isAdmin': True,
+                    'isPremium': True
+                }
+            )
+            logging.info(f"✓ Updated Clerk metadata for admin grant: {target_user['email']}")
+        except Exception as e:
+            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
+    
+    return {
+        "success": True, 
+        "message": f"Admin access granted to {target_user['email']}"
+    }
 
 @api_router.post("/admin/users/{user_id}/revoke-admin")
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+    # Validate user_id
+    if not user_id or user_id == "undefined" or user_id == "null":
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid user_id provided"
+        )
+    
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Prevent self-revocation
     if user_id == current_user.clerk_id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
-    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": False}})
+    # Update MongoDB
+    await db.users.update_one(
+        {"clerk_id": user_id}, 
+        {"$set": {"is_admin": False}}
+    )
     
-    return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_user = clerk_client.users.get(user_id=user_id)
+            clerk_client.users.update(
+                user_id=user_id,
+                public_metadata={
+                    **clerk_user.public_metadata,
+                    'isAdmin': False
+                }
+            )
+            logging.info(f"✓ Updated Clerk metadata for admin revoke: {target_user['email']}")
+        except Exception as e:
+            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
+    
+    return {
+        "success": True, 
+        "message": f"Admin access revoked from {target_user['email']}"
+    }
 
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
+    # Validate user_id
+    if not user_id or user_id == "undefined" or user_id == "null":
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid user_id provided"
+        )
+    
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Don't allow removing premium from admins
     if target_user.get('is_admin') and target_user.get('is_premium'):
-        raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
+        raise HTTPException(
+            status_code=400, 
+            detail="Cannot remove premium status from admin users"
+        )
     
+    # Toggle premium status
     new_premium_status = not target_user.get('is_premium', False)
-    await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_premium": new_premium_status}})
+    
+    # Update MongoDB
+    await db.users.update_one(
+        {"clerk_id": user_id}, 
+        {"$set": {"is_premium": new_premium_status}}
+    )
+    
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_user = clerk_client.users.get(user_id=user_id)
+            clerk_client.users.update(
+                user_id=user_id,
+                public_metadata={
+                    **clerk_user.public_metadata,
+                    'isPremium': new_premium_status
+                }
+            )
+            logging.info(f"✓ Updated Clerk metadata for premium toggle: {target_user['email']}")
+        except Exception as e:
+            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
     
     status_text = "granted" if new_premium_status else "revoked"
-    return {"success": True, "message": f"Premium access {status_text} for {target_user['email']}"}
+    return {
+        "success": True, 
+        "message": f"Premium access {status_text} for {target_user['email']}"
+    }
+
+# @api_router.post("/admin/users/{user_id}/grant-admin")
+# async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+#     target_user = await db.users.find_one({"clerk_id": user_id})
+#     if not target_user:
+#         raise HTTPException(status_code=404, detail="User not found")
+    
+#     await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
+    
+#     return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
+
+# @api_router.post("/admin/users/{user_id}/revoke-admin")
+# async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+#     target_user = await db.users.find_one({"clerk_id": user_id})
+#     if not target_user:
+#         raise HTTPException(status_code=404, detail="User not found")
+    
+#     if user_id == current_user.clerk_id:
+#         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
+    
+#     await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": False}})
+    
+#     return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
+
+# @api_router.post("/admin/users/{user_id}/toggle-premium")
+# async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
+#     # Validate user_id
+#     if not user_id or user_id == "undefined" or user_id == "null":
+#         raise HTTPException(
+#             status_code=400, 
+#             detail="Invalid user_id provided"
+#         )
+    
+#     target_user = await db.users.find_one({"clerk_id": user_id})
+#     if not target_user:
+#         raise HTTPException(status_code=404, detail="User not found")
+    
+#     # Don't allow removing premium from admins
+#     if target_user.get('is_admin') and target_user.get('is_premium'):
+#         raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
+    
+#     # Toggle premium status
+#     new_premium_status = not target_user.get('is_premium', False)
+    
+#     # Update MongoDB
+#     await db.users.update_one(
+#         {"clerk_id": user_id}, 
+#         {"$set": {"is_premium": new_premium_status}}
+#     )
+    
+#     # Update Clerk metadata (same pattern as grant_admin_access)
+#     if clerk_client:
+#         try:
+#             clerk_user = clerk_client.users.get(user_id=user_id)
+#             clerk_client.users.update(
+#                 user_id=user_id,
+#                 public_metadata={
+#                     **clerk_user.public_metadata,
+#                     'isPremium': new_premium_status
+#                 }
+#             )
+#             logging.info(f"✓ Updated Clerk metadata for user: {target_user['email']}")
+#         except Exception as e:
+#             logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
+    
+#     status_text = "granted" if new_premium_status else "revoked"
+#     return {
+#         "success": True, 
+#         "message": f"Premium access {status_text} for {target_user['email']}"
+#     }
 
 # Admin CRUD - Topics
 @api_router.post("/admin/topics")
