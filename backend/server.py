@@ -220,30 +220,9 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                     "bookmarked_questions": [],
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
-                
-                try:
-                    await db.users.insert_one(new_user)
-                    user_doc = new_user
-                    logging.info(f"✓ Created new user: {new_user['email']}")
-                except Exception as insert_error:
-                    # Handle duplicate key error - try to find existing user by email
-                    if "duplicate key" in str(insert_error).lower():
-                        logging.warning(f"Duplicate key error, searching for existing user by email")
-                        user_doc = await db.users.find_one({"email": new_user['email']}, {"_id": 0})
-                        if user_doc:
-                            # Update the clerk_id for the existing user
-                            await db.users.update_one(
-                                {"email": new_user['email']},
-                                {"$set": {"clerk_id": clerk_user_id}}
-                            )
-                            user_doc['clerk_id'] = clerk_user_id
-                            logging.info(f"✓ Updated existing user with new clerk_id: {new_user['email']}")
-                        else:
-                            logging.error(f"Could not find user after duplicate key error")
-                            return None
-                    else:
-                        raise insert_error
-                        
+                await db.users.insert_one(new_user)
+                user_doc = new_user
+                logging.info(f"✓ Created new user: {new_user['email']}")
             except Exception as e:
                 logging.error(f"Failed to get Clerk user: {e}")
                 return None
@@ -526,15 +505,7 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0}).to_list(10000)
-    
-    # Clean users data to ensure JSON serializability
-    cleaned_users = []
-    for user_doc in users:
-        # Remove any remaining _id or ObjectId fields
-        cleaned_user = {k: v for k, v in user_doc.items() if k != '_id' and not k.startswith('_')}
-        cleaned_users.append(cleaned_user)
-    
-    return cleaned_users
+    return users
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
@@ -752,10 +723,8 @@ async def startup_db():
         
         # Users indexes
         await db.users.create_index("clerk_id", unique=True)
-        # Remove email unique index - email can be duplicated across different clerk users
         try:
-            await db.users.drop_index("email_1")
-            logger.info("Dropped old email_1 unique index")
+            await db.users.create_index("email", unique=True)
         except Exception:
             pass
         
