@@ -924,6 +924,11 @@ async def get_cache_stats(user: User = Depends(require_admin)):
     except Exception as e:
         return {"error": str(e)}
 
+        # HEAD
+@api_router.head("/health")
+async def health_head():
+    return Response(status_code=200)
+
 @api_router.get("/health")
 async def health_check():
     try:
