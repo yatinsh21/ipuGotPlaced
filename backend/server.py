@@ -218,9 +218,30 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                     "bookmarked_questions": [],
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
-                await db.users.insert_one(new_user)
-                user_doc = new_user
-                logging.info(f"✓ Created new user: {new_user['email']}")
+                
+                try:
+                    await db.users.insert_one(new_user)
+                    user_doc = new_user
+                    logging.info(f"✓ Created new user: {new_user['email']}")
+                except Exception as insert_error:
+                    # Handle duplicate key error - try to find existing user by email
+                    if "duplicate key" in str(insert_error).lower():
+                        logging.warning(f"Duplicate key error, searching for existing user by email")
+                        user_doc = await db.users.find_one({"email": new_user['email']}, {"_id": 0})
+                        if user_doc:
+                            # Update the clerk_id for the existing user
+                            await db.users.update_one(
+                                {"email": new_user['email']},
+                                {"$set": {"clerk_id": clerk_user_id}}
+                            )
+                            user_doc['clerk_id'] = clerk_user_id
+                            logging.info(f"✓ Updated existing user with new clerk_id: {new_user['email']}")
+                        else:
+                            logging.error(f"Could not find user after duplicate key error")
+                            return None
+                    else:
+                        raise insert_error
+                        
             except Exception as e:
                 logging.error(f"Failed to get Clerk user: {e}")
                 return None
