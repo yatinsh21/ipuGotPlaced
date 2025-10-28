@@ -504,8 +504,18 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
-    users = await db.users.find({}, {"_id": 0}).to_list(10000)
-    return users
+    users = await db.users.find({}).to_list(10000)
+    
+    # Convert MongoDB documents to serializable format
+    serializable_users = []
+    for user_doc in users:
+        # Convert _id to string and remove the ObjectId
+        user_dict = dict(user_doc)
+        if '_id' in user_dict:
+            user_dict['_id'] = str(user_dict['_id'])
+        serializable_users.append(user_dict)
+    
+    return serializable_users
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
