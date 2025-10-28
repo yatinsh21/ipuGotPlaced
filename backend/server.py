@@ -65,7 +65,7 @@ api_router = APIRouter(prefix="/api")
 # Models
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    clerk_id: str
+    clerk_id: str  # This is the primary key
     email: str
     name: str
     picture: Optional[str] = None
@@ -73,7 +73,7 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
+    # NO 'id' field - we use clerk_id instead
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -741,66 +741,89 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup_db():
     try:
-        # Clean up documents with null IDs BEFORE creating indexes
-        logger.info("Cleaning up null ID documents...")
+        logger.info("🚀 Starting database initialization...")
         
-        # Delete or fix users with null clerk_id
+        # Step 1: Clean up null values
+        logger.info("Cleaning up null ID documents...")
         null_users = await db.users.count_documents({"clerk_id": None})
         if null_users > 0:
             logger.warning(f"Found {null_users} users with null clerk_id - deleting them")
             await db.users.delete_many({"clerk_id": None})
         
-        # Clean up other collections
         await db.questions.delete_many({"id": None})
         await db.topics.delete_many({"id": None})
         await db.companies.delete_many({"id": None})
         await db.experiences.delete_many({"id": None})
+        logger.info("✓ Null ID cleanup complete")
         
-        logger.info("Null ID cleanup complete")
+        # Step 2: Drop old/unused indexes
+        logger.info("Dropping old indexes...")
+        old_indexes = ["id_1", "email_1"]
+        for index_name in old_indexes:
+            try:
+                await db.users.drop_index(index_name)
+                logger.info(f"✓ Dropped old index: {index_name}")
+            except Exception:
+                pass
         
-        # Now create indexes (they won't fail due to duplicates)
+        # Step 3: Create proper indexes
+        logger.info("Creating indexes...")
+        
+        # Topics
         await db.topics.create_index("id", unique=True)
         
+        # Questions
         await db.questions.create_index("id", unique=True)
         await db.questions.create_index("topic_id")
         await db.questions.create_index("company_id")
         await db.questions.create_index([("difficulty", 1), ("topic_id", 1)])
         await db.questions.create_index([("category", 1), ("company_id", 1)])
         
+        # Companies
         await db.companies.create_index("id", unique=True)
         await db.companies.create_index("name")
         
+        # Experiences
         await db.experiences.create_index("id", unique=True)
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        # Users indexes - create clerk_id unique index AFTER cleanup
+        # Users - ONLY clerk_id is unique
         await db.users.create_index("clerk_id", unique=True)
+        await db.users.create_index("email")  # Non-unique for search
         
-        # Remove old email unique index if it exists
-        try:
-            await db.users.drop_index("email_1")
-            logger.info("Dropped old email_1 unique index")
-        except Exception:
-            pass
-        
-        # Cache collection indexes
+        # Cache
         await cache_collection.create_index("key", unique=True)
         await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
-        logger.info("✓ Database indexes created successfully")
+        logger.info("✓ All indexes created successfully")
         
-        # Warm up cache
+        # Step 4: Verify services
+        if razorpay_client:
+            logger.info("✓ Razorpay client initialized")
+        else:
+            logger.warning("⚠️ Razorpay not configured - payments disabled")
+        
+        if clerk_client:
+            logger.info("✓ Clerk client initialized")
+        else:
+            logger.warning("⚠️ Clerk not configured")
+        
+        # Step 5: Warm up cache
+        logger.info("Warming up cache...")
         topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
         await set_cached_data("topics", topics, ttl=7200)
         
         companies = await db.companies.find({}, {"_id": 0}).to_list(1000)
         await set_cached_data("companies", companies, ttl=7200)
         
-        logger.info("✓ Cache warmed up successfully")
+        logger.info("✓ Cache warmed up")
+        logger.info("🎉 Database initialization complete!")
         
     except Exception as e:
-        logger.warning(f"Index creation warning: {e}")
+        logger.error(f"❌ Startup error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
         
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
