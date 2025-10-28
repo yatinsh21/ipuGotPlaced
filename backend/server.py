@@ -6,8 +6,10 @@ from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
-from bson import ObjectId
+# from bson import ObjectId
 from pathlib import Path
+from bson import ObjectId
+# from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
 import uuid
@@ -521,17 +523,23 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
-    users = await db.users.find({}, {"_id": 0}).to_list(10000)
+    """Get all users - returns JSONResponse to handle MongoDB types"""
+    users = await db.users.find({}).to_list(10000)
     
-    # Ensure all data is JSON serializable
-    for user_doc in users:
-        for key, value in list(user_doc.items()):
-            if isinstance(value, ObjectId):
-                user_doc[key] = str(value)
-            elif isinstance(value, datetime):
-                user_doc[key] = value.isoformat()
+    def make_json_safe(obj):
+        """Recursively convert MongoDB types to JSON-safe types"""
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
+        elif isinstance(obj, dict):
+            return {k: make_json_safe(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [make_json_safe(item) for item in obj]
+        return obj
     
-    return users
+    safe_users = [make_json_safe(user) for user in users]
+    return JSONResponse(content=safe_users)
 
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
@@ -733,11 +741,24 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup_db():
     try:
+        # Clean up documents with null IDs BEFORE creating indexes
+        logger.info("Cleaning up null ID documents...")
+        
+        # Delete or fix users with null clerk_id
+        null_users = await db.users.count_documents({"clerk_id": None})
+        if null_users > 0:
+            logger.warning(f"Found {null_users} users with null clerk_id - deleting them")
+            await db.users.delete_many({"clerk_id": None})
+        
+        # Clean up other collections
         await db.questions.delete_many({"id": None})
         await db.topics.delete_many({"id": None})
         await db.companies.delete_many({"id": None})
         await db.experiences.delete_many({"id": None})
         
+        logger.info("Null ID cleanup complete")
+        
+        # Now create indexes (they won't fail due to duplicates)
         await db.topics.create_index("id", unique=True)
         
         await db.questions.create_index("id", unique=True)
@@ -753,9 +774,10 @@ async def startup_db():
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        # Users indexes
+        # Users indexes - create clerk_id unique index AFTER cleanup
         await db.users.create_index("clerk_id", unique=True)
-        # Remove email unique index - email can be duplicated across different clerk users
+        
+        # Remove old email unique index if it exists
         try:
             await db.users.drop_index("email_1")
             logger.info("Dropped old email_1 unique index")
@@ -766,19 +788,20 @@ async def startup_db():
         await cache_collection.create_index("key", unique=True)
         await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
-        logger.info("Database indexes created successfully")
+        logger.info("✓ Database indexes created successfully")
         
+        # Warm up cache
         topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
         await set_cached_data("topics", topics, ttl=7200)
         
         companies = await db.companies.find({}, {"_id": 0}).to_list(1000)
         await set_cached_data("companies", companies, ttl=7200)
         
-        logger.info("Cache warmed up successfully")
+        logger.info("✓ Cache warmed up successfully")
         
     except Exception as e:
         logger.warning(f"Index creation warning: {e}")
-
+        
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
     try:
