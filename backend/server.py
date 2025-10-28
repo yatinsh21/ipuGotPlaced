@@ -48,7 +48,7 @@ else:
 
 # Cloudinary configuration
 cloudinary.config(
-    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'demo'),
+    cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME', 'dzlwzbwf2'),
     api_key=os.environ.get('CLOUDINARY_API_KEY', ''),
     api_secret=os.environ.get('CLOUDINARY_API_SECRET', '')
 )
@@ -840,7 +840,7 @@ async def check_razorpay_status():
         "key_id_prefix": key_id[:15] if len(key_id) >= 15 else key_id,
         "all_env_vars": list(os.environ.keys())  # This will show ALL env vars loaded
     }
-    
+
 
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
