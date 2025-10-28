@@ -507,7 +507,15 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
     users = await db.users.find({}, {"_id": 0}).to_list(10000)
-    return users
+    
+    # Clean users data to ensure JSON serializability
+    cleaned_users = []
+    for user_doc in users:
+        # Remove any remaining _id or ObjectId fields
+        cleaned_user = {k: v for k, v in user_doc.items() if k != '_id' and not k.startswith('_')}
+        cleaned_users.append(cleaned_user)
+    
+    return cleaned_users
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
