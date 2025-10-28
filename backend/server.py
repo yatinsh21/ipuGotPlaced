@@ -704,8 +704,10 @@ async def startup_db():
         
         # Users indexes
         await db.users.create_index("clerk_id", unique=True)
+        # Remove email unique index - email can be duplicated across different clerk users
         try:
-            await db.users.create_index("email", unique=True)
+            await db.users.drop_index("email_1")
+            logger.info("Dropped old email_1 unique index")
         except Exception:
             pass
         
