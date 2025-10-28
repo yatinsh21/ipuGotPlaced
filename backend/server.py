@@ -70,8 +70,6 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    bookmarked_questions: List[str] = []
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
