@@ -30,6 +30,8 @@ const AdminPanel = () => {
   const [loading, setLoading] = useState(true);
   
   const isAdmin = user?.publicMetadata?.isAdmin;
+  console.log(isAdmin);
+  
 
   // Helper function to get auth config
   const getAuthConfig = async () => {

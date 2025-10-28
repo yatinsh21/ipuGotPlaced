@@ -70,8 +70,6 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    bookmarked_questions: List[str] = []
-    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -220,9 +218,30 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                     "bookmarked_questions": [],
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
-                await db.users.insert_one(new_user)
-                user_doc = new_user
-                logging.info(f"✓ Created new user: {new_user['email']}")
+                
+                try:
+                    await db.users.insert_one(new_user)
+                    user_doc = new_user
+                    logging.info(f"✓ Created new user: {new_user['email']}")
+                except Exception as insert_error:
+                    # Handle duplicate key error - try to find existing user by email
+                    if "duplicate key" in str(insert_error).lower():
+                        logging.warning(f"Duplicate key error, searching for existing user by email")
+                        user_doc = await db.users.find_one({"email": new_user['email']}, {"_id": 0})
+                        if user_doc:
+                            # Update the clerk_id for the existing user
+                            await db.users.update_one(
+                                {"email": new_user['email']},
+                                {"$set": {"clerk_id": clerk_user_id}}
+                            )
+                            user_doc['clerk_id'] = clerk_user_id
+                            logging.info(f"✓ Updated existing user with new clerk_id: {new_user['email']}")
+                        else:
+                            logging.error(f"Could not find user after duplicate key error")
+                            return None
+                    else:
+                        raise insert_error
+                        
             except Exception as e:
                 logging.error(f"Failed to get Clerk user: {e}")
                 return None
@@ -467,23 +486,6 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
     except Exception as e:
         logging.error(f"❌ Payment verification failed: {e}")
         raise HTTPException(status_code=400, detail=f"Payment verification failed: {str(e)}")
-        
-        # Update user to premium in MongoDB
-        await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
-        
-        # Update Clerk user metadata
-        if clerk_client:
-            try:
-                clerk_client.users.update_metadata(
-                    user_id=user.clerk_id,
-                    public_metadata={"isPremium": True}
-                )
-            except Exception as e:
-                logging.error(f"Failed to update Clerk metadata: {e}")
-        
-        return {"success": True, "message": "Payment verified successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail="Payment verification failed")
 
 # Admin endpoints
 @api_router.get("/admin/stats")
@@ -504,18 +506,16 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
-    users = await db.users.find({}).to_list(10000)
+    users = await db.users.find({}, {"_id": 0}).to_list(10000)
     
-    # Convert MongoDB documents to serializable format
-    serializable_users = []
+    # Clean users data to ensure JSON serializability
+    cleaned_users = []
     for user_doc in users:
-        # Convert _id to string and remove the ObjectId
-        user_dict = dict(user_doc)
-        if '_id' in user_dict:
-            user_dict['_id'] = str(user_dict['_id'])
-        serializable_users.append(user_dict)
+        # Remove any remaining _id or ObjectId fields
+        cleaned_user = {k: v for k, v in user_doc.items() if k != '_id' and not k.startswith('_')}
+        cleaned_users.append(cleaned_user)
     
-    return serializable_users
+    return cleaned_users
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
@@ -733,8 +733,10 @@ async def startup_db():
         
         # Users indexes
         await db.users.create_index("clerk_id", unique=True)
+        # Remove email unique index - email can be duplicated across different clerk users
         try:
-            await db.users.create_index("email", unique=True)
+            await db.users.drop_index("email_1")
+            logger.info("Dropped old email_1 unique index")
         except Exception:
             pass
         
