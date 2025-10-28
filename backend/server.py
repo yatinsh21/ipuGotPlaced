@@ -824,7 +824,24 @@ async def startup_db():
         logger.error(f"❌ Startup error: {e}")
         import traceback
         logger.error(traceback.format_exc())
-        
+
+@api_router.get("/debug/razorpay-status")
+async def check_razorpay_status():
+    """Debug endpoint - REMOVE IN PRODUCTION"""
+    key_id = os.environ.get('RAZORPAY_KEY_ID', '')
+    key_secret = os.environ.get('RAZORPAY_KEY_SECRET', '')
+    
+    return {
+        "razorpay_client_exists": razorpay_client is not None,
+        "key_id_present": bool(key_id),
+        "key_secret_present": bool(key_secret),
+        "key_id_length": len(key_id) if key_id else 0,
+        "key_secret_length": len(key_secret) if key_secret else 0,
+        "key_id_prefix": key_id[:15] if len(key_id) >= 15 else key_id,
+        "all_env_vars": list(os.environ.keys())  # This will show ALL env vars loaded
+    }
+    
+
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
     try:
