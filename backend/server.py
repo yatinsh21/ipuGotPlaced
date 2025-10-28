@@ -3,16 +3,19 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
+
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 # from bson import ObjectId
 from pathlib import Path
+import re
+import uuid
 from bson import ObjectId
 # from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
-import uuid
+# import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
 import json
@@ -97,9 +100,26 @@ class Company(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
+    slug: Optional[str] = None  # Add slug field
     logo_url: Optional[str] = None
     question_count: int = 0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Auto-generate slug from name if not provided
+        if not self.slug and self.name:
+            self.slug = self.generate_slug(self.name)
+    
+    @staticmethod
+    def generate_slug(name: str) -> str:
+        """Generate URL-friendly slug from company name"""
+        slug = name.lower()
+        slug = re.sub(r'[^a-z0-9\s-]', '', slug)  # Remove special chars
+        slug = re.sub(r'[\s]+', '-', slug)  # Replace spaces with hyphens
+        slug = slug.strip('-')  # Remove leading/trailing hyphens
+        return slug or str(uuid.uuid4())[:8]  # Fallback to random string
+
 
 class Experience(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -680,16 +700,61 @@ async def upload_image(file: UploadFile = File(...), user: User = Depends(requir
 
 @api_router.post("/admin/companies")
 async def create_company(company: Company, user: User = Depends(require_admin)):
-    await db.companies.insert_one(company.model_dump())
-    await invalidate_cache_pattern("companies*")
-    return company
+    try:
+        logging.info(f"Creating company: {company.name}")
+        
+        # Ensure slug is generated
+        if not company.slug:
+            company.slug = Company.generate_slug(company.name)
+        
+        # Check if slug already exists
+        existing = await db.companies.find_one({"slug": company.slug})
+        if existing:
+            # Make slug unique by appending a random suffix
+            company.slug = f"{company.slug}-{str(uuid.uuid4())[:8]}"
+            logging.info(f"Slug already exists, using: {company.slug}")
+        
+        await db.companies.insert_one(company.model_dump())
+        await invalidate_cache_pattern("companies*")
+        
+        logging.info(f"✓ Company created successfully: {company.name}")
+        return company
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to create company: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to create company: {str(e)}")
 
+
+# Update the update_company endpoint
 @api_router.put("/admin/companies/{company_id}")
 async def update_company(company_id: str, company: Company, user: User = Depends(require_admin)):
-    await db.companies.update_one({"id": company_id}, {"$set": company.model_dump()})
-    await invalidate_cache_pattern("companies*")
-    return company
-
+    try:
+        logging.info(f"Updating company: {company_id}")
+        
+        # Ensure slug exists
+        if not company.slug:
+            company.slug = Company.generate_slug(company.name)
+        
+        # Check if slug is taken by another company
+        existing = await db.companies.find_one({"slug": company.slug, "id": {"$ne": company_id}})
+        if existing:
+            company.slug = f"{company.slug}-{str(uuid.uuid4())[:8]}"
+            logging.info(f"Slug conflict, using: {company.slug}")
+        
+        await db.companies.update_one({"id": company_id}, {"$set": company.model_dump()})
+        await invalidate_cache_pattern("companies*")
+        
+        logging.info(f"✓ Company updated successfully")
+        return company
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to update company: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to update company: {str(e)}")
+        
 @api_router.delete("/admin/companies/{company_id}")
 async def delete_company(company_id: str, user: User = Depends(require_admin)):
     await db.companies.delete_one({"id": company_id})
