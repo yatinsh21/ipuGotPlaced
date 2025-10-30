@@ -273,9 +273,9 @@ const CompanyQuestionsPage = () => {
 
   const categories = ['all', 'technical', 'coding', 'project', 'HR'];
   const getCategoryCount = (cat) => {
-  if (!isPremiumUser) return <Lock size={16} />;
-  if (cat === 'all') return questions.length;
-  return questions.filter(q => q.category === cat).length;
+  if (!isPremiumUser) return <Lock className='ml-1 mb-0.5' size={16} />;
+  if (cat === 'all') return ;
+  return "";
 };
 
   const getDifficultyColor = (diff) => {
@@ -373,7 +373,7 @@ const CompanyQuestionsPage = () => {
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">{company?.name}</h1>
                 {isPremiumUser ? (
-                  <p className="text-gray-600">{questions.length} interview questions</p>
+                  <p className="text-gray-600">{questions.length +5} interview questions</p>
                 ) : (
                   <p className="text-gray-600">Premium content • Upgrade to view</p>
                 )}
@@ -390,7 +390,7 @@ const CompanyQuestionsPage = () => {
                     data-testid={`category-${cat}`}
                     className="capitalize"
                   >
-                    {cat} ({getCategoryCount(cat)})
+                    {cat} { getCategoryCount(cat)}
                   </TabsTrigger>
                 ))}
               </TabsList>
