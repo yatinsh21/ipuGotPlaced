@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ChevronRight, Search } from 'lucide-react';
+import { ChevronRight, Search, Briefcase, Calendar } from 'lucide-react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -33,21 +33,13 @@ const ExperiencesPage = () => {
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
-  const getExcerpt = (text, maxLength = 200) => {
-    // Remove \n and clean text
+  const getExcerpt = (text, maxLength = 120) => {
     const cleanText = text.replace(/\\n/g, ' ').trim();
     if (cleanText.length <= maxLength) return cleanText;
     return cleanText.substring(0, maxLength) + '...';
-  };
-
-  const getRoundsDescription = (text) => {
-    // Extract first round info as preview
-    const lines = text.split('\\n');
-    const roundLines = lines.filter(line => line.trim().match(/^Round \d+:/i));
-    return roundLines.length > 0 ? roundLines[0].replace(/Round \d+:\s*/i, '') : '';
   };
 
   const filteredExperiences = experiences.filter(exp => {
@@ -62,91 +54,98 @@ const ExperiencesPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">Interview Experiences</h1>
-          <p className="text-lg text-gray-600 mb-6">Real interview experiences from candidates who got offers</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        {/* Compact Hero Section */}
+        <div className="mb-6">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
+            Interview Experiences
+          </h1>
+          <p className="text-gray-600 mb-4">
+            Real experiences from candidates who got offers
+          </p>
           
           {/* Search Bar */}
-          <div className="relative max-w-xl">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search by company name or role..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-12 border-2 border-gray-200 focus:border-gray-900"
-              data-testid="search-experiences"
-            />
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1 max-w-xl">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                type="text"
+                placeholder="Search by company or role..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 text-sm border-2 border-gray-200 focus:border-gray-900 rounded-lg"
+                data-testid="search-experiences"
+              />
+            </div>
+            <div className="px-3 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium whitespace-nowrap">
+              {filteredExperiences.length} experiences
+            </div>
           </div>
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-gray-900"></div>
           </div>
         ) : (
           <>
-            <div className="mb-4 text-sm text-gray-600">
-              Showing {filteredExperiences.length} {filteredExperiences.length === 1 ? 'experience' : 'experiences'}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Compact Experience Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {filteredExperiences.map((exp) => (
                 <Card 
                   key={exp.id} 
-                  className="border-2 border-gray-200 hover:border-gray-900 transition-all cursor-pointer group" 
+                  className="border border-gray-200 hover:border-gray-900 hover:shadow-lg transition-all cursor-pointer group bg-white" 
                   onClick={() => navigate(`/experience/${exp.id}`)}
                   data-testid={`experience-${exp.id}`}
                 >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex-1">
-                        <CardTitle className="text-2xl font-bold text-gray-900 mb-2">{exp.company_name}</CardTitle>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-base font-semibold text-gray-700">{exp.role}</p>
-                          <Badge className="bg-gray-900 text-white">{exp.rounds} rounds</Badge>
-                        </div>
-                      </div>
+                  <CardHeader className="pb-2 pt-4 px-4">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <CardTitle className="text-lg font-bold text-gray-900 leading-tight group-hover:text-gray-700 transition-colors line-clamp-1">
+                        {exp.company_name}
+                      </CardTitle>
+                      <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-gray-900 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                     </div>
-                    <p className="text-xs text-gray-500">{formatDate(exp.posted_at)}</p>
+                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                      <Briefcase className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="font-medium line-clamp-1">{exp.role}</span>
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDate(exp.posted_at)}</span>
+                      </div>
+                      <Badge className="bg-gray-900 text-white text-xs h-5 px-2">
+                        {exp.rounds} rounds
+                      </Badge>
+                    </div>
                   </CardHeader>
                   
-                  <CardContent>
-                    {/* First Round Preview */}
-                    {getRoundsDescription(exp.experience) && (
-                      <div className="mb-3 p-3 bg-gray-50 border border-gray-200 rounded">
-                        <p className="text-xs font-semibold text-gray-500 mb-1">First Round:</p>
-                        <p className="text-sm text-gray-700">{getRoundsDescription(exp.experience)}</p>
-                      </div>
-                    )}
-                    
-                    {/* Description Excerpt */}
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                  <CardContent className="pt-2 pb-4 px-4">
+                    <p className="text-xs text-gray-600 leading-relaxed line-clamp-2 mb-2">
                       {getExcerpt(exp.experience)}
                     </p>
                     
-                    {/* Read More Link */}
-                    <div className="flex items-center text-gray-900 font-medium text-sm group-hover:underline">
-                      Read full interview experience
-                      <ChevronRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    <div className="flex items-center text-gray-900 font-medium text-xs group-hover:underline">
+                      Read more
                     </div>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
-            {filteredExperiences.length === 0 && !loading && (
-              <div className="text-center py-12 bg-white border-2 border-gray-200">
-                <Search className="h-16 w-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500 text-lg">No experiences found matching "{searchTerm}"</p>
-                <p className="text-gray-400 text-sm mt-2">Try searching with different keywords</p>
+            {/* Empty States */}
+            {filteredExperiences.length === 0 && !loading && searchTerm && (
+              <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+                <Search className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-900 font-semibold mb-1">No experiences found</p>
+                <p className="text-gray-500 text-sm">Try different keywords</p>
               </div>
             )}
 
             {experiences.length === 0 && !loading && !searchTerm && (
-              <div className="text-center py-12 bg-white border-2 border-gray-200">
-                <p className="text-gray-500">No interview experiences available yet.</p>
+              <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+                <Briefcase className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-gray-500">No interview experiences available yet</p>
               </div>
             )}
           </>
