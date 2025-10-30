@@ -180,7 +180,7 @@ const HomePage = () => {
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
             Ace your next tech interview like a <span className='text-red-600 font-extrabold underline'>Pro</span> 
           </h1>
-          <p className="text-lg text-gray-600">Actual interviews from real experiences!</p>
+          <p className="text-lg text-gray-600"> Carefully curated catalog of interview essential Questions</p>
         </div>
 
         {loading ? (

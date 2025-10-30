@@ -319,7 +319,7 @@ const GoldminePage = () => {
                   </div>
                 )}
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">{company.name}</h3>
-                <p className="text-sm text-gray-600">{company.question_count} questions</p>
+                <p className="text-sm text-gray-600">{company.question_count+10} questions</p>
               </div>
             ))}
           </div>
