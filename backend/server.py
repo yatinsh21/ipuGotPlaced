@@ -1093,59 +1093,61 @@ async def shutdown_db_client():
     logger.info("✓ MongoDB connection closed")
 
 app.include_router(api_router)
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    await db.users.update_one(
-        {"clerk_id": user_id}, 
-        {"$set": {"is_admin": True, "is_premium": True}}
-    )
-    
-    # Invalidate user cache
-    await invalidate_cache_pattern(f"user:{user_id}")
-    await invalidate_cache_pattern("admin_stats")
-    
-    if clerk_client:
-        try:
-            clerk_user = clerk_client.users.get(user_id=user_id)
-            clerk_client.users.update(
-                user_id=user_id,
-                public_metadata={
-                    **clerk_user.public_metadata,
-                    'isAdmin': True,
-                    'isPremium': True
-                }
-            )
-            logging.info(f"✓ Updated Clerk metadata for admin grant: {target_user['email']}")
-        except Exception as e:
-            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
-    
-    return {
-        "success": True, 
-        "message": f"Admin access granted to {target_user['email']}"
-    }
+
+if not target_user:
+    raise HTTPException(status_code=404, detail="User not found")
+
+await db.users.update_one(
+    {"clerk_id": user_id},
+    {"$set": {"is_admin": True, "is_premium": True}}
+)
+
+# Invalidate user cache
+await invalidate_cache_pattern(f"user:{user_id}")
+await invalidate_cache_pattern("admin_stats")
+
+if clerk_client:
+    try:
+        clerk_user = clerk_client.users.get(user_id=user_id)
+        clerk_client.users.update(
+            user_id=user_id,
+            public_metadata={
+                **clerk_user.public_metadata,
+                'isAdmin': True,
+                'isPremium': True
+            }
+        )
+        logging.info(f"Updated Clerk metadata for admin grant: {target_user['email']}")
+    except Exception as e:
+        logging.error(f"Failed to update Clerk metadata: {e}")
+
+return {
+    "success": True,
+    "message": f"Admin access granted to {target_user['email']}"
+}
+
 
 @api_router.post("/admin/users/{user_id}/revoke-admin")
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    if not user_id or user_id == "undefined" or user_id == "null":
+    if not user_id or user_id in {"undefined", "null"}:
         raise HTTPException(status_code=400, detail="Invalid user_id provided")
-    
+
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     if user_id == current_user.clerk_id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
-    
+
     await db.users.update_one(
-        {"clerk_id": user_id}, 
+        {"clerk_id": user_id},
         {"$set": {"is_admin": False}}
     )
-    
+
     # Invalidate user cache
     await invalidate_cache_pattern(f"user:{user_id}")
     await invalidate_cache_pattern("admin_stats")
-    
+
     if clerk_client:
         try:
             clerk_user = clerk_client.users.get(user_id=user_id)
@@ -1156,18 +1158,19 @@ async def revoke_admin_access(user_id: str, current_user: User = Depends(require
                     'isAdmin': False
                 }
             )
-            logging.info(f"✓ Updated Clerk metadata for admin revoke: {target_user['email']}")
+            logging.info(f"Updated Clerk metadata for admin revoke: {target_user['email']}")
         except Exception as e:
-            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
-    
+            logging.error(f"Failed to update Clerk metadata: {e}")
+
     return {
-        "success": True, 
+        "success": True,
         "message": f"Admin access revoked from {target_user['email']}"
     }
 
+
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-    if not user_id or user_id == "undefined" or user_id == "null":
+    if not user_id or user_id in {"undefined", "null"}:
         raise HTTPException(status_code=400, detail="Invalid user_id provided")
-    
+
     target_user = await db.users.find_one({"clerk_id": user_id})
