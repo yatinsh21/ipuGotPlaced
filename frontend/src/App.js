@@ -8,8 +8,12 @@ import GoldminePage from "@/pages/GoldminePage";
 import ExperiencesPage from "@/pages/ExperiencesPage";
 import ExperienceDetailPage from "@/pages/ExperienceDetailPage";
 import AdminPanel from "@/pages/AdminPanel";
+import TermsPage from "./pages/TermsPage";
 import CompanyQuestionsPage from "@/pages/CompanyQuestionsPage";
 import BookmarksPage from "@/pages/BookmarksPage";
+import ContactPage from "./pages/ContactPage";
+import PrivacyPage from "./pages/PrivacyPolicy";
+import AboutPage from "./pages/AboutPage";
 import "@/App.css";
 
 function App() {
@@ -29,6 +33,11 @@ function App() {
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/topics" element={<HomePage />} />
+          <Route path="/privacy" element={<PrivacyPage/>} />
+          <Route path="/contact" element={<ContactPage/>} />
+          <Route path="/terms" element={<TermsPage/>} />
+
+          <Route path="/about" element={<AboutPage />} />
           <Route path="/goldmine" element={<GoldminePage />} />
           <Route path="/company/:companyId" element={<CompanyQuestionsPage />} />
           <Route path="/bookmarks" element={<BookmarksPage />} />
