@@ -29,8 +29,21 @@ const ExperienceDetailPage = () => {
 
   const fetchExperience = async () => {
     try {
-      // Fetch preview data for all users
-      const response = await axios.get(`${API}/experiences-preview`);
+      let response;
+      
+      // Premium users get full experience data
+      if (isPremiumUser && isSignedIn) {
+        const token = await getToken();
+        response = await axios.get(`${API}/experiences`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+      } else {
+        // Non-premium users get preview data
+        response = await axios.get(`${API}/experiences-preview`);
+      }
+      
       const exp = response.data.find(e => e.id === experienceId);
       setExperience(exp);
     } catch (error) {
@@ -180,30 +193,31 @@ const ExperienceDetailPage = () => {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-8">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/experiences')}
-            className="mb-6"
+            className="mb-4 sm:mb-6 h-8 sm:h-9 text-sm"
           >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Experiences
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+            <span className="hidden xs:inline">Back to Experiences</span>
+            <span className="xs:hidden">Back</span>
           </Button>
 
-          <div className="bg-yellow-50 border-2 border-yellow-200 p-6 rounded-lg">
-            <div className="flex items-center justify-between">
+          <div className="bg-yellow-50 border-2 border-yellow-200 p-4 sm:p-6 rounded-lg">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
               <div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
-                  <Lock className="h-5 w-5" />
-                  Sign in to view this page
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+                  <Lock className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span>Sign in to view this page</span>
                 </h3>
-                <p className="text-gray-700">Sign in with Google to access interview experiences.</p>
+                <p className="text-sm sm:text-base text-gray-700">Sign in with Google to access interview experiences.</p>
               </div>
               <button 
                 onClick={() => {
                   window.location.href = `${BACKEND_URL}/api/auth/login`;
                 }}
-                className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium"
+                className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap w-full sm:w-auto"
               >
                 Sign in with Google
               </button>
@@ -250,46 +264,54 @@ const ExperienceDetailPage = () => {
             </Card>
           )}
 
-         <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b-2 border-yellow-200 p-8">
-                  <div className="max-w-2xl mx-auto text-center">
-                    <Crown className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-                    <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                      Unlock Premium Content
-                    </h2>
-                    <p className="text-lg text-gray-700 mb-6">
-                      Get lifetime access to carefully curated interview questions.
-                    </p>
-                    
-                    <div className="bg-white border-2 border-yellow-400 rounded-lg p-6 mb-6 inline-block">
-                      <div className="text-5xl font-bold text-gray-900 mb-2">₹399</div>
-                      <div className="text-gray-600 text-lg">One-time payment • Lifetime access</div>
-                    </div>
-                    
-                    <Button 
-                      onClick={handlePayment}
-                      size="lg"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold text-lg px-8 py-6 h-auto"
-                    >
-                      <Crown className="h-5 w-5 mr-2" />
-                      Upgrade to Premium Now
-                    </Button>
-                    
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
-                        <div className="font-semibold text-gray-900 mb-1">✓ All Questions</div>
-                        <div className="text-sm text-gray-600">Access complete Q&A database</div>
-                      </div>
-                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
-                        <div className="font-semibold text-gray-900 mb-1">✓ Bookmark Feature</div>
-                        <div className="text-sm text-gray-600">Save important questions</div>
-                      </div>
-                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
-                        <div className="font-semibold text-gray-900 mb-1">✓ Lifetime Access</div>
-                        <div className="text-sm text-gray-600">Pay once, access forever</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          <div className="bg-white border-2 border-gray-200 shadow-lg rounded-lg w-full max-w-3xl mx-auto">
+  <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-b-2 border-yellow-200 p-5 sm:p-8">
+    <div className="text-center">
+      <Crown className="h-10 w-10 sm:h-12 sm:w-12 text-yellow-500 mx-auto mb-3" />
+      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">
+        Premium Content
+      </h2>
+      <p className="text-sm sm:text-base text-gray-700 mb-4 px-2 sm:px-0">
+        Upgrade to premium to read full interview experiences and access company-wise questions
+      </p>
+
+      {/* Price box */}
+          <div className='flex flex-col'>
+
+          
+      <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 mb-4 inline-block w-full sm:w-auto">
+        <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">₹399</div>
+        <div className="text-gray-600 text-sm sm:text-base">One-time • Lifetime access</div>
+      </div>
+
+      {/* Button */}
+      <Button
+        onClick={handlePayment}
+        className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold px-5 sm:px-6 py-4 sm:py-5 h-auto mb-5 w-full sm:w-auto"
+      >
+        <Crown className="h-4 w-4 mr-2" />
+        Upgrade to Premium Now
+      </Button>
+</div>
+      {/* Features */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left text-sm px-2 sm:px-0">
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ All Experiences</div>
+          <div className="text-xs text-gray-600">Read complete stories</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Company Q&A</div>
+          <div className="text-xs text-gray-600">Full question database</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Lifetime Access</div>
+          <div className="text-xs text-gray-600">Pay once forever</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
         </div>
         
         <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
@@ -320,46 +342,47 @@ const ExperienceDetailPage = () => {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-5xl mx-auto px-4 py-4 sm:py-6">
-        <div className="flex items-center justify-between mb-4">
+      <div className="max-w-5xl mx-auto px-3 sm:px-4 py-3 sm:py-4 md:py-6">
+        <div className="flex items-center justify-between mb-3 sm:mb-4 gap-2">
           <Button 
             variant="ghost" 
             onClick={() => navigate('/experiences')}
-            className="hover:bg-gray-100 -ml-2 h-9"
+            className="hover:bg-gray-100 -ml-2 h-8 sm:h-9 text-sm"
             data-testid="back-btn"
           >
-            <ArrowLeft className="h-4 w-4 mr-1" />
+            <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1" />
             Back
           </Button>
           <Button 
             variant="outline" 
             onClick={() => navigate('/experiences')}
-            className="border border-gray-300 hover:border-gray-900 h-9 text-sm"
+            className="border border-gray-300 hover:border-gray-900 h-8 sm:h-9 text-xs sm:text-sm px-3 sm:px-4"
           >
-            More Experiences
+            <span className="hidden xs:inline">More Experiences</span>
+            <span className="xs:hidden">More</span>
           </Button>
         </div>
 
         <Card className="border border-gray-200 shadow-sm">
-          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-4 sm:px-6 py-4">
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2">{experience.company_name}</h1>
-            <div className="flex flex-wrap gap-2 text-sm">
-              <div className="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded">
-                <Briefcase className="h-3.5 w-3.5" />
-                <span>{experience.role}</span>
+          <div className="bg-gradient-to-r from-gray-900 to-gray-800 text-white px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2 break-words leading-tight">{experience.company_name}</h1>
+            <div className="flex flex-wrap gap-1.5 sm:gap-2 text-xs sm:text-sm">
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 px-2 sm:px-2.5 py-1 rounded">
+                <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
+                <span className="truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">{experience.role}</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded">
-                <Layers className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 px-2 sm:px-2.5 py-1 rounded whitespace-nowrap">
+                <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                 <span>{experience.rounds} rounds</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded">
-                <Calendar className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 px-2 sm:px-2.5 py-1 rounded whitespace-nowrap">
+                <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                 <span>{formatDate(experience.posted_at)}</span>
               </div>
             </div>
           </div>
 
-          <CardContent className="p-4 sm:p-6">
+          <CardContent className="p-3 sm:p-4 md:p-6">
             <Accordion type="single" collapsible className="space-y-2">
               {roundSections.map((section, index) => (
                 <AccordionItem 
@@ -368,20 +391,20 @@ const ExperienceDetailPage = () => {
                   className="border border-gray-200 rounded-lg"
                 >
                   <AccordionTrigger 
-                    className="hover:no-underline px-3 py-2.5 hover:bg-gray-50 text-sm"
+                    className="hover:no-underline px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-gray-50 text-xs sm:text-sm"
                     data-testid={`round-${index}`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center justify-center w-6 h-6 bg-gray-900 text-white rounded-full text-xs font-bold flex-shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 w-full">
+                      <div className="flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 bg-gray-900 text-white rounded-full text-xs font-bold flex-shrink-0">
                         {index + 1}
                       </div>
-                      <span className="font-semibold text-gray-900 text-left">{section.title}</span>
+                      <span className="font-semibold text-gray-900 text-left break-words pr-2">{section.title}</span>
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-3 pb-3 pt-1">
-                    <div className="pl-8 text-sm text-gray-700 space-y-1.5">
+                  <AccordionContent className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-1">
+                    <div className="pl-6 sm:pl-8 text-xs sm:text-sm text-gray-700 space-y-1 sm:space-y-1.5">
                       {section.content.map((line, i) => (
-                        <p key={i}>{line}</p>
+                        <p key={i} className="break-words">{line}</p>
                       ))}
                     </div>
                   </AccordionContent>
@@ -390,19 +413,19 @@ const ExperienceDetailPage = () => {
             </Accordion>
 
             {tipsSections.length > 0 && (
-              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Lightbulb className="h-4 w-4 text-amber-600" />
-                  <h3 className="text-sm font-bold text-gray-900">Key Insights</h3>
+              <div className="mt-3 sm:mt-4 bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-3">
+                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                  <Lightbulb className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
+                  <h3 className="text-xs sm:text-sm font-bold text-gray-900">Key Insights</h3>
                 </div>
                 {tipsSections.map((section, index) => (
-                  <div key={index} className="space-y-1.5">
+                  <div key={index} className="space-y-1 sm:space-y-1.5">
                     <p className="text-xs font-semibold text-gray-700">{section.title}:</p>
-                    <div className="text-sm text-gray-700 space-y-1">
+                    <div className="text-xs sm:text-sm text-gray-700 space-y-0.5 sm:space-y-1">
                       {section.content.map((line, i) => (
-                        <p key={i} className="flex gap-1.5">
-                          <span className="text-amber-600">•</span>
-                          <span>{line}</span>
+                        <p key={i} className="flex gap-1 sm:gap-1.5">
+                          <span className="text-amber-600 flex-shrink-0">•</span>
+                          <span className="break-words">{line}</span>
                         </p>
                       ))}
                     </div>
@@ -412,11 +435,11 @@ const ExperienceDetailPage = () => {
             )}
 
             {otherSections.length > 0 && (
-              <div className="mt-4 text-sm text-gray-700 space-y-1.5">
+              <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-700 space-y-1 sm:space-y-1.5">
                 {otherSections.map((section, index) => (
                   <div key={index}>
                     {section.content.map((line, i) => (
-                      <p key={i}>{line}</p>
+                      <p key={i} className="break-words">{line}</p>
                     ))}
                   </div>
                 ))}
