@@ -413,27 +413,31 @@ const ExperienceDetailPage = () => {
               ))}
             </Accordion>
 
-            {tipsSections.length > 0 && (
-              <div className="mt-3 sm:mt-4 bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-3">
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                  <Lightbulb className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
-                  <h3 className="text-xs sm:text-sm font-bold text-gray-900">Key Insights</h3>
-                </div>
-                {tipsSections.map((section, index) => (
-                  <div key={index} className="space-y-1 sm:space-y-1.5">
-                    <p className="text-xs font-semibold text-gray-700">{section.title}:</p>
-                    <div className="text-xs sm:text-sm text-gray-700 space-y-0.5 sm:space-y-1">
-                      {section.content.map((line, i) => (
-                        <p key={i} className="flex gap-1 sm:gap-1.5">
-                          <span className="text-amber-600 flex-shrink-0">•</span>
-                          <span className="break-words">{line}</span>
-                        </p>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+           {tipsSections.length > 0 && (
+  <div className="mt-3 sm:mt-4 bg-amber-50 border border-amber-200 rounded-lg p-2.5 sm:p-3">
+    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+      <Lightbulb className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-600 flex-shrink-0" />
+      <h3 className="text-xs sm:text-sm font-bold text-gray-900">Key Insights</h3>
+    </div>
+    {tipsSections.map((section, index) => (
+      <div key={index} className="space-y-1 sm:space-y-1.5">
+        <p className="text-xs font-semibold text-gray-700">{section.title}:</p>
+        <div className="text-xs sm:text-sm text-gray-700 space-y-0.5 sm:space-y-1">
+          {section.content.map((line, i) => (
+            <p 
+              key={i} 
+              className="flex gap-1 sm:gap-1.5 whitespace-pre-line"  // ✅ add this
+            >
+              <span className="text-amber-600 flex-shrink-0">•</span>
+              <span className="break-words">{line}</span>
+            </p>
+          ))}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
 
             {otherSections.length > 0 && (
               <div className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-700 space-y-1 sm:space-y-1.5">
