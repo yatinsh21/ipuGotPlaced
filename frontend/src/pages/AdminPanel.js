@@ -1097,12 +1097,15 @@ const ExperiencesManager = ({ experiences, companies, fetchAllData, getAuthConfi
                           </Button>
                         )}
                       </div>
-                      <Input
-                        value={round.description}
-                        onChange={(e) => updateRound(index, e.target.value)}
-                        placeholder={`e.g., Coding round - two medium level problems`}
-                        required
-                      />
+                      <textarea
+  value={round.description}
+  onChange={(e) => updateRound(index, e.target.value)}
+  placeholder="e.g., Coding round - two medium level problems"
+  required
+  className="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+  rows={3}
+/>
+
                     </div>
                   ))}
                 </div>

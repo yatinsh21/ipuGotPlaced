@@ -402,12 +402,13 @@ const ExperienceDetailPage = () => {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent className="px-2.5 sm:px-3 pb-2.5 sm:pb-3 pt-1">
-                    <div className="pl-6 sm:pl-8 text-xs sm:text-sm text-gray-700 space-y-1 sm:space-y-1.5">
-                      {section.content.map((line, i) => (
-                        <p key={i} className="break-words">{line}</p>
-                      ))}
-                    </div>
-                  </AccordionContent>
+  <div
+    className="pl-6 sm:pl-8 text-xs sm:text-sm text-gray-700 whitespace-pre-line"
+  >
+    {section.content}
+  </div>
+</AccordionContent>
+
                 </AccordionItem>
               ))}
             </Accordion>
