@@ -3,26 +3,25 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-
+from upstash_redis import Redis
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
+# from bson import ObjectId
 from pathlib import Path
 import re
 import uuid
 from bson import ObjectId
+# from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
+# import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
 import json
 import cloudinary
 import cloudinary.uploader
 from clerk_backend_api import Clerk
-
-# Upstash Redis imports
-import redis.asyncio as aioredis
-from redis.asyncio import Redis
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -39,52 +38,14 @@ client = AsyncIOMotorClient(
 )
 db = client[os.environ['DB_NAME']]
 
-# MongoDB-based cache collection (fallback)
+# MongoDB-based cache collection
 cache_collection = db.cache
 
-# Upstash Redis configuration
-redis_client: Optional[Redis] = None
-REDIS_ENABLED = False
-
-async def init_redis():
-    """Initialize Upstash Redis connection"""
-    global redis_client, REDIS_ENABLED
-    
-    upstash_url = os.environ.get('UPSTASH_REDIS_REST_URL', '')
-    upstash_token = os.environ.get('UPSTASH_REDIS_REST_TOKEN', '')
-    
-    if upstash_url and upstash_token:
-        try:
-            # For Upstash REST API, we need to use the REST endpoint
-            # Format: redis://default:TOKEN@HOST:PORT
-            if upstash_url.startswith('https://'):
-                # Extract host from URL
-                host = upstash_url.replace('https://', '').replace('http://', '')
-                redis_url = f"rediss://default:{upstash_token}@{host}:6379"
-            else:
-                redis_url = upstash_url
-            
-            redis_client = await aioredis.from_url(
-                redis_url,
-                encoding="utf-8",
-                decode_responses=True,
-                socket_connect_timeout=5,
-                socket_keepalive=True,
-                health_check_interval=30
-            )
-            
-            # Test connection
-            await redis_client.ping()
-            REDIS_ENABLED = True
-            logging.info("✓ Upstash Redis connected successfully")
-            
-        except Exception as e:
-            logging.warning(f"⚠️ Upstash Redis connection failed, using MongoDB cache: {e}")
-            redis_client = None
-            REDIS_ENABLED = False
-    else:
-        logging.warning("⚠️ Upstash Redis not configured, using MongoDB cache")
-        REDIS_ENABLED = False
+# Upstash Redis client
+redis = Redis(
+    url=os.getenv("UPSTASH_REDIS_URL", ""),
+    token=os.getenv("UPSTASH_REDIS_TOKEN", ""),
+)
 
 # Clerk client
 clerk_secret = os.environ.get('CLERK_SECRET_KEY', '')
@@ -121,7 +82,7 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
+    # NO 'id' field - we use clerk_id instead
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -145,13 +106,14 @@ class Company(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    slug: Optional[str] = None
+    slug: Optional[str] = None  # Add slug field
     logo_url: Optional[str] = None
     question_count: int = 0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     def __init__(self, **data):
         super().__init__(**data)
+        # Auto-generate slug from name if not provided
         if not self.slug and self.name:
             self.slug = self.generate_slug(self.name)
     
@@ -159,10 +121,11 @@ class Company(BaseModel):
     def generate_slug(name: str) -> str:
         """Generate URL-friendly slug from company name"""
         slug = name.lower()
-        slug = re.sub(r'[^a-z0-9\s-]', '', slug)
-        slug = re.sub(r'[\s]+', '-', slug)
-        slug = slug.strip('-')
-        return slug or str(uuid.uuid4())[:8]
+        slug = re.sub(r'[^a-z0-9\s-]', '', slug)  # Remove special chars
+        slug = re.sub(r'[\s]+', '-', slug)  # Replace spaces with hyphens
+        slug = slug.strip('-')  # Remove leading/trailing hyphens
+        return slug or str(uuid.uuid4())[:8]  # Fallback to random string
+
 
 class Experience(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -183,40 +146,27 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_signature: str
 
-# Enhanced cache helper functions with Upstash Redis
-def generate_cache_key(prefix: str, **kwargs) -> str:
-    """Generate cache key with prefix and parameters"""
-    if not kwargs:
-        return prefix
-    params = "_".join(f"{k}:{v}" for k, v in sorted(kwargs.items()) if v is not None)
-    return f"{prefix}_{params}" if params else prefix
-
-async def get_cached_data(key: str):
-    """Get data from Upstash Redis or fallback to MongoDB"""
+# Redis cache helper functions
+async def get_redis_cached_data(key: str):
+    """
+    Retrieve data from Redis cache
+    """
     try:
-        # Try Redis first
-        if REDIS_ENABLED and redis_client:
-            cached = await redis_client.get(key)
-            if cached:
-                return json.loads(cached)
-        
-        # Fallback to MongoDB cache
-        cached_doc = await cache_collection.find_one({"key": key})
-        if cached_doc:
-            if datetime.fromisoformat(cached_doc['expires_at']) > datetime.now(timezone.utc):
-                return json.loads(cached_doc['data'])
-            else:
-                await cache_collection.delete_one({"key": key})
-                
+        cached_data = redis.get(key)
+        if cached_data:
+            return json.loads(cached_data)
+        return None
     except Exception as e:
-        logging.warning(f"Cache get failed for {key}: {e}")
-    
-    return None
+        # Log error but don't break the application - fall back to MongoDB cache
+        logging.warning(f"Redis get error for key {key}: {e}")
+        return None
 
-async def set_cached_data(key: str, data, ttl: int = 3600):
-    """Set data in Upstash Redis and MongoDB (dual-write for reliability)"""
+async def set_redis_cached_data(key: str, data, ttl: int = 3600) -> None:
+    """
+    Store data in Redis cache with TTL
+    """
     try:
-        # Serialize data
+        # Use the same serialization as your existing cache
         def serialize_data(obj):
             if isinstance(obj, datetime):
                 return obj.isoformat()
@@ -229,69 +179,128 @@ async def set_cached_data(key: str, data, ttl: int = 3600):
             return obj
         
         serialized_data = serialize_data(data)
-        json_data = json.dumps(serialized_data)
+        redis.setex(key, ttl, json.dumps(serialized_data))
+    except Exception as e:
+        # Log error but don't break the application - fall back to MongoDB cache
+        logging.warning(f"Redis set error for key {key}: {e}")
+
+async def invalidate_redis_cache_pattern(pattern: str):
+    """
+    Invalidate Redis cache by pattern
+    """
+    try:
+        # For Redis pattern deletion, we need to get keys matching pattern and delete them
+        # Note: This uses SCAN which is safe for production
+        keys_to_delete = []
+        cursor = 0
+        while True:
+            cursor, keys = redis.scan(cursor, match=f"{pattern}*", count=100)
+            keys_to_delete.extend(keys)
+            if cursor == 0:
+                break
         
-        # Write to Redis (primary)
-        if REDIS_ENABLED and redis_client:
-            await redis_client.setex(key, ttl, json_data)
-        
-        # Write to MongoDB (fallback/backup)
+        if keys_to_delete:
+            redis.delete(*keys_to_delete)
+            logging.info(f"✓ Redis cache invalidated for pattern: {pattern} - deleted {len(keys_to_delete)} keys")
+    except Exception as e:
+        logging.warning(f"Redis cache invalidation failed for {pattern}: {e}")
+
+# MongoDB-based cache helper functions
+def generate_cache_key(prefix: str, **kwargs) -> str:
+    if not kwargs:
+        return prefix
+    params = "_".join(f"{k}:{v}" for k, v in sorted(kwargs.items()) if v is not None)
+    return f"{prefix}_{params}" if params else prefix
+
+# Updated cache helper functions - Redis first, MongoDB fallback
+async def get_cached_data(key: str):
+    # Try Redis first (fastest)
+    redis_data = await get_redis_cached_data(key)
+    if redis_data:
+        logging.info(f"✓ Cache HIT (Redis) for key: {key}")
+        return redis_data
+    
+    # Fall back to MongoDB cache
+    try:
+        cached_doc = await cache_collection.find_one({"key": key})
+        if cached_doc:
+            if datetime.fromisoformat(cached_doc['expires_at']) > datetime.now(timezone.utc):
+                logging.info(f"✓ Cache HIT (MongoDB) for key: {key}")
+                return json.loads(cached_doc['data'])
+            else:
+                await cache_collection.delete_one({"key": key})
+    except Exception as e:
+        logging.warning(f"MongoDB cache get failed for {key}: {e}")
+    
+    logging.info(f"✗ Cache MISS for key: {key}")
+    return None
+
+async def set_cached_data(key: str, data, ttl: int = 3600):
+    # Set in Redis (primary - faster)
+    await set_redis_cached_data(key, data, ttl)
+    
+    # Also set in MongoDB (fallback - persistent)
+    try:
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
+        
+        # Convert datetime objects to ISO format strings before caching
+        def serialize_data(obj):
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, ObjectId):
+                return str(obj)
+            elif isinstance(obj, dict):
+                return {k: serialize_data(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [serialize_data(item) for item in obj]
+            return obj
+        
+        serialized_data = serialize_data(data)
+        
         await cache_collection.update_one(
             {"key": key},
             {
                 "$set": {
                     "key": key,
-                    "data": json_data,
+                    "data": json.dumps(serialized_data),
                     "expires_at": expires_at.isoformat(),
                     "created_at": datetime.now(timezone.utc).isoformat()
                 }
             },
             upsert=True
         )
-        
     except Exception as e:
-        logging.warning(f"Cache set failed for {key}: {e}")
+        logging.warning(f"MongoDB cache set failed for {key}: {e}")
 
 async def invalidate_cache_pattern(pattern: str):
-    """Invalidate cache keys matching pattern in both Redis and MongoDB"""
+    # Invalidate both Redis and MongoDB caches
+    await invalidate_redis_cache_pattern(pattern)
     try:
-        # Invalidate in Redis
-        if REDIS_ENABLED and redis_client:
-            # Convert wildcard pattern to Redis pattern
-            redis_pattern = pattern.replace("*", "*")
-            cursor = 0
-            
-            while True:
-                cursor, keys = await redis_client.scan(cursor, match=redis_pattern, count=100)
-                if keys:
-                    await redis_client.delete(*keys)
-                if cursor == 0:
-                    break
-        
-        # Invalidate in MongoDB
         regex_pattern = pattern.replace("*", ".*")
         await cache_collection.delete_many({"key": {"$regex": f"^{regex_pattern}$"}})
-        
     except Exception as e:
-        logging.warning(f"Cache invalidation failed for {pattern}: {e}")
+        logging.warning(f"MongoDB cache invalidation failed for {pattern}: {e}")
 
-# Auth dependency using Clerk
+# Auth dependency using Clerk - REWRITTEN
 async def get_current_user(authorization: str = Header(None, alias="Authorization")) -> Optional[User]:
-    """Verify Clerk session token and get/create user"""
+    """Verify Clerk session token and get/create user - SIMPLIFIED VERSION"""
     
+    # Check if authorization header exists
     if not authorization:
         logging.warning("No Authorization header provided")
         return None
     
+    # Check if it's a Bearer token
     if not authorization.startswith('Bearer '):
         logging.warning(f"Invalid Authorization format: {authorization[:20]}")
         return None
     
+    # Check if Clerk client is initialized
     if not clerk_client:
         logging.error("Clerk client not initialized")
         return None
     
+    # Extract token
     token = authorization.replace('Bearer ', '').strip()
     
     if not token:
@@ -310,19 +319,15 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
         
         logging.info(f"✓ Token decoded successfully for clerk_id: {clerk_user_id}")
         
-        # Try to get user from cache first
-        cache_key = f"user:{clerk_user_id}"
-        cached_user = await get_cached_data(cache_key)
-        if cached_user:
-            return User(**cached_user)
-        
-        # Get or create user in database
+        # Get or create user in our database
         user_doc = await db.users.find_one({"clerk_id": clerk_user_id}, {"_id": 0})
         
         if not user_doc:
+            # Get user info from Clerk
             try:
                 clerk_user = clerk_client.users.get(user_id=clerk_user_id)
                 
+                # Create new user in our database
                 new_user = {
                     "clerk_id": clerk_user_id,
                     "email": clerk_user.email_addresses[0].email_address if clerk_user.email_addresses else "",
@@ -339,10 +344,12 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                     user_doc = new_user
                     logging.info(f"✓ Created new user: {new_user['email']}")
                 except Exception as insert_error:
+                    # Handle duplicate key error - try to find existing user by email
                     if "duplicate key" in str(insert_error).lower():
                         logging.warning(f"Duplicate key error, searching for existing user by email")
                         user_doc = await db.users.find_one({"email": new_user['email']}, {"_id": 0})
                         if user_doc:
+                            # Update the clerk_id for the existing user
                             await db.users.update_one(
                                 {"email": new_user['email']},
                                 {"$set": {"clerk_id": clerk_user_id}}
@@ -359,11 +366,13 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                 logging.error(f"Failed to get Clerk user: {e}")
                 return None
         else:
+            # Update user metadata from Clerk on each request
             try:
                 clerk_user = clerk_client.users.get(user_id=clerk_user_id)
                 is_premium = clerk_user.public_metadata.get('isPremium', False) if hasattr(clerk_user, 'public_metadata') else False
                 is_admin = clerk_user.public_metadata.get('isAdmin', False) if hasattr(clerk_user, 'public_metadata') else False
                 
+                # Update if changed
                 if user_doc.get('is_premium') != is_premium or user_doc.get('is_admin') != is_admin:
                     await db.users.update_one(
                         {"clerk_id": clerk_user_id},
@@ -375,11 +384,7 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
             except Exception as e:
                 logging.error(f"Failed to update user metadata: {e}")
         
-        # Cache user data for 5 minutes
-        user_obj = User(**user_doc)
-        await set_cached_data(cache_key, user_doc, ttl=300)
-        
-        return user_obj
+        return User(**user_doc)
         
     except Exception as e:
         logging.error(f"❌ Auth error: {e}")
@@ -505,12 +510,10 @@ async def toggle_bookmark(question_id: str, user: User = Depends(require_premium
     if question_id in user.bookmarked_questions:
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$pull": {"bookmarked_questions": question_id}})
         await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
-        await invalidate_cache_pattern(f"user:{user.clerk_id}")
         return {"bookmarked": False}
     else:
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$addToSet": {"bookmarked_questions": question_id}})
         await invalidate_cache_pattern(f"bookmarks_user:{user.clerk_id}")
-        await invalidate_cache_pattern(f"user:{user.clerk_id}")
         return {"bookmarked": True}
 
 @api_router.get("/bookmarks")
@@ -542,7 +545,7 @@ async def get_experiences(company_id: Optional[str] = None):
     await set_cached_data(cache_key, experiences, ttl=3600)
     return experiences
 
-# Payment endpoints
+# Payment endpoints - REWRITTEN FROM SCRATCH
 @api_router.post("/payment/create-order")
 async def create_order(order_req: CreateOrderRequest, user: User = Depends(require_auth)):
     """Create Razorpay order for payment"""
@@ -550,6 +553,7 @@ async def create_order(order_req: CreateOrderRequest, user: User = Depends(requi
         logging.info(f"💰 Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
         logging.info(f"💰 Amount requested: ₹{order_req.amount / 100}")
         
+        # Create Razorpay order
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
             "currency": "INR",
@@ -575,15 +579,15 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
             'razorpay_signature': payment.razorpay_signature
         }
         
+        # Verify payment signature
         razorpay_client.utility.verify_payment_signature(params_dict)
         logging.info(f"✓ Payment signature verified")
         
+        # Update user to premium in MongoDB
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
         logging.info(f"✓ User upgraded to premium in MongoDB")
         
-        # Invalidate user cache
-        await invalidate_cache_pattern(f"user:{user.clerk_id}")
-        
+        # Update Clerk user metadata
         if clerk_client:
             try:
                 clerk_client.users.update_metadata(
@@ -606,34 +610,27 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
 # Admin endpoints
 @api_router.get("/admin/stats")
 async def get_admin_stats(user: User = Depends(require_admin)):
-    cache_key = "admin_stats"
-    cached = await get_cached_data(cache_key)
-    if cached:
-        return cached
-    
     total_users = await db.users.count_documents({})
     premium_users = await db.users.count_documents({"is_premium": True})
     total_questions = await db.questions.count_documents({})
     total_companies = await db.companies.count_documents({})
     total_experiences = await db.experiences.count_documents({})
     
-    stats = {
+    return {
         "total_users": total_users,
         "premium_users": premium_users,
         "total_questions": total_questions,
         "total_companies": total_companies,
         "total_experiences": total_experiences
     }
-    
-    await set_cached_data(cache_key, stats, ttl=300)
-    return stats
 
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
-    """Get all users"""
+    """Get all users - returns JSONResponse to handle MongoDB types"""
     users = await db.users.find({}).to_list(10000)
     
     def make_json_safe(obj):
+        """Recursively convert MongoDB types to JSON-safe types"""
         if isinstance(obj, ObjectId):
             return str(obj)
         elif isinstance(obj, datetime):
@@ -649,30 +646,117 @@ async def get_all_users(user: User = Depends(require_admin)):
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+    # Validate user_id
     if not user_id or user_id == "undefined" or user_id == "null":
-        raise HTTPException(status_code=400, detail="Invalid user_id provided")
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid user_id provided"
+        )
     
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Update MongoDB - admins automatically get premium
+    await db.users.update_one(
+        {"clerk_id": user_id}, 
+        {"$set": {"is_admin": True, "is_premium": True}}
+    )
+    
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_user = clerk_client.users.get(user_id=user_id)
+            clerk_client.users.update(
+                user_id=user_id,
+                public_metadata={
+                    **clerk_user.public_metadata,
+                    'isAdmin': True,
+                    'isPremium': True
+                }
+            )
+            logging.info(f"✓ Updated Clerk metadata for admin grant: {target_user['email']}")
+        except Exception as e:
+            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
+    
+    return {
+        "success": True, 
+        "message": f"Admin access granted to {target_user['email']}"
+    }
+
+@api_router.post("/admin/users/{user_id}/revoke-admin")
+async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
+    # Validate user_id
+    if not user_id or user_id == "undefined" or user_id == "null":
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid user_id provided"
+        )
+    
+    target_user = await db.users.find_one({"clerk_id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Prevent self-revocation
+    if user_id == current_user.clerk_id:
+        raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
+    
+    # Update MongoDB
+    await db.users.update_one(
+        {"clerk_id": user_id}, 
+        {"$set": {"is_admin": False}}
+    )
+    
+    # Update Clerk metadata
+    if clerk_client:
+        try:
+            clerk_user = clerk_client.users.get(user_id=user_id)
+            clerk_client.users.update(
+                user_id=user_id,
+                public_metadata={
+                    **clerk_user.public_metadata,
+                    'isAdmin': False
+                }
+            )
+            logging.info(f"✓ Updated Clerk metadata for admin revoke: {target_user['email']}")
+        except Exception as e:
+            logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
+    
+    return {
+        "success": True, 
+        "message": f"Admin access revoked from {target_user['email']}"
+    }
+
+@api_router.post("/admin/users/{user_id}/toggle-premium")
+async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
+    # Validate user_id
+    if not user_id or user_id == "undefined" or user_id == "null":
+        raise HTTPException(
+            status_code=400, 
+            detail="Invalid user_id provided"
+        )
+    
+    target_user = await db.users.find_one({"clerk_id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Don't allow removing premium from admins
     if target_user.get('is_admin') and target_user.get('is_premium'):
         raise HTTPException(
             status_code=400, 
             detail="Cannot remove premium status from admin users"
         )
     
+    # Toggle premium status
     new_premium_status = not target_user.get('is_premium', False)
     
+    # Update MongoDB
     await db.users.update_one(
         {"clerk_id": user_id}, 
         {"$set": {"is_premium": new_premium_status}}
     )
     
-    # Invalidate user cache
-    await invalidate_cache_pattern(f"user:{user_id}")
-    await invalidate_cache_pattern("admin_stats")
-    
+    # Update Clerk metadata
     if clerk_client:
         try:
             clerk_user = clerk_client.users.get(user_id=user_id)
@@ -796,11 +880,14 @@ async def create_company(company: Company, user: User = Depends(require_admin)):
     try:
         logging.info(f"Creating company: {company.name}")
         
+        # Ensure slug is generated
         if not company.slug:
             company.slug = Company.generate_slug(company.name)
         
+        # Check if slug already exists
         existing = await db.companies.find_one({"slug": company.slug})
         if existing:
+            # Make slug unique by appending a random suffix
             company.slug = f"{company.slug}-{str(uuid.uuid4())[:8]}"
             logging.info(f"Slug already exists, using: {company.slug}")
         
@@ -816,14 +903,18 @@ async def create_company(company: Company, user: User = Depends(require_admin)):
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to create company: {str(e)}")
 
+
+# Update the update_company endpoint
 @api_router.put("/admin/companies/{company_id}")
 async def update_company(company_id: str, company: Company, user: User = Depends(require_admin)):
     try:
         logging.info(f"Updating company: {company_id}")
         
+        # Ensure slug exists
         if not company.slug:
             company.slug = Company.generate_slug(company.name)
         
+        # Check if slug is taken by another company
         existing = await db.companies.find_one({"slug": company.slug, "id": {"$ne": company_id}})
         if existing:
             company.slug = f"{company.slug}-{str(uuid.uuid4())[:8]}"
@@ -870,6 +961,7 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
     return {"success": True}
 
 # Middleware setup - ORDER MATTERS!
+# 1. CORS must be first to handle preflight requests
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -879,6 +971,7 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
+# 2. GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 logging.basicConfig(
@@ -891,9 +984,6 @@ logger = logging.getLogger(__name__)
 async def startup_db():
     try:
         logger.info("🚀 Starting database initialization...")
-        
-        # Initialize Redis
-        await init_redis()
         
         # Step 1: Clean up null values
         logger.info("Cleaning up null ID documents...")
@@ -940,9 +1030,9 @@ async def startup_db():
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        # Users
+        # Users - ONLY clerk_id is unique
         await db.users.create_index("clerk_id", unique=True)
-        await db.users.create_index("email")
+        await db.users.create_index("email")  # Non-unique for search
         
         # Cache
         await cache_collection.create_index("key", unique=True)
@@ -970,13 +1060,6 @@ async def startup_db():
         await set_cached_data("companies", companies, ttl=7200)
         
         logger.info("✓ Cache warmed up")
-        
-        # Cache statistics
-        if REDIS_ENABLED:
-            logger.info("✓ Using Upstash Redis for caching")
-        else:
-            logger.info("✓ Using MongoDB for caching (Redis fallback)")
-        
         logger.info("🎉 Database initialization complete!")
         
     except Exception as e:
@@ -997,49 +1080,35 @@ async def check_razorpay_status():
         "key_id_length": len(key_id) if key_id else 0,
         "key_secret_length": len(key_secret) if key_secret else 0,
         "key_id_prefix": key_id[:15] if len(key_id) >= 15 else key_id,
-        "all_env_vars": list(os.environ.keys())
+        "all_env_vars": list(os.environ.keys())  # This will show ALL env vars loaded
     }
+
 
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
     try:
-        stats = {
-            "cache_type": "Upstash Redis + MongoDB" if REDIS_ENABLED else "MongoDB only",
-            "redis_enabled": REDIS_ENABLED
-        }
-        
-        # Redis stats
-        if REDIS_ENABLED and redis_client:
-            try:
-                info = await redis_client.info()
-                stats["redis"] = {
-                    "connected": True,
-                    "used_memory": info.get('used_memory_human', 'N/A'),
-                    "total_keys": await redis_client.dbsize(),
-                    "uptime_seconds": info.get('uptime_in_seconds', 0)
-                }
-            except Exception as e:
-                stats["redis"] = {"connected": False, "error": str(e)}
-        else:
-            stats["redis"] = {"connected": False}
-        
-        # MongoDB cache stats
         total_keys = await cache_collection.count_documents({})
         now = datetime.now(timezone.utc).isoformat()
         valid_keys = await cache_collection.count_documents({"expires_at": {"$gt": now}})
         expired_keys = total_keys - valid_keys
         
-        stats["mongodb"] = {
+        # Redis stats
+        redis_info = redis.info()
+        redis_keys = redis.dbsize()
+        
+        return {
             "total_keys": total_keys,
             "valid_keys": valid_keys,
-            "expired_keys": expired_keys
+            "expired_keys": expired_keys,
+            "cache_type": "Hybrid (Redis + MongoDB)",
+            "redis_keys": redis_keys,
+            "redis_used_memory": redis_info.get('used_memory', 0),
+            "redis_connected_clients": redis_info.get('connected_clients', 0)
         }
-        
-        return stats
-        
     except Exception as e:
         return {"error": str(e)}
 
+        # HEAD
 @api_router.head("/health")
 async def health_head():
     return Response(status_code=200)
@@ -1058,23 +1127,14 @@ async def health_check():
     except Exception as e:
         cache_status = f"unhealthy: {str(e)}"
     
-    # Redis health check
-    redis_status = "disabled"
-    if REDIS_ENABLED and redis_client:
-        try:
-            await redis_client.ping()
-            redis_status = "healthy"
-        except Exception as e:
-            redis_status = f"unhealthy: {str(e)}"
-    
-    overall_status = "healthy"
-    if mongo_status != "healthy" or cache_status != "healthy":
-        overall_status = "degraded"
-    if redis_status.startswith("unhealthy"):
-        overall_status = "degraded"
+    try:
+        redis.ping()
+        redis_status = "healthy"
+    except Exception as e:
+        redis_status = f"unhealthy: {str(e)}"
     
     return {
-        "status": overall_status,
+        "status": "healthy" if mongo_status == "healthy" and cache_status == "healthy" and redis_status == "healthy" else "degraded",
         "mongodb": mongo_status,
         "cache": cache_status,
         "redis": redis_status
@@ -1082,95 +1142,6 @@ async def health_check():
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    try:
-        if redis_client:
-            await redis_client.close()
-            logger.info("✓ Redis connection closed")
-    except Exception as e:
-        logger.error(f"Error closing Redis: {e}")
-    
     client.close()
-    logger.info("✓ MongoDB connection closed")
 
 app.include_router(api_router)
-
-if not target_user:
-    raise HTTPException(status_code=404, detail="User not found")
-
-await db.users.update_one(
-    {"clerk_id": user_id},
-    {"$set": {"is_admin": True, "is_premium": True}}
-)
-
-# Invalidate user cache
-await invalidate_cache_pattern(f"user:{user_id}")
-await invalidate_cache_pattern("admin_stats")
-
-if clerk_client:
-    try:
-        clerk_user = clerk_client.users.get(user_id=user_id)
-        clerk_client.users.update(
-            user_id=user_id,
-            public_metadata={
-                **clerk_user.public_metadata,
-                'isAdmin': True,
-                'isPremium': True
-            }
-        )
-        logging.info(f"Updated Clerk metadata for admin grant: {target_user['email']}")
-    except Exception as e:
-        logging.error(f"Failed to update Clerk metadata: {e}")
-
-return {
-    "success": True,
-    "message": f"Admin access granted to {target_user['email']}"
-}
-
-
-@api_router.post("/admin/users/{user_id}/revoke-admin")
-async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    if not user_id or user_id in {"undefined", "null"}:
-        raise HTTPException(status_code=400, detail="Invalid user_id provided")
-
-    target_user = await db.users.find_one({"clerk_id": user_id})
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    if user_id == current_user.clerk_id:
-        raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
-
-    await db.users.update_one(
-        {"clerk_id": user_id},
-        {"$set": {"is_admin": False}}
-    )
-
-    # Invalidate user cache
-    await invalidate_cache_pattern(f"user:{user_id}")
-    await invalidate_cache_pattern("admin_stats")
-
-    if clerk_client:
-        try:
-            clerk_user = clerk_client.users.get(user_id=user_id)
-            clerk_client.users.update(
-                user_id=user_id,
-                public_metadata={
-                    **clerk_user.public_metadata,
-                    'isAdmin': False
-                }
-            )
-            logging.info(f"Updated Clerk metadata for admin revoke: {target_user['email']}")
-        except Exception as e:
-            logging.error(f"Failed to update Clerk metadata: {e}")
-
-    return {
-        "success": True,
-        "message": f"Admin access revoked from {target_user['email']}"
-    }
-
-
-@api_router.post("/admin/users/{user_id}/toggle-premium")
-async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-    if not user_id or user_id in {"undefined", "null"}:
-        raise HTTPException(status_code=400, detail="Invalid user_id provided")
-
-    target_user = await db.users.find_one({"clerk_id": user_id})
