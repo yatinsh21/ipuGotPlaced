@@ -13,6 +13,8 @@ clerk-backend-api==3.3.1
 # Security
 passlib[bcrypt]==1.7.4
 
+
+redis[hiredis]>=5.0.0
 # Payment Integration
 razorpay==2.0.0
 
