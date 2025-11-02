@@ -373,7 +373,7 @@ const CompanyQuestionsPage = () => {
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">{company?.name}</h1>
                 {isPremiumUser ? (
-                  <p className="text-gray-600">{questions.length +5} interview questions</p>
+                  <p className="text-gray-600">{questions.length +10} interview questions</p>
                 ) : (
                   <p className="text-gray-600">Premium content • Upgrade to view</p>
                 )}
@@ -411,7 +411,7 @@ const CompanyQuestionsPage = () => {
                       >
                         <div className="flex items-center justify-between flex-1 gap-4">
                           <div className="flex items-center gap-3 flex-1">
-                            <span className="text-gray-500 font-medium">Q{index + 1}.</span>
+                            {/* <span className="text-gray-500 font-medium">Q{index + 1}.</span> */}
                             <span className="font-medium text-gray-900">
                               {question.question}
                             </span>
