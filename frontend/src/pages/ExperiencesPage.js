@@ -110,10 +110,7 @@ const ExperiencesPage = () => {
                       <span className="font-medium line-clamp-1">{exp.role}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2 text-xs text-gray-500">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{formatDate(exp.posted_at)}</span>
-                      </div>
+                     
                       <Badge className="bg-gray-900 text-white text-xs h-5 px-2">
                         {exp.rounds} rounds
                       </Badge>

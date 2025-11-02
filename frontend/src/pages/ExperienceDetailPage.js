@@ -255,10 +255,10 @@ const ExperienceDetailPage = () => {
                     <Layers className="h-3.5 w-3.5" />
                     <span>{experience.rounds} rounds</span>
                   </div>
-                  <div className="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded">
+                  {/* <div className="flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded">
                     <Calendar className="h-3.5 w-3.5" />
                     <span>{formatDate(experience.posted_at)}</span>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </Card>
@@ -375,10 +375,10 @@ const ExperienceDetailPage = () => {
                 <Layers className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                 <span>{experience.rounds} rounds</span>
               </div>
-              <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 px-2 sm:px-2.5 py-1 rounded whitespace-nowrap">
+              {/* <div className="flex items-center gap-1 sm:gap-1.5 bg-white/15 px-2 sm:px-2.5 py-1 rounded whitespace-nowrap">
                 <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 flex-shrink-0" />
                 <span>{formatDate(experience.posted_at)}</span>
-              </div>
+              </div> */}
             </div>
           </div>
 
