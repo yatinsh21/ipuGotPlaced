@@ -90,7 +90,7 @@ const GoldminePage = () => {
       console.log('Step 3: Opening Razorpay checkout...');
       
       const razorpayOptions = {
-        key: 'rzp_live_RVGaTvsyo82E4p',
+        key: 'rzp_test_RanE6xlYz4HVas',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
