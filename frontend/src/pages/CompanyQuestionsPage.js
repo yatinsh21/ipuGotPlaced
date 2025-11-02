@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import {  SignInButton } from '@clerk/clerk-react';
+
 import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -164,7 +166,7 @@ const CompanyQuestionsPage = () => {
       console.log('Step 3: Opening Razorpay checkout...');
       
       const razorpayOptions = {
-        key: 'rzp_test_RanE6xlYz4HVas',
+        key: 'rzp_live_RanAcueBT31KjY',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
@@ -320,14 +322,11 @@ const CompanyQuestionsPage = () => {
                 </h3>
                 <p className="text-gray-700">Sign in with Google to access company questions.</p>
               </div>
-              <Button 
-                onClick={() => {
-                  window.location.href = `${BACKEND_URL}/api/auth/login`;
-                }}
-                className="bg-gray-900 hover:bg-gray-800 text-white"
-              >
-                Sign in with Google
-              </Button>
+              <SignInButton mode="modal">
+                    <Button className="w-[30%]">
+                      Sign in with Google
+                    </Button>
+                  </SignInButton>
             </div>
           </div>
 

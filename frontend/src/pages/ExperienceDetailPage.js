@@ -3,6 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
+import {  SignInButton } from '@clerk/clerk-react';
+
+// import {  useAuth } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,7 +83,7 @@ const ExperienceDetailPage = () => {
       );
       
       const razorpayOptions = {
-        key: 'rzp_test_RanE6xlYz4HVas',
+        key: 'rzp_live_RanAcueBT31KjY',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
@@ -213,14 +216,11 @@ const ExperienceDetailPage = () => {
                 </h3>
                 <p className="text-sm sm:text-base text-gray-700">Sign in with Google to access interview experiences.</p>
               </div>
-              <button 
-                onClick={() => {
-                  window.location.href = `${BACKEND_URL}/api/auth/login`;
-                }}
-                className="bg-gray-900 hover:bg-gray-800 text-white px-4 py-2 rounded-lg font-medium text-sm sm:text-base whitespace-nowrap w-full sm:w-auto"
-              >
-                Sign in with Google
-              </button>
+               <SignInButton mode="modal">
+                    <Button className="w-[30%]">
+                      Sign in with Google
+                    </Button>
+                  </SignInButton>
             </div>
           </div>
         </div>

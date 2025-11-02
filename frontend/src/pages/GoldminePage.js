@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Crown, Lock, Check, X } from 'lucide-react';
 import { toast } from 'sonner';
+import Footer from "@/components/Footer";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -90,7 +91,7 @@ const GoldminePage = () => {
       console.log('Step 3: Opening Razorpay checkout...');
       
       const razorpayOptions = {
-        key: 'rzp_test_RanE6xlYz4HVas',
+        key: 'rzp_live_RanAcueBT31KjY',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Bookmark, BookmarkCheck, Lock, Crown } from 'lucide-react';
 import { toast } from 'sonner';
 import '../copyProtection.css';
+import TopBanner from '@/components/TopBanner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -225,6 +226,7 @@ const HomePage = () => {
                 </SelectContent>
               </Select>
             </div>
+            <TopBanner/>
 
             {/* Questions Accordion */}
             <div className="bg-white border border-gray-200 shadow-sm">
@@ -240,7 +242,7 @@ const HomePage = () => {
                     >
                       <div className="flex items-center gap-3 flex-1 justify-between">
                         <div className="flex items-center gap-3 flex-1">
-                          <span className="text-gray-500 font-medium">Q{index + 1}.</span>
+                          {/* <span className="text-gray-500 font-medium">Q{index + 1}.</span> */}
                           <span className="font-medium text-gray-900">{question.question}</span>
                           <Badge className={getDifficultyColor(question.difficulty)}>
                             {question.difficulty}

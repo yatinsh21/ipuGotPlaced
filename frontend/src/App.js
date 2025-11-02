@@ -15,6 +15,7 @@ import ContactPage from "./pages/ContactPage";
 import PrivacyPage from "./pages/PrivacyPolicy";
 import AboutPage from "./pages/AboutPage";
 import "@/App.css";
+import Footer from "./components/Footer";
 
 function App() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -52,7 +53,9 @@ function App() {
             } 
           />
         </Routes>
+          <Footer/>
       </BrowserRouter>
+
       <Toaster />
     </div>
   );
