@@ -157,9 +157,9 @@ const GoldminePage = () => {
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please sign out and sign in again.');
       } else if (error.response?.status === 500) {
-        toast.error('Server error. Please try again later.');
+        toast.error('High demand ! , Please try again');
       } else {
-        toast.error('Payment initiation failed. Please try again.');
+        toast.error('High demand ! , Please try again');
       }
     }
   };
