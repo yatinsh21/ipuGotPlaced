@@ -83,7 +83,7 @@ const ExperienceDetailPage = () => {
       );
       
       const razorpayOptions = {
-        key: 'rzp_live_RanAcueBT31KjY',
+        key: 'rzp_live_RbBiOlLpYoy4f3',
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
