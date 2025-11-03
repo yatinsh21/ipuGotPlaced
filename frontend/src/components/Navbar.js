@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
+import { NotebookText ,Compass } from 'lucide-react';
 import { Crown, Bookmark, Shield, Menu, X } from 'lucide-react';
 
 const Navbar = () => {
@@ -24,14 +25,15 @@ const Navbar = () => {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex gap-6">
-              <Link to="/topics" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                Questions
+              <Link to="/topics" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
+                   <NotebookText className="h-4 w-4" />  Question Bank
               </Link>
               <Link to="/goldmine" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
                 <Crown className="h-4 w-4" />
                 Goldmine
               </Link>
-              <Link to="/experiences" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+              <Link to="/experiences" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
+               <Compass className="h-4 w-4" />
                 Experiences
               </Link>
             </div>
