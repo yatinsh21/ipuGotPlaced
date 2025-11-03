@@ -324,7 +324,11 @@ const CompanyQuestionsPage = () => {
               </div>
               <SignInButton mode="modal">
                     <Button className="w-[30%]">
-                      Sign in with Google
+                      Sign in with Google<img
+      src="/google.png"
+      alt="Google logo"
+      className="w-4 h-4 object-contain"
+    />
                     </Button>
                   </SignInButton>
             </div>

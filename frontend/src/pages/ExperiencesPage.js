@@ -73,13 +73,13 @@ const ExperiencesPage = () => {
                 placeholder="Search by company or role..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 text-sm border-2 border-gray-200 focus:border-gray-900 rounded-lg"
+                className="pl-10 h-10 w-full text-sm border-2 border-gray-200 focus:border-gray-900 rounded-lg"
                 data-testid="search-experiences"
               />
             </div>
-            <div className="px-3 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium whitespace-nowrap">
+            {/* <div className="px-3 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium whitespace-nowrap">
               {filteredExperiences.length} experiences
-            </div>
+            </div> */}
           </div>
         </div>
 

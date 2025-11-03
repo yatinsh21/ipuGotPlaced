@@ -73,7 +73,11 @@ const Navbar = () => {
             ) : (
               <SignInButton mode="modal">
                 <Button data-testid="login-btn" size="sm">
-                  Sign in
+                  Sign in with Google<img
+      src="/google.png"
+      alt="Google logo"
+      className="w-4 h-4 object-contain"
+    />
                 </Button>
               </SignInButton>
             )}
