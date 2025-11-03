@@ -301,15 +301,27 @@ const ExperienceDetailPage = () => {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left text-sm px-2 sm:px-0">
         <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
           <div className="font-semibold text-gray-900 mb-1">✓ All Experiences</div>
-          <div className="text-xs text-gray-600">Read complete stories</div>
+          <div className="text-xs text-gray-600">Real Stories , Real Impact</div>
         </div>
         <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
           <div className="font-semibold text-gray-900 mb-1">✓ Company Q&A</div>
-          <div className="text-xs text-gray-600">Full question database</div>
+          <div className="text-xs text-gray-600">Master company-specific Q&A</div>
         </div>
         <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
           <div className="font-semibold text-gray-900 mb-1">✓ Lifetime Access</div>
           <div className="text-xs text-gray-600">Pay once forever</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Priority Support</div>
+          <div className="text-xs text-gray-600">Skip the line , get Priority</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Bookmark Questions</div>
+          <div className="text-xs text-gray-600">Save what matters</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Tags & Filters</div>
+          <div className="text-xs text-gray-600">Smart tags for sharp minds</div>
         </div>
       </div>
     </div>

@@ -202,9 +202,17 @@ const GoldminePage = () => {
           ["Topic-wise Questions", true, true],
           ["All Question Answers", true, true],
           ["Company-wise Questions", false, true],
-          ["15+ Top Companies", false, true],
+          ["Top Companies", false, true],
           ["Bookmark Questions", false, true],
-          ["Tags & Filters", false, true],
+          [
+            <>
+              Tags & Filters<br />
+              <span className="text-xs text-gray-500">(e.g. most-asked, just-read)</span>
+            </>,
+            false,
+            true
+          ],
+          ["Premium Experiences", false, true],
         ].map(([feature, free, premium], idx) => (
           <React.Fragment key={idx}>
             <div className="p-2 border-b border-r text-xs sm:text-sm">{feature}</div>
