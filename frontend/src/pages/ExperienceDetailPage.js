@@ -131,7 +131,7 @@ const ExperienceDetailPage = () => {
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please sign out and sign in again.');
       } else {
-        toast.error('Payment initiation failed. Please try again.');
+        toast.error('High demand !, Please try again ');
       }
     }
   };

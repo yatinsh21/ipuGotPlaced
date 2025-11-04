@@ -234,7 +234,7 @@ const CompanyQuestionsPage = () => {
       } else if (error.response?.status === 500) {
         toast.error('Server error. Please try again later.');
       } else {
-        toast.error('Payment initiation failed. Please try again.');
+        toast.error('High Demand !, Please try again');
       }
     }
   };
