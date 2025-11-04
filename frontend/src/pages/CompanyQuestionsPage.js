@@ -25,6 +25,8 @@ const CompanyQuestionsPage = () => {
   const [company, setCompany] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
+    const [isMobileDevice, setIsMobileDevice] = useState(false);
+  
   const [loading, setLoading] = useState(true);
 
   const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
@@ -35,6 +37,28 @@ const CompanyQuestionsPage = () => {
     }
     fetchCompanyAndQuestions();
   }, [companyId, isPremiumUser, isSignedIn]);
+
+  const checkIfMobile = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+    const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
+    const isMobileScreen = window.innerWidth <= 768;
+    return isMobileUA || isMobileScreen;
+  };
+  
+    useEffect(() => {
+    // Check device type on mount
+    setIsMobileDevice(checkIfMobile());
+    
+    // Add resize listener to detect screen size changes
+    const handleResize = () => {
+      setIsMobileDevice(checkIfMobile());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
 
   const fetchUserBookmarks = async () => {
     try {
@@ -124,6 +148,12 @@ const CompanyQuestionsPage = () => {
 
   // PAYMENT HANDLER
   const handlePayment = async () => {
+     if (isMobileDevice) {
+        toast.error('Please use a desktop or laptop for 100% successful payment 🎉.', {
+          duration: 4000,
+        });
+        return;
+      }
     console.log('=== PAYMENT FLOW STARTED (Company Page) ===');
     
     try {
@@ -463,7 +493,7 @@ const CompanyQuestionsPage = () => {
               <div className="bg-white border-2 border-gray-200 shadow-lg">
                 {/* Premium Upgrade Banner */}
                   <div className="p-6 space-y-3">
-                  {[1, 2, 3].map((i) => (
+                  {[1, 2].map((i) => (
                     <div 
                       key={i}
                       className="border border-gray-200 rounded-lg p-4 bg-gray-50 flex items-center justify-between"
@@ -506,20 +536,32 @@ const CompanyQuestionsPage = () => {
                       Upgrade to Premium Now
                     </Button>
                     
-                    <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
-                        <div className="font-semibold text-gray-900 mb-1">✓ All Questions</div>
-                        <div className="text-sm text-gray-600">Access complete Q&A database</div>
-                      </div>
-                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
-                        <div className="font-semibold text-gray-900 mb-1">✓ Bookmark Feature</div>
-                        <div className="text-sm text-gray-600">Save important questions</div>
-                      </div>
-                      <div className="bg-white/50 p-4 rounded border border-yellow-200">
-                        <div className="font-semibold text-gray-900 mb-1">✓ Lifetime Access</div>
-                        <div className="text-sm text-gray-600">Pay once, access forever</div>
-                      </div>
-                    </div>
+                    <div className="grid grid-cols-1 mt-2 sm:grid-cols-3 gap-3 text-left text-sm px-2 sm:px-0">
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ All Experiences</div>
+          <div className="text-xs text-gray-600">Real Stories , Real Impact</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Company Q&A</div>
+          <div className="text-xs text-gray-600">Master company-specific Q&A</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Lifetime Access</div>
+          <div className="text-xs text-gray-600">Pay once forever</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Priority Support</div>
+          <div className="text-xs text-gray-600">Skip the line , get Priority</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Bookmark Questions</div>
+          <div className="text-xs text-gray-600">Save what matters</div>
+        </div>
+        <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">
+          <div className="font-semibold text-gray-900 mb-1">✓ Tags & Filters</div>
+          <div className="text-xs text-gray-600">Smart tags for sharp minds</div>
+        </div>
+      </div>
                   </div>
                 </div>
 

@@ -23,12 +23,38 @@ const ExperienceDetailPage = () => {
   const { getToken } = useAuth();
   const [experience, setExperience] = useState(null);
   const [loading, setLoading] = useState(true);
+    const [isMobileDevice, setIsMobileDevice] = useState(false);
+  
 
   const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
+
+  
 
   useEffect(() => {
     fetchExperience();
   }, [experienceId]);
+
+  const checkIfMobile = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+    const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
+    const isMobileScreen = window.innerWidth <= 768;
+    return isMobileUA || isMobileScreen;
+  };
+  
+    useEffect(() => {
+    // Check device type on mount
+    setIsMobileDevice(checkIfMobile());
+    
+    // Add resize listener to detect screen size changes
+    const handleResize = () => {
+      setIsMobileDevice(checkIfMobile());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
 
   const fetchExperience = async () => {
     try {
@@ -57,6 +83,13 @@ const ExperienceDetailPage = () => {
   };
 
   const handlePayment = async () => {
+
+    if (isMobileDevice) {
+        toast.error('Please use a desktop or laptop for 100% successful payment 🎉', {
+          duration: 4000,
+        });
+        return;
+      }
     try {
       if (!isSignedIn) {
         toast.error('Please sign in to purchase premium');

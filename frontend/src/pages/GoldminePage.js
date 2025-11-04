@@ -74,7 +74,7 @@ const checkIfMobile = () => {
   // PAYMENT HANDLER - REWRITTEN FROM SCRATCH
   const handlePayment = async () => {
     if (isMobileDevice) {
-    toast.error('Please use a desktop or laptop to complete payment', {
+    toast.error('Please use a desktop or laptop for 100% successful payment 🎉', {
       duration: 4000,
     });
     return;
