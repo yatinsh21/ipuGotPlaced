@@ -1,5 +1,5 @@
 import React from "react";
-
+import { ArrowLeft, Calendar, Briefcase, Layers, Lightbulb,  Monitor } from 'lucide-react';
 import { createIcons, icons } from 'lucide';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
@@ -19,6 +19,7 @@ const GoldminePage = () => {
   const { isSignedIn, user } = useUser();
   const { getToken } = useAuth();
   const navigate = useNavigate();
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
@@ -29,6 +30,29 @@ const GoldminePage = () => {
     // Always fetch companies for everyone
     fetchCompaniesPreview();
   }, [isSignedIn]);
+
+    // Device detection function
+const checkIfMobile = () => {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const mobileKeywords = ['android', 'webos', 'iphone', 'ipad', 'ipod', 'blackberry', 'windows phone'];
+  const isMobileUA = mobileKeywords.some(keyword => userAgent.includes(keyword));
+  const isMobileScreen = window.innerWidth <= 768;
+  return isMobileUA || isMobileScreen;
+};
+
+  useEffect(() => {
+  // Check device type on mount
+  setIsMobileDevice(checkIfMobile());
+  
+  // Add resize listener to detect screen size changes
+  const handleResize = () => {
+    setIsMobileDevice(checkIfMobile());
+  };
+  
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+
 
   const fetchCompaniesPreview = async () => {
     try {
@@ -49,6 +73,13 @@ const GoldminePage = () => {
 
   // PAYMENT HANDLER - REWRITTEN FROM SCRATCH
   const handlePayment = async () => {
+    if (isMobileDevice) {
+    toast.error('Please use a desktop or laptop to complete payment', {
+      duration: 4000,
+    });
+    return;
+  }
+
     console.log('=== PAYMENT FLOW STARTED ===');
     
     try {
@@ -184,6 +215,8 @@ const GoldminePage = () => {
 
     {/* Comparison Table */}
     <div className="mb-8">
+      {/* Mobile Device Warning */}
+
       <h3 className="text-lg font-semibold text-gray-900 mb-4 text-center">
         Compare Plans
       </h3>
@@ -236,7 +269,19 @@ const GoldminePage = () => {
     </div>
 
     {/* Action Buttons */}
-    <div className="text-center space-y-4">
+    {isMobileDevice && (
+  <div className="mb-4 bg-white border-2 border-yellow-400 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
+    <Monitor className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+    <div>
+      <p className="font-semibold text-yellow-900 text-sm sm:text-base mb-1">Desktop Required for Payment</p>
+      <p className="text-xs sm:text-sm text-yellow-800">
+        Please switch to a desktop or laptop computer to complete your purchase. Mobile payments are not supported at this time.
+      </p>
+    </div>
+  </div>
+)}
+    {!isMobileDevice && (
+  <div className="text-center space-y-4">
       <Button
         size="lg"
         onClick={handlePayment}
@@ -254,6 +299,9 @@ const GoldminePage = () => {
         Continue Without Premium
       </Button>
     </div>
+)}
+
+    
   </div>
 </div>
 
@@ -420,7 +468,7 @@ const GoldminePage = () => {
                 data-testid="upgrade-premium-btn"
                 className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-4 text-base mb-3"
               >
-                Upgrade to Premium for ₹399
+                Upgrade to Premium for ₹399 
               </Button>
               
               <Button 

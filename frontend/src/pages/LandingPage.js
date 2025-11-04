@@ -3,6 +3,7 @@ import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
 import { Crown, BookOpen, Building2, FileText, ChevronRight } from 'lucide-react';
 import Footer from '@/components/Footer';
+// import { Crown } from 'lucide-react';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -30,15 +31,29 @@ const LandingPage = () => {
               We can't change luck — but we can be ready when it arrives.
             </p>
           </div>
-          <Button 
-            size="lg" 
-            onClick={() => navigate('/topics')}
-            className="bg-gray-900 hover:bg-gray-800 text-white px-6 md:px-8 py-4 md:py-6 text-base md:text-lg"
-            data-testid="cta-btn"
-          >
-            Start Practicing Free
-            <ChevronRight className="ml-2 h-4 w-4 md:h-5 md:w-5" />
-          </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full px-4">
+  <Button
+    size="lg"
+    onClick={() => navigate('/topics')}
+    className="flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white w-full sm:w-auto py-3 sm:py-4 md:py-5 text-sm sm:text-base md:text-lg font-medium transition-all"
+    data-testid="cta-btn"
+  >
+    Start Practicing Free
+    <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+  </Button>
+
+  <Button
+    size="lg"
+    onClick={() => navigate('/goldmine')}
+    className="flex items-center justify-center bg-[#EAB308] hover:bg-yellow-600 text-black font-bold w-full sm:w-auto px-4 sm:px-6 md:px-8 py-3 sm:py-4 md:py-5 text-sm sm:text-base md:text-lg transition-all"
+    data-testid="cta-btn"
+  >
+    <Crown className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+    Premium Questions
+    <ChevronRight className="ml-2 h-4 w-4 sm:h-5 sm:w-5" />
+  </Button>
+</div>
+
         </div>
 
         {/* Company Logos */}
