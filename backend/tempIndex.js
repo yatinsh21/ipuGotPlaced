@@ -475,7 +475,7 @@ async def create_order(order_req: CreateOrderRequest, user: User = Depends(requi
             "amount": order_req.amount,
             "currency": "INR",
             "payment_capture": 1,
-             "offers": ["offer_RbiVqAVG9Bb9gH"]
+             "offers": ["offer_RbihggUfvvAVVU"]
         })
         
         logging.info(f"✓ Razorpay order created: {razor_order['id']}")
