@@ -199,6 +199,7 @@ const CompanyQuestionsPage = () => {
         key: 'rzp_live_RbBiOlLpYoy4f3',
         amount: orderResponse.data.amount,
         currency: 'INR',
+        offers: ["offer_RbiVqAVG9Bb9gH"],
         order_id: orderResponse.data.id,
         name: 'IGP Premium',
         description: 'Lifetime access to company-wise questions',

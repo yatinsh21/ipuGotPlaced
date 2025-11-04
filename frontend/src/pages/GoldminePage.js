@@ -126,6 +126,7 @@ const checkIfMobile = () => {
         amount: orderResponse.data.amount,
         currency: 'INR',
         order_id: orderResponse.data.id,
+        offers: ["offer_RbiVqAVG9Bb9gH"],
         name: 'IGP Premium',
         description: 'Lifetime access to company-wise questions',
         handler: async (razorpayResponse) => {
