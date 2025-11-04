@@ -268,7 +268,7 @@ const checkIfMobile = () => {
       </div>
     </div>
 
-    {/* Action Buttons */}
+    {/* Action Buttons
     {isMobileDevice && (
   <div className="mb-4 bg-white border-2 border-yellow-400 rounded-lg p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
     <Monitor className="h-5 w-5 sm:h-6 sm:w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
@@ -279,8 +279,8 @@ const checkIfMobile = () => {
       </p>
     </div>
   </div>
-)}
-    {!isMobileDevice && (
+)} */}
+    {/* {!isMobileDevice && ( */}
   <div className="text-center space-y-4">
       <Button
         size="lg"
@@ -299,7 +299,7 @@ const checkIfMobile = () => {
         Continue Without Premium
       </Button>
     </div>
-)}
+{/* )} */}
 
     
   </div>
