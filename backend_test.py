@@ -509,7 +509,7 @@ class InterviewPrepAPITester:
         
         # Test create-order endpoint without authentication (should return 401)
         success, response = self.test_endpoint('POST', 'payment/create-order', 401, 
-                                             data={"amount": 39900},
+                                             data={"amount": 29900},
                                              description="Create payment order without auth (should return 401)")
         
         # Test verify payment endpoint without authentication (should return 401)
@@ -525,21 +525,21 @@ class InterviewPrepAPITester:
         # Test with invalid Bearer token format
         invalid_headers = {'Authorization': 'InvalidFormat token123'}
         success, response = self.test_endpoint('POST', 'payment/create-order', 401,
-                                             data={"amount": 39900},
+                                             data={"amount": 29900},
                                              headers=invalid_headers,
                                              description="Create order with invalid auth format (should return 401)")
         
         # Test with Bearer but no token
         empty_bearer_headers = {'Authorization': 'Bearer '}
         success, response = self.test_endpoint('POST', 'payment/create-order', 401,
-                                             data={"amount": 39900},
+                                             data={"amount": 29900},
                                              headers=empty_bearer_headers,
                                              description="Create order with empty Bearer token (should return 401)")
         
         # Test with null token (simulating frontend fix)
         null_token_headers = {'Authorization': 'Bearer null'}
         success, response = self.test_endpoint('POST', 'payment/create-order', 401,
-                                             data={"amount": 39900},
+                                             data={"amount": 29900},
                                              headers=null_token_headers,
                                              description="Create order with 'Bearer null' (should return 401)")
         

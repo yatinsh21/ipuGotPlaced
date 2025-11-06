@@ -90,12 +90,16 @@ const ContactPage = () => {
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Frequently Asked Questions</h2>
           
           <div className="space-y-6">
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">How do I access premium content?</h3>
-              <p className="text-gray-600 text-sm">
-                After signing in, visit any company questions page or interview experience. Click "Upgrade to Premium" and complete the one-time payment of ₹399 through Razorpay.
-              </p>
-            </div>
+           <div>
+  <h3 className="font-semibold text-gray-900 mb-2">How do I access premium content?</h3>
+  <p className="text-gray-600 text-sm">
+    After signing in, visit any company questions page or interview experience. Click{" "}
+    <span className="font-medium text-gray-900">"Upgrade to Premium"</span> and complete the one-time payment of{" "}
+    <span className="line-through text-gray-500">₹399</span>{" "}
+    <span className="font-semibold text-green-600">₹299</span> through Razorpay.
+  </p>
+</div>
+
 
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Is the payment secure?</h3>

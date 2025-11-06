@@ -181,7 +181,7 @@ const CompanyQuestionsPage = () => {
       
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 39900 }, // ₹399 in paise
+        { amount: 29900 }, // ₹299 in paise
         { 
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -523,11 +523,12 @@ const CompanyQuestionsPage = () => {
                       Get lifetime access to {company?.question_count || 'all'} carefully curated interview questions from {company?.name}
                     </p>
                     
-                    <div className="bg-white border-2 border-yellow-400 rounded-lg p-6 mb-6 inline-block">
-                      <div className="text-5xl font-bold text-gray-900 mb-2">₹399</div>
-                      <div className="text-gray-600 text-lg">One-time payment • Lifetime access</div>
-                    </div>
-                    
+                   <div className="bg-white border-2 border-yellow-400 rounded-lg p-6 mb-6 inline-block text-center">
+  <div className="text-2xl text-gray-500 line-through mb-1">₹399</div>
+  <div className="text-5xl font-bold text-gray-900 mb-1">₹299</div>
+  <div className="text-gray-600 text-lg">One-time payment • Lifetime access</div>
+</div>
+
                     <Button 
                       onClick={handlePayment}
                       size="lg"

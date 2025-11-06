@@ -106,7 +106,7 @@ const ExperienceDetailPage = () => {
       
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 39900 },
+        { amount: 29900 },
         { 
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -316,10 +316,12 @@ const ExperienceDetailPage = () => {
           <div className='flex flex-col'>
 
           
-      <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 mb-4 inline-block w-full sm:w-auto">
-        <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">₹399</div>
-        <div className="text-gray-600 text-sm sm:text-base">One-time • Lifetime access</div>
-      </div>
+      <div className="bg-white border-2 border-yellow-400 rounded-lg p-4 mb-4 inline-block w-full sm:w-auto text-center">
+  <div className="text-xl text-gray-500 line-through">₹399</div>
+  <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">₹299</div>
+  <div className="text-gray-600 text-sm sm:text-base">One-time • Lifetime access</div>
+</div>
+
 
       {/* Button */}
       <Button

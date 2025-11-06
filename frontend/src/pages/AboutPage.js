@@ -129,10 +129,16 @@ const AboutPage = () => {
                 <div className="p-1.5 bg-gray-900 rounded-full mt-1">
                   <div className="w-2 h-2 bg-white rounded-full"></div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900 mb-1">Affordable Premium</h4>
-                  <p className="text-sm text-gray-600">One-time payment of ₹399 for lifetime access. No subscriptions, no hidden fees.</p>
-                </div>
+               <div>
+  <h4 className="font-semibold text-gray-900 mb-1">Affordable Premium</h4>
+  <p className="text-sm text-gray-600">
+    One-time payment of{" "}
+    <span className="line-through text-gray-500">₹399</span>{" "}
+    <span className="font-semibold text-green-600">₹299</span> for lifetime access.
+    No subscriptions, no hidden fees.
+  </p>
+</div>
+
               </div>
               <div className="flex items-start gap-3">
                 <div className="p-1.5 bg-gray-900 rounded-full mt-1">

@@ -52,7 +52,7 @@ const TermsPage = () => {
             <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">4. Premium Subscription</h2>
               <p className="leading-relaxed mb-2">
-                <strong>4.1 Payment:</strong> Premium access requires a one-time payment of ₹399 processed through Razorpay.
+                <strong>4.1 Payment:</strong> Premium access requires a one-time payment of ₹299 processed through Razorpay.
               </p>
               <p className="leading-relaxed mb-2">
                 <strong>4.2 Lifetime Access:</strong> Premium subscription provides lifetime access to all premium content, including interview experiences and company-wise questions.

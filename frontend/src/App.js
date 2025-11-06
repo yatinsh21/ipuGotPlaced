@@ -16,6 +16,8 @@ import PrivacyPage from "./pages/PrivacyPolicy";
 import AboutPage from "./pages/AboutPage";
 import "@/App.css";
 import Footer from "./components/Footer";
+import TopNotification from "./components/AnnouncementBar";
+import AnnouncementBar from "./components/AnnouncementBar";
 
 function App() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -31,6 +33,7 @@ function App() {
   return (
     <div className="App">
       <BrowserRouter>
+      <AnnouncementBar  />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route path="/topics" element={<HomePage />} />
@@ -54,6 +57,7 @@ function App() {
           />
         </Routes>
           <Footer/>
+          {/* <TopNotification/> */}
       </BrowserRouter>
 
       <Toaster />

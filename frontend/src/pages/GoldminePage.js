@@ -107,7 +107,7 @@ const checkIfMobile = () => {
       
       const orderResponse = await axios.post(
         `${API}/payment/create-order`,
-        { amount: 39900 }, // ₹399 in paise
+        { amount: 29900 }, // ₹299 in paise
         { 
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -206,12 +206,14 @@ const checkIfMobile = () => {
       <h2 className="text-3xl font-bold text-gray-900 mb-1">Upgrade to Premium</h2>
       <p className="text-gray-600 text-sm">Unlock all features — once and for all 🚀</p>
 
-      <div className="mt-6">
-        <div className="text-5xl font-extrabold text-gray-900 mb-1">₹399</div>
-        <div className="text-sm text-gray-600 font-medium">
-          One-time payment • Lifetime access
-        </div>
-      </div>
+      <div className="mt-6 flex flex-col items-center justify-center text-center">
+  <div className="text-2xl text-gray-500 line-through">₹399</div>
+  <div className="text-5xl font-extrabold text-gray-900 mb-1">₹299</div>
+  <div className="text-sm text-gray-600 font-medium">
+    One-time payment • Lifetime access
+  </div>
+</div>
+
     </div>
 
     {/* Comparison Table */}
@@ -336,7 +338,7 @@ const checkIfMobile = () => {
               className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 mt-4"
             >
               <Crown className="h-4 w-4 mr-2" />
-              Unlock All for ₹399
+              Unlock All for ₹299
             </Button>
           )}
         </div>
@@ -392,7 +394,7 @@ const checkIfMobile = () => {
               <Crown className="h-12 w-12 text-yellow-500 mx-auto mb-3" />
               <h2 className="text-2xl font-bold text-gray-900 mb-1">Upgrade to Premium</h2>
               <div className="my-4">
-                <div className="text-4xl font-bold text-gray-900 mb-1">₹399</div>
+                <div className="text-4xl font-bold text-gray-900 mb-1">₹299</div>
                 <div className="text-sm text-gray-600">One-time • Lifetime access</div>
               </div>
             </div>
@@ -469,7 +471,7 @@ const checkIfMobile = () => {
                 data-testid="upgrade-premium-btn"
                 className="bg-gray-900 hover:bg-gray-800 text-white px-6 py-4 text-base mb-3"
               >
-                Upgrade to Premium for ₹399 
+                Upgrade to Premium for ₹299 
               </Button>
               
               <Button 
