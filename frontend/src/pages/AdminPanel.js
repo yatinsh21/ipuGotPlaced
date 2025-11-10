@@ -229,6 +229,15 @@ const AdminPanel = () => {
                 />
               </TabsContent>
 
+              <TabsContent value="alumni">
+                <AlumniManager 
+                  alumni={alumni} 
+                  setAlumni={setAlumni}
+                  fetchAllData={fetchAllData} 
+                  getAuthConfig={getAuthConfig}
+                />
+              </TabsContent>
+
               <TabsContent value="users">
                 <UsersManager users={users} onRefresh={fetchAllData} currentUser={user} getAuthConfig={getAuthConfig} />
               </TabsContent>
