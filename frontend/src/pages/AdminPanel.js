@@ -1361,7 +1361,8 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
     try {
       const data = {
         ...formData,
-        college: formData.college ? parseInt(formData.college) : null,
+        // ✅ FIXED: Keep college as string, only parse graduation_year as int
+        college: formData.college || null,  // Keep as string!
         graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null,
         phone: formData.phone || null,
         location: formData.location || null
