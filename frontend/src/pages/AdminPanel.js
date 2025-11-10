@@ -27,6 +27,7 @@ const AdminPanel = () => {
   const [companies, setCompanies] = useState([]);
   const [experiences, setExperiences] = useState([]);
   const [users, setUsers] = useState([]);
+  const [alumni, setAlumni] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const isAdmin = user?.publicMetadata?.isAdmin;
