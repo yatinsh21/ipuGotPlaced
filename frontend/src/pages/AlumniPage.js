@@ -2,12 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Search, MapPin, Briefcase, GraduationCap, Calendar, Mail, Phone, Lock, Crown } from 'lucide-react';
+import { Search, MapPin, Briefcase, GraduationCap, Calendar, Mail, Phone, Lock, Crown, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -18,14 +16,8 @@ const AlumniPage = () => {
   const { getToken } = useAuth();
   const [alumni, setAlumni] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [filters, setFilters] = useState({
-    company: '',
-    name: '',
-    role: '',
-    location: '',
-    years_of_experience: '',
-    graduation_year: ''
-  });
+  const [searchName, setSearchName] = useState('');
+  const [searchCompany, setSearchCompany] = useState('');
 
   const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
@@ -39,18 +31,14 @@ const AlumniPage = () => {
     };
   };
 
-  const searchAlumni = async () => {
+  const searchAlumni = async (name = searchName, company = searchCompany) => {
     setLoading(true);
     try {
       const config = await getAuthConfig();
       const params = {};
       
-      // Only add non-empty filters
-      Object.keys(filters).forEach(key => {
-        if (filters[key]) {
-          params[key] = filters[key];
-        }
-      });
+      if (name) params.name = name;
+      if (company) params.company = company;
 
       const response = await axios.get(`${API}/alumni/search`, {
         ...config,
@@ -58,10 +46,6 @@ const AlumniPage = () => {
       });
       
       setAlumni(response.data);
-      
-      if (response.data.length === 0) {
-        toast.info('No alumni found matching your criteria');
-      }
     } catch (error) {
       console.error('Failed to search alumni:', error);
       toast.error('Failed to search alumni');
@@ -80,225 +64,172 @@ const AlumniPage = () => {
       const config = await getAuthConfig();
       const response = await axios.get(`${API}/alumni/${alumniId}/reveal`, config);
       
-      // Update the alumni in the list with revealed info
       setAlumni(prevAlumni => 
         prevAlumni.map(a => 
           a.id === alumniId ? { ...a, ...response.data, revealed: true } : a
         )
       );
       
-      toast.success('Contact revealed successfully!');
+      toast.success('Contact revealed!');
     } catch (error) {
       console.error('Failed to reveal contact:', error);
       toast.error('Failed to reveal contact');
     }
   };
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  };
-
-  const clearFilters = () => {
-    setFilters({
-      company: '',
-      name: '',
-      role: '',
-      location: '',
-      years_of_experience: '',
-      graduation_year: ''
-    });
-    setAlumni([]);
-  };
-
+  // Debounced search effect
   useEffect(() => {
-    // Load all alumni on mount
-    searchAlumni();
+    const timer = setTimeout(() => {
+      searchAlumni();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchName, searchCompany]);
+
+  // Load all alumni on mount
+  useEffect(() => {
+    searchAlumni('', '');
   }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Alumni Network</h1>
-          <p className="text-gray-600">Connect with alumni working at top companies</p>
-          {!isPremium && (
-            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2">
-              <Lock className="h-5 w-5 text-yellow-600" />
-              <span className="text-yellow-800">
-                Upgrade to <strong>Premium</strong> to reveal alumni contact information
-              </span>
-            </div>
-          )}
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Compact Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Alumni Network</h1>
+          <p className="text-sm text-gray-600">Connect with alumni at top companies</p>
         </div>
 
-        {/* Search Filters */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Search Alumni
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                <Input
-                  placeholder="e.g., Google, Microsoft"
-                  value={filters.company}
-                  onChange={(e) => handleFilterChange('company', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <Input
-                  placeholder="Search by name"
-                  value={filters.name}
-                  onChange={(e) => handleFilterChange('name', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                <Input
-                  placeholder="e.g., Software Engineer"
-                  value={filters.role}
-                  onChange={(e) => handleFilterChange('role', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                <Input
-                  placeholder="e.g., San Francisco"
-                  value={filters.location}
-                  onChange={(e) => handleFilterChange('location', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Years of Experience</label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 5"
-                  value={filters.years_of_experience}
-                  onChange={(e) => handleFilterChange('years_of_experience', e.target.value)}
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Graduation Year</label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 2020"
-                  value={filters.graduation_year}
-                  onChange={(e) => handleFilterChange('graduation_year', e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-2 mt-4">
-              <Button onClick={searchAlumni} disabled={loading}>
-                <Search className="h-4 w-4 mr-2" />
-                {loading ? 'Searching...' : 'Search'}
-              </Button>
-              <Button variant="outline" onClick={clearFilters}>
-                Clear Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Results */}
-        {loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+        {/* Premium Banner - Compact */}
+        {!isPremium && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex items-center gap-2 text-sm">
+            <Lock className="h-4 w-4 text-yellow-600 flex-shrink-0" />
+            <span className="text-yellow-800">
+              <strong>Premium</strong> required to reveal contacts
+            </span>
           </div>
-        ) : alumni.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        )}
+
+        {/* Minimalist Search */}
+        <div className="mb-6 bg-white rounded-lg border border-gray-200 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <Search className="h-4 w-4 text-gray-400" />
+            <span className="text-sm font-medium text-gray-700">Search Alumni</span>
+            {loading && (
+              <div className="ml-auto">
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-gray-900"></div>
+              </div>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Input
+              placeholder="Search by name..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
+              className="text-sm"
+            />
+            <Input
+              placeholder="Search by company..."
+              value={searchCompany}
+              onChange={(e) => setSearchCompany(e.target.value)}
+              className="text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Results - Compact Cards */}
+        {alumni.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {alumni.map((person) => (
-              <Card key={person.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center justify-between">
-                    <span>{person.name}</span>
-                    {isPremium && <Crown className="h-5 w-5 text-yellow-500" />}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <Briefcase className="h-4 w-4 text-gray-400" />
-                    <span className="font-medium">{person.role}</span>
+              <Card key={person.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4 space-y-2.5">
+                  {/* Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-semibold text-gray-900 text-sm leading-tight">
+                      {person.name}
+                    </h3>
+                    {isPremium && <Crown className="h-3.5 w-3.5 text-yellow-500 flex-shrink-0 mt-0.5" />}
                   </div>
                   
-                  <div className="flex items-center gap-2 text-gray-700">
-                    <span className="font-semibold text-blue-600">{person.company}</span>
+                  {/* Role & Company */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-gray-700">
+                      <Briefcase className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs font-medium truncate">{person.role}</span>
+                    </div>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <span className="text-xs font-semibold text-blue-600 truncate">{person.company}</span>
+                    </div>
                   </div>
                   
-                  {person.location && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <MapPin className="h-4 w-4 text-gray-400" />
-                      <span>{person.location}</span>
-                    </div>
-                  )}
-                  
-                  {person.years_of_experience && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Calendar className="h-4 w-4 text-gray-400" />
-                      <span>{person.years_of_experience} years experience</span>
-                    </div>
-                  )}
-                  
-                  {person.graduation_year && (
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <GraduationCap className="h-4 w-4 text-gray-400" />
-                      <span>Class of {person.graduation_year}</span>
-                    </div>
-                  )}
-                  
-                  <div className="pt-3 border-t mt-3">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        {person.revealed || person.email.includes('@') ? (
-                          <span className="text-sm">{person.email}</span>
-                        ) : (
-                          <span className="text-sm text-gray-400 blur-sm select-none">
-                            email@example.com
-                          </span>
-                        )}
+                  {/* Additional Info - Compact */}
+                  {/* <div className="space-y-1 text-xs text-gray-600">
+                    {person.location && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{person.location}</span>
                       </div>
-                      
-                      {person.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          {person.revealed || !person.phone.includes('*') ? (
-                            <span className="text-sm">{person.phone}</span>
-                          ) : (
-                            <span className="text-sm text-gray-400 blur-sm select-none">
-                              123-456-7890
-                            </span>
-                          )}
-                        </div>
+                    )}
+                    
+                    {person.years_of_experience && (
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <span>{person.years_of_experience}y exp</span>
+                      </div>
+                    )}
+                    
+                    {person.graduation_year && (
+                      <div className="flex items-center gap-1.5">
+                        <GraduationCap className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        <span>'{person.graduation_year.toString().slice(-2)}</span>
+                      </div>
+                    )}
+                  </div> */}
+                  
+                  {/* Contact Section - Compact */}
+                  <div className="pt-2.5 border-t space-y-1.5">
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                      {person.revealed || person.email.includes('@') ? (
+                        <span className="text-xs truncate">{person.email}</span>
+                      ) : (
+                        <span className="text-xs text-gray-400 blur-[3px] select-none">
+                          email@example.com
+                        </span>
                       )}
                     </div>
                     
+                    {person.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                        {person.revealed || !person.phone.includes('*') ? (
+                          <span className="text-xs">{person.phone}</span>
+                        ) : (
+                          <span className="text-xs text-gray-400 blur-[3px] select-none">
+                            123-456-7890
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    
                     {!person.revealed && (person.email.includes('*') || (person.phone && person.phone.includes('*'))) && (
                       <Button
-                        className="w-full mt-3"
+                        className="w-full mt-2 h-7 text-xs"
                         size="sm"
                         onClick={() => revealContact(person.id)}
                         disabled={!isPremium}
                       >
                         {isPremium ? (
-                          <>Reveal Contact</>
+                          'Reveal Contact'
                         ) : (
                           <>
-                            <Lock className="h-4 w-4 mr-2" />
-                            Premium Required
+                            <Lock className="h-3 w-3 mr-1" />
+                            Premium
                           </>
                         )}
                       </Button>
@@ -308,9 +239,13 @@ const AlumniPage = () => {
               </Card>
             ))}
           </div>
+        ) : loading ? (
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900"></div>
+          </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No alumni found. Try adjusting your filters.</p>
+            <p className="text-gray-500 text-sm">No alumni found. Try different search terms.</p>
           </div>
         )}
       </div>
