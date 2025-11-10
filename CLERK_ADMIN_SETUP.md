@@ -3,7 +3,7 @@
 ## 🔐 Setting Up Admin Access
 
 ### Step 1: Sign in to Your Application
-1. Go to https://clerk-auth-igp.preview.emergentagent.com
+1. Go to https://alumni-connect-48.preview.emergentagent.com
 2. Click "Sign in" button in the top-right corner
 3. Choose "Continue with Google"
 4. Complete the Google OAuth sign-in process
@@ -41,7 +41,7 @@ After signing in, you need your Clerk User ID to grant yourself admin access.
 1. Refresh your application page
 2. Click on your profile picture (User Button) in the navbar
 3. You should now see admin-related options
-4. Navigate to: https://clerk-auth-igp.preview.emergentagent.com/admin
+4. Navigate to: https://alumni-connect-48.preview.emergentagent.com/admin
 5. Or you should see "Admin" button in the navbar
 
 ---
@@ -132,8 +132,8 @@ If you want to test premium features without payment:
 
 ## 📍 Quick Links
 
-- **Application**: https://clerk-auth-igp.preview.emergentagent.com
-- **Admin Panel**: https://clerk-auth-igp.preview.emergentagent.com/admin
+- **Application**: https://alumni-connect-48.preview.emergentagent.com
+- **Admin Panel**: https://alumni-connect-48.preview.emergentagent.com/admin
 - **Clerk Dashboard**: https://dashboard.clerk.com
 - **Razorpay Dashboard**: https://dashboard.razorpay.com
 
