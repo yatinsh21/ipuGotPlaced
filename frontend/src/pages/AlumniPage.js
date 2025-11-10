@@ -247,23 +247,27 @@ const AlumniPage = () => {
                       </div>
                     )}
                     
-                    {!person.revealed && (person.email.includes('*') || (person.phone && person.phone.includes('*'))) && (
-                      <Button
-                        className="w-full mt-2 h-7 text-xs"
-                        size="sm"
-                        onClick={() => revealContact(person.id)}
-                        disabled={!isPremium}
-                      >
-                        {isPremium ? (
-                          'Reveal Contact'
-                        ) : (
-                          <>
-                            <Lock className="h-3 w-3 mr-1" />
-                            Premium
-                          </>
-                        )}
-                      </Button>
-                    )}
+                    {/* Reveal or Lock Button */}
+{!person.revealed &&
+  (person.email.includes('*') || (person.phone && person.phone.includes('*'))) && (
+    <>
+      {isPremium ? (
+        <Button
+          className="w-full mt-2 h-7 text-xs"
+          size="sm"
+          onClick={() => revealContact(person.id)}
+        >
+          Reveal Contact
+        </Button>
+      ) : (
+        <div className="w-full mt-2 flex items-center justify-center bg-gray-100 text-gray-500 text-xs py-1.5 rounded-md border border-gray-200">
+          <Lock className="h-3.5 w-3.5 mr-1 text-gray-500" />
+          <span className="font-medium">Premium</span>
+        </div>
+      )}
+    </>
+  )}
+
                   </div>
                 </CardContent>
               </Card>
