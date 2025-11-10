@@ -167,6 +167,18 @@ const AdminPanel = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card className="border-2 border-gray-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">Alumni</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-5 w-5 text-green-500" />
+                    <span className="text-3xl font-bold text-gray-900">{stats?.total_alumni || 0}</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             {/* Management Tabs */}
