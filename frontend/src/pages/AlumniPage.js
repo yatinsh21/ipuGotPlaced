@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+
 const SkeletonCard = () => (
   <div className="animate-pulse bg-white rounded-lg border border-gray-200 p-4 space-y-2 min-h-[140px]">
     <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
@@ -116,15 +117,14 @@ const AlumniPage = () => {
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Compact Header */}
         <div className="mb-8 text-center sm:text-left">
-  <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2 leading-snug">
-    Tired of “Hi bhaiya” messages dying on{" "}
-    <span className="text-[#0A66C2]">LinkedIn?</span>
-  </h1>
-  <p className="text-base sm:text-lg text-gray-600 max-w-xxl">
-    Connect with <span className="font-semibold text-gray-800 underline">alumni</span> who've aced the interviews you're preparing for.
-  </p>
-</div>
-
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2 leading-snug">
+            Tired of "Hi bhaiya" messages dying on{" "}
+            <span className="text-[#0A66C2]">LinkedIn?</span>
+          </h1>
+          <p className="text-base sm:text-lg text-gray-600 max-w-xxl">
+            Connect with <span className="font-semibold text-gray-800 underline">alumni</span> who've aced the interviews you're preparing for.
+          </p>
+        </div>
 
         {/* Premium Banner - Compact */}
         {!isPremium && (
@@ -172,23 +172,22 @@ const AlumniPage = () => {
 
         {/* Results - Compact Cards */}
         {!hasSearched ? (
-  <div className="text-center py-5 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-200 rounded-xl max-w-lg mx-auto">
-    <div className="flex justify-center mb-4">
-      <div className="p-4 rounded-full bg-blue-50 border border-blue-100">
-        <Search className="h-8 w-8 text-[#0A66C2] animate-pulse" />
-      </div>
-    </div>
-    <h3 className="text-lg font-semibold text-gray-800 mb-1">
-      Start your alumni search
-    </h3>
-    <p className="text-gray-500 text-sm mb-4">
-      Enter a <span className="font-medium text-gray-700">name</span>,{" "}
-      <span className="font-medium text-gray-700">company</span>, or{" "}
-      <span className="font-medium text-gray-700">college</span> to connect.
-    </p>
-    
-  </div>
-) : alumni.length > 0 ? (
+          <div className="text-center py-5 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-200 rounded-xl max-w-lg mx-auto">
+            <div className="flex justify-center mb-4">
+              <div className="p-4 rounded-full bg-blue-50 border border-blue-100">
+                <Search className="h-8 w-8 text-[#0A66C2] animate-pulse" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-1">
+              Start your alumni search
+            </h3>
+            <p className="text-gray-500 text-sm mb-4">
+              Enter a <span className="font-medium text-gray-700">name</span>,{" "}
+              <span className="font-medium text-gray-700">company</span>, or{" "}
+              <span className="font-medium text-gray-700">college</span> to connect.
+            </p>
+          </div>
+        ) : alumni.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {alumni.map((person) => (
               <Card key={person.id} className="hover:shadow-md transition-shadow">
@@ -221,95 +220,106 @@ const AlumniPage = () => {
                     )}
                   </div>
                   
-                  {/* Contact Section - Compact */}
+                  {/* Contact Section - Fixed Logic */}
                   <div className="pt-2.5 border-t space-y-1.5">
-                    <div className="flex items-center gap-1.5">
-                      <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                      {person.revealed || person.email.includes('@') ? (
-                        <span className="text-xs truncate">{person.email}</span>
-                      ) : (
-                        <span className="text-xs text-gray-400 blur-[3px] select-none">
-                          email@example.com
-                        </span>
-                      )}
-                    </div>
-                    
-                    {person.phone && (
-                      <div className="flex items-center gap-1.5">
-                        <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                        {person.revealed || !person.phone.includes('*') ? (
-                          <span className="text-xs">{person.phone}</span>
-                        ) : (
-                          <span className="text-xs text-gray-400 blur-[3px] select-none">
-                            123-456-7890
-                          </span>
+                    {/* Show contacts only if revealed OR if not premium (locked state) */}
+                    {person.revealed ? (
+                      <>
+                        {/* Show actual email when revealed */}
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="text-xs truncate">{person.email}</span>
+                        </div>
+                        
+                        {/* Show actual phone when revealed */}
+                        {person.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs">{person.phone}</span>
+                          </div>
                         )}
-                      </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* Show blurred/masked contacts when not revealed */}
+                        <div className="flex items-center gap-1.5">
+                          <Mail className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                          <span className="text-xs text-gray-400 blur-[3px] select-none">
+                            email@example.com
+                          </span>
+                        </div>
+                        
+                        {person.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <span className="text-xs text-gray-400 blur-[3px] select-none">
+                              123-456-7890
+                            </span>
+                          </div>
+                        )}
+                      </>
                     )}
                     
-                    {/* Reveal or Lock Button */}
-{!person.revealed &&
-  (person.email.includes('*') || (person.phone && person.phone.includes('*'))) && (
-    <>
-      {isPremium ? (
-        <Button
-          className="w-full mt-2 h-7 text-xs"
-          size="sm"
-          onClick={() => revealContact(person.id)}
-        >
-          Reveal Contact
-        </Button>
-      ) : (
-        <div className="w-full mt-2 flex items-center justify-center bg-gray-100 text-gray-500 text-xs py-1.5 rounded-md border border-gray-200">
-          <Lock className="h-3.5 w-3.5 mr-1 text-gray-500" />
-          <span className="font-medium">Premium</span>
-        </div>
-      )}
-    </>
-  )}
-
+                    {/* Show button/lock only when NOT revealed */}
+                    {!person.revealed && (
+                      <>
+                        {isPremium ? (
+                          <Button
+                            className="w-full mt-2 h-7 text-xs"
+                            size="sm"
+                            onClick={() => revealContact(person.id)}
+                          >
+                            Reveal Contact
+                          </Button>
+                        ) : (
+                          <div className="w-full mt-2 flex items-center justify-center bg-gray-100 text-gray-500 text-xs py-1.5 rounded-md border border-gray-200">
+                            <Lock className="h-3.5 w-3.5 mr-1 text-gray-500" />
+                            <span className="font-medium">Premium Required</span>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : loading ? (
-  // 🔹 Loading skeleton grid
-  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 py-8">
-    {[...Array(8)].map((_, i) => (
-      <SkeletonCard key={i} />
-    ))}
-  </div>
-) : (
-  // 🔹 Stylish “No results” message
-  <div className="text-center py-20 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-200 rounded-xl max-w-lg mx-auto">
-    <div className="flex justify-center mb-4">
-      <div className="p-4 rounded-full bg-red-50 border border-red-100">
-        <Search className="h-8 w-8 text-red-500" />
-      </div>
-    </div>
-    <h3 className="text-lg font-semibold text-gray-800 mb-1">
-      No alumni found
-    </h3>
-    <p className="text-gray-500 text-sm mb-3">
-      Try searching with a different name, company, or college.
-    </p>
-    <Button
-      size="sm"
-      variant="outline"
-      className="text-sm border-gray-300 hover:bg-gray-50"
-      onClick={() => {
-        setSearchName('');
-        setSearchCompany('');
-        setSearchCollege('');
-        setHasSearched(false);
-      }}
-    >
-      Clear Search
-    </Button>
-  </div>
-)
-}
+          // Loading skeleton grid
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 py-8">
+            {[...Array(8)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        ) : (
+          // No results message
+          <div className="text-center py-20 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-200 rounded-xl max-w-lg mx-auto">
+            <div className="flex justify-center mb-4">
+              <div className="p-4 rounded-full bg-red-50 border border-red-100">
+                <Search className="h-8 w-8 text-red-500" />
+              </div>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-1">
+              No alumni found
+            </h3>
+            <p className="text-gray-500 text-sm mb-3">
+              Try searching with a different name, company, or college.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-sm border-gray-300 hover:bg-gray-50"
+              onClick={() => {
+                setSearchName('');
+                setSearchCompany('');
+                setSearchCollege('');
+                setHasSearched(false);
+              }}
+            >
+              Clear Search
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );
