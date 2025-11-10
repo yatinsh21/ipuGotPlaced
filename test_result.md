@@ -384,7 +384,11 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Payment Order Creation - Fix 401 Error"
+    - "Alumni Model and Database"
+    - "Alumni Admin CRUD Endpoints"
+    - "Alumni Search Endpoint"
+    - "Alumni Contact Reveal Endpoint"
+    - "Admin Stats - Alumni Count"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
