@@ -354,14 +354,16 @@ const CompanyQuestionsPage = () => {
                 <p className="text-gray-700">Sign in with Google to access company questions.</p>
               </div>
               <SignInButton mode="modal">
-                    <Button className="w-[30%]">
-                      Sign in with Google<img
+  <Button className="w-full sm:w-auto px-4 sm:px-6 flex items-center justify-center gap-2">
+    <span className="hidden sm:inline">Sign in with Google</span>
+    <span className="sm:hidden">Sign in</span>
+    <img
       src="/google.png"
       alt="Google logo"
       className="w-4 h-4 object-contain"
     />
-                    </Button>
-                  </SignInButton>
+  </Button>
+</SignInButton>
             </div>
           </div>
 
@@ -416,19 +418,21 @@ const CompanyQuestionsPage = () => {
 
             {/* Category Tabs - Always visible */}
             <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
-              <TabsList className="bg-white border border-gray-200">
-                {categories.map((cat) => (
-                  <TabsTrigger 
-                    key={cat} 
-                    value={cat}
-                    data-testid={`category-${cat}`}
-                    className="capitalize"
-                  >
-                    {cat} { getCategoryCount(cat)}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
+  <div className="overflow-x-auto scrollbar-hide">
+    <TabsList className="bg-white border border-gray-200 inline-flex min-w-full md:min-w-0 w-max md:w-auto flex-nowrap md:flex-wrap">
+      {categories.map((cat) => (
+        <TabsTrigger 
+          key={cat} 
+          value={cat}
+          data-testid={`category-${cat}`}
+          className="capitalize whitespace-nowrap text-sm px-3 py-2"
+        >
+          {cat} {getCategoryCount(cat)}
+        </TabsTrigger>
+      ))}
+    </TabsList>
+  </div>
+</Tabs>
 
             {/* Premium users see questions */}
             {isPremiumUser ? (
@@ -529,14 +533,15 @@ const CompanyQuestionsPage = () => {
   <div className="text-gray-600 text-lg">One-time payment • Lifetime access</div>
 </div>
 
-                    <Button 
-                      onClick={handlePayment}
-                      size="lg"
-                      className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold text-lg px-8 py-6 h-auto"
-                    >
-                      <Crown className="h-5 w-5 mr-2" />
-                      Upgrade to Premium Now
-                    </Button>
+                  <Button 
+  onClick={handlePayment}
+  size="lg"
+  className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-semibold text-base sm:text-lg px-4 sm:px-8 py-4 sm:py-6 h-auto w-full sm:w-auto"
+>
+  <Crown className="h-4 w-4  sm:h-5 sm:w-5 mr-2" />
+  <span className="hidden sm:inline">Upgrade to Premium Now</span>
+  <span className="sm:hidden">Get Premium</span>
+</Button>
                     
                     <div className="grid grid-cols-1 mt-2 sm:grid-cols-3 gap-3 text-left text-sm px-2 sm:px-0">
         <div className="bg-white/50 p-3 rounded border border-yellow-200 text-center sm:text-left">

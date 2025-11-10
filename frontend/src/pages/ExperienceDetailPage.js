@@ -249,15 +249,17 @@ const ExperienceDetailPage = () => {
                 </h3>
                 <p className="text-sm sm:text-base text-gray-700">Sign in with Google to access interview experiences.</p>
               </div>
-               <SignInButton mode="modal">
-                    <Button className="w-[30%]">
-                      Sign in with Google<img
+              <SignInButton mode="modal">
+  <Button className="w-full sm:w-auto px-4 sm:px-6 flex items-center justify-center gap-2">
+    <span className="hidden sm:inline">Sign in with Google</span>
+    <span className="sm:hidden">Sign in</span>
+    <img
       src="/google.png"
       alt="Google logo"
       className="w-4 h-4 object-contain"
     />
-                    </Button>
-                  </SignInButton>
+  </Button>
+</SignInButton>
             </div>
           </div>
         </div>

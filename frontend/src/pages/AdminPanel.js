@@ -183,16 +183,51 @@ const AdminPanel = () => {
 
             {/* Management Tabs */}
             <Tabs defaultValue="topics" className="space-y-4">
-              <TabsList className="bg-white border border-gray-200">
-                <TabsTrigger value="topics">Topics</TabsTrigger>
-                <TabsTrigger value="questions">Questions (Free)</TabsTrigger>
-                <TabsTrigger value="companies">Companies (Goldmine)</TabsTrigger>
-                <TabsTrigger value="company-questions">Company Questions (Premium)</TabsTrigger>
-                <TabsTrigger value="experiences">Experiences</TabsTrigger>
-                <TabsTrigger value="alumni">Alumni</TabsTrigger>
-                <TabsTrigger value="users">Users</TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto scrollbar-hide">
+  <TabsList className="bg-white border border-gray-200 inline-flex min-w-full md:min-w-0 w-max md:w-auto flex-nowrap md:flex-wrap">
+    <TabsTrigger value="topics" className="whitespace-nowrap text-sm px-3 py-2">
+      Topics
+    </TabsTrigger>
+    
+    <TabsTrigger value="questions" className="whitespace-nowrap text-sm px-3 py-2">
+      <span className="hidden sm:inline">Questions (Free)</span>
+      <span className="sm:hidden">Questions</span>
+    </TabsTrigger>
+    
+    <TabsTrigger value="companies" className="whitespace-nowrap text-sm px-3 py-2">
+      <span className="hidden sm:inline">Companies (Goldmine)</span>
+      <span className="sm:hidden">Companies</span>
+    </TabsTrigger>
+    
+    <TabsTrigger value="company-questions" className="whitespace-nowrap text-sm px-3 py-2">
+      <span className="hidden lg:inline">Company Questions (Premium)</span>
+      <span className="hidden sm:inline lg:hidden">Co. Questions</span>
+      <span className="sm:hidden">Co. Q</span>
+    </TabsTrigger>
+    
+    <TabsTrigger value="experiences" className="whitespace-nowrap text-sm px-3 py-2">
+      Experiences
+    </TabsTrigger>
+    
+    <TabsTrigger value="alumni" className="whitespace-nowrap text-sm px-3 py-2">
+      Alumni
+    </TabsTrigger>
+    
+    <TabsTrigger value="users" className="whitespace-nowrap text-sm px-3 py-2">
+      Users
+    </TabsTrigger>
+  </TabsList>
+</div>
 
+<style jsx>{`
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+`}</style>
               <TabsContent value="topics">
                 <TopicsManager topics={topics} setTopics={setTopics} fetchAllData={fetchAllData} getAuthConfig={getAuthConfig} />
               </TabsContent>
