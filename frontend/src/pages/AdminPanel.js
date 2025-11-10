@@ -189,6 +189,7 @@ const AdminPanel = () => {
                 <TabsTrigger value="companies">Companies (Goldmine)</TabsTrigger>
                 <TabsTrigger value="company-questions">Company Questions (Premium)</TabsTrigger>
                 <TabsTrigger value="experiences">Experiences</TabsTrigger>
+                <TabsTrigger value="alumni">Alumni</TabsTrigger>
                 <TabsTrigger value="users">Users</TabsTrigger>
               </TabsList>
 
