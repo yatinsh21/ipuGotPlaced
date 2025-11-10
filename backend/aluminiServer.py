@@ -132,6 +132,19 @@ class Experience(BaseModel):
     status: str = "selected"
     posted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+class Alumni(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: str
+    phone: Optional[str] = None
+    role: str
+    company: str
+    years_of_experience: Optional[int] = None
+    location: Optional[str] = None
+    graduation_year: Optional[int] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 class CreateOrderRequest(BaseModel):
     amount: int
 
@@ -533,13 +546,15 @@ async def get_admin_stats(user: User = Depends(require_admin)):
     total_questions = await db.questions.count_documents({})
     total_companies = await db.companies.count_documents({})
     total_experiences = await db.experiences.count_documents({})
+    total_alumni = await db.alumni.count_documents({})
     
     return {
         "total_users": total_users,
         "premium_users": premium_users,
         "total_questions": total_questions,
         "total_companies": total_companies,
-        "total_experiences": total_experiences
+        "total_experiences": total_experiences,
+        "total_alumni": total_alumni
     }
 
 @api_router.get("/admin/users")
@@ -948,6 +963,109 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
     await invalidate_cache_pattern("experiences*")
     return {"success": True}
 
+# Admin CRUD - Alumni
+@api_router.get("/admin/alumni")
+async def get_all_alumni(user: User = Depends(require_admin)):
+    """Get all alumni for admin management"""
+    alumni = await db.alumni.find({}, {"_id": 0}).to_list(10000)
+    return alumni
+
+@api_router.post("/admin/alumni")
+async def create_alumni(alumni: Alumni, user: User = Depends(require_admin)):
+    """Create new alumni record"""
+    await db.alumni.insert_one(alumni.model_dump())
+    await invalidate_cache_pattern("alumni*")
+    return alumni
+
+@api_router.put("/admin/alumni/{alumni_id}")
+async def update_alumni(alumni_id: str, alumni: Alumni, user: User = Depends(require_admin)):
+    """Update existing alumni record"""
+    await db.alumni.update_one({"id": alumni_id}, {"$set": alumni.model_dump()})
+    await invalidate_cache_pattern("alumni*")
+    return alumni
+
+@api_router.delete("/admin/alumni/{alumni_id}")
+async def delete_alumni(alumni_id: str, user: User = Depends(require_admin)):
+    """Delete alumni record"""
+    await db.alumni.delete_one({"id": alumni_id})
+    await invalidate_cache_pattern("alumni*")
+    return {"success": True}
+
+# Public Alumni Endpoints
+@api_router.get("/alumni/search")
+async def search_alumni(
+    company: Optional[str] = None,
+    name: Optional[str] = None,
+    role: Optional[str] = None,
+    years_of_experience: Optional[int] = None,
+    location: Optional[str] = None,
+    graduation_year: Optional[int] = None,
+    user: Optional[User] = Depends(get_current_user)
+):
+    """Search alumni with filters. Contacts are masked for non-premium users."""
+    # Build query
+    query = {}
+    if company:
+        query["company"] = {"$regex": company, "$options": "i"}
+    if name:
+        query["name"] = {"$regex": name, "$options": "i"}
+    if role:
+        query["role"] = {"$regex": role, "$options": "i"}
+    if location:
+        query["location"] = {"$regex": location, "$options": "i"}
+    if years_of_experience is not None:
+        query["years_of_experience"] = years_of_experience
+    if graduation_year is not None:
+        query["graduation_year"] = graduation_year
+    
+    # Check cache
+    cache_key = generate_cache_key(
+        "alumni_search",
+        company=company,
+        name=name,
+        role=role,
+        years_of_experience=years_of_experience,
+        location=location,
+        graduation_year=graduation_year
+    )
+    cached = await get_cached_data(cache_key)
+    if cached:
+        alumni_list = cached
+    else:
+        alumni_list = await db.alumni.find(query, {"_id": 0}).to_list(1000)
+        await set_cached_data(cache_key, alumni_list, ttl=3600)
+    
+    # Mask contact info for non-premium users
+    is_premium = user and (user.is_premium or user.is_admin) if user else False
+    
+    if not is_premium:
+        for alumni in alumni_list:
+            if alumni.get('email'):
+                alumni['email'] = '***@***.***'
+            if alumni.get('phone'):
+                alumni['phone'] = '***-***-****'
+    
+    return alumni_list
+
+@api_router.get("/alumni/{alumni_id}/reveal")
+async def reveal_alumni_contact(alumni_id: str, user: User = Depends(require_premium)):
+    """Reveal full contact information for premium users"""
+    alumni = await db.alumni.find_one({"id": alumni_id}, {"_id": 0})
+    if not alumni:
+        raise HTTPException(status_code=404, detail="Alumni not found")
+    
+    return {
+        "id": alumni["id"],
+        "name": alumni["name"],
+        "email": alumni.get("email", ""),
+        "phone": alumni.get("phone", ""),
+        "role": alumni["role"],
+        "company": alumni["company"],
+        "years_of_experience": alumni.get("years_of_experience"),
+        "location": alumni.get("location"),
+        "graduation_year": alumni.get("graduation_year")
+    }
+
 # Middleware setup - ORDER MATTERS!
 # 1. CORS must be first to handle preflight requests
 app.add_middleware(
@@ -1017,6 +1135,14 @@ async def startup_db():
         await db.experiences.create_index("id", unique=True)
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
+        
+        # Alumni
+        await db.alumni.create_index("id", unique=True)
+        await db.alumni.create_index("company")
+        await db.alumni.create_index("name")
+        await db.alumni.create_index("role")
+        await db.alumni.create_index("location")
+        await db.alumni.create_index("graduation_year")
         
         # Users - ONLY clerk_id is unique
         await db.users.create_index("clerk_id", unique=True)
