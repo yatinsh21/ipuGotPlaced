@@ -546,13 +546,15 @@ async def get_admin_stats(user: User = Depends(require_admin)):
     total_questions = await db.questions.count_documents({})
     total_companies = await db.companies.count_documents({})
     total_experiences = await db.experiences.count_documents({})
+    total_alumni = await db.alumni.count_documents({})
     
     return {
         "total_users": total_users,
         "premium_users": premium_users,
         "total_questions": total_questions,
         "total_companies": total_companies,
-        "total_experiences": total_experiences
+        "total_experiences": total_experiences,
+        "total_alumni": total_alumni
     }
 
 @api_router.get("/admin/users")
