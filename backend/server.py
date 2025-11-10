@@ -1147,16 +1147,47 @@ async def get_all_alumni(user: User = Depends(require_admin)):
 @api_router.post("/admin/alumni")
 async def create_alumni(alumni: Alumni, user: User = Depends(require_admin)):
     """Create new alumni record"""
-    await db.alumni.insert_one(alumni.model_dump())
-    await invalidate_cache_pattern("alumni*")
-    return alumni
+    try:
+        alumni_data = alumni.model_dump()
+        
+        # Keep college as string, only graduation_year should be int
+        logging.info(f"Creating alumni: {alumni_data}")
+        
+        await db.alumni.insert_one(alumni_data)
+        await invalidate_cache_pattern("alumni*")
+        
+        logging.info(f"✓ Alumni created: {alumni.name} - College: {alumni.college}")
+        return alumni
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to create alumni: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to create alumni: {str(e)}")
 
 @api_router.put("/admin/alumni/{alumni_id}")
 async def update_alumni(alumni_id: str, alumni: Alumni, user: User = Depends(require_admin)):
     """Update existing alumni record"""
-    await db.alumni.update_one({"id": alumni_id}, {"$set": alumni.model_dump()})
-    await invalidate_cache_pattern("alumni*")
-    return alumni
+    try:
+        # Don't convert college to int - it should remain a string!
+        alumni_data = alumni.model_dump()
+        
+        # Log for debugging
+        logging.info(f"Updating alumni {alumni_id}: {alumni_data}")
+        
+        await db.alumni.update_one({"id": alumni_id}, {"$set": alumni_data})
+        await invalidate_cache_pattern("alumni*")
+        
+        logging.info(f"✓ Alumni updated successfully")
+        return alumni
+        
+    except Exception as e:
+        logging.error(f"❌ Failed to update alumni: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to update alumni: {str(e)}")
+
+        
 
 @api_router.delete("/admin/alumni/{alumni_id}")
 async def delete_alumni(alumni_id: str, user: User = Depends(require_admin)):
