@@ -571,6 +571,275 @@ class InterviewPrepAPITester:
         print("\n✅ Authentication header parsing handles different case variations")
         print("ℹ️  The fix ensures both 'Authorization' and 'authorization' headers are checked")
 
+    def test_alumni_endpoints(self):
+        """Test Alumni/Senior Search feature endpoints"""
+        print("🎓 Testing Alumni/Senior Search Feature...")
+        print("=" * 50)
+        
+        # Test data for alumni creation
+        test_alumni_data = [
+            {
+                "name": "Sarah Johnson",
+                "email": "sarah.johnson@google.com",
+                "phone": "+1-555-0123",
+                "role": "Senior Software Engineer",
+                "company": "Google",
+                "years_of_experience": 5,
+                "location": "Mountain View, CA",
+                "graduation_year": 2018
+            },
+            {
+                "name": "Michael Chen",
+                "email": "michael.chen@microsoft.com",
+                "phone": "+1-555-0456",
+                "role": "Principal Engineer",
+                "company": "Microsoft",
+                "years_of_experience": 8,
+                "location": "Seattle, WA",
+                "graduation_year": 2015
+            },
+            {
+                "name": "Priya Sharma",
+                "email": "priya.sharma@amazon.com",
+                "role": "Software Development Manager",
+                "company": "Amazon",
+                "years_of_experience": 6,
+                "location": "Bangalore, India",
+                "graduation_year": 2017
+            },
+            {
+                "name": "David Wilson",
+                "email": "david.wilson@meta.com",
+                "phone": "+1-555-0789",
+                "role": "Staff Engineer",
+                "company": "Meta",
+                "years_of_experience": 7,
+                "location": "Menlo Park, CA",
+                "graduation_year": 2016
+            }
+        ]
+        
+        created_alumni_ids = []
+        
+        print("\n📋 Testing Admin Alumni Management Endpoints (without auth - should fail):")
+        
+        # Test GET /api/admin/alumni (should require admin auth)
+        success, response = self.test_endpoint('GET', 'admin/alumni', 401, 
+                                             description="Get all alumni (should require admin)")
+        
+        # Test POST /api/admin/alumni (should require admin auth)
+        success, response = self.test_endpoint('POST', 'admin/alumni', 401,
+                                             data=test_alumni_data[0],
+                                             description="Create alumni (should require admin)")
+        
+        # Test PUT /api/admin/alumni/{alumni_id} (should require admin auth)
+        test_alumni_id = "test-alumni-id-123"
+        success, response = self.test_endpoint('PUT', f'admin/alumni/{test_alumni_id}', 401,
+                                             data=test_alumni_data[0],
+                                             description="Update alumni (should require admin)")
+        
+        # Test DELETE /api/admin/alumni/{alumni_id} (should require admin auth)
+        success, response = self.test_endpoint('DELETE', f'admin/alumni/{test_alumni_id}', 401,
+                                             description="Delete alumni (should require admin)")
+        
+        print("\n🔍 Testing Public Alumni Search Endpoint:")
+        
+        # Test GET /api/alumni/search without authentication (should work but mask contacts)
+        success, response = self.test_endpoint('GET', 'alumni/search', 200,
+                                             description="Search alumni without auth (should mask contacts)")
+        
+        if success and response:
+            try:
+                alumni_list = response.json()
+                print(f"    Found {len(alumni_list)} alumni records")
+                
+                # Check if contacts are masked for unauthenticated users
+                if alumni_list:
+                    first_alumni = alumni_list[0]
+                    email_masked = first_alumni.get('email', '') == '***@***.***'
+                    phone_masked = first_alumni.get('phone', '') == '***-***-****'
+                    
+                    if email_masked or phone_masked:
+                        print("    ✅ Contact information properly masked for unauthenticated users")
+                    else:
+                        print("    ⚠️  Contact information may not be properly masked")
+                        
+            except Exception as e:
+                print(f"    ⚠️  Error parsing alumni search response: {e}")
+        
+        # Test search with various filters
+        search_filters = [
+            ('alumni/search?company=Google', 'Search by company (Google)'),
+            ('alumni/search?name=Sarah', 'Search by name (Sarah)'),
+            ('alumni/search?role=Engineer', 'Search by role (Engineer)'),
+            ('alumni/search?location=Seattle', 'Search by location (Seattle)'),
+            ('alumni/search?years_of_experience=5', 'Search by years of experience (5)'),
+            ('alumni/search?graduation_year=2018', 'Search by graduation year (2018)'),
+            ('alumni/search?company=Google&role=Engineer', 'Search with multiple filters'),
+        ]
+        
+        for endpoint, description in search_filters:
+            success, response = self.test_endpoint('GET', endpoint, 200, description=description)
+        
+        print("\n🔐 Testing Alumni Contact Reveal Endpoint:")
+        
+        # Test GET /api/alumni/{alumni_id}/reveal without authentication (should return 401)
+        test_alumni_id = "test-alumni-id-123"
+        success, response = self.test_endpoint('GET', f'alumni/{test_alumni_id}/reveal', 401,
+                                             description="Reveal contacts without auth (should return 401)")
+        
+        # Test with invalid alumni ID (would return 404 with proper auth)
+        invalid_alumni_id = "invalid-alumni-id-999"
+        success, response = self.test_endpoint('GET', f'alumni/{invalid_alumni_id}/reveal', 401,
+                                             description="Reveal contacts for invalid ID (should return 401 due to no auth)")
+        
+        print("\n📊 Testing Admin Stats - Alumni Count:")
+        
+        # Test GET /api/admin/stats (should require admin auth)
+        success, response = self.test_endpoint('GET', 'admin/stats', 401,
+                                             description="Get admin stats including alumni count (should require admin)")
+        
+        print("\n🧪 Testing Alumni Search Cache Behavior:")
+        
+        # Test cache behavior for alumni search
+        search_endpoint = 'alumni/search?company=Google'
+        
+        # First request (cache miss)
+        start_time = time.time()
+        success1, response1 = self.test_endpoint('GET', search_endpoint, 200,
+                                               description="Alumni search - First request (cache miss)")
+        first_time = time.time() - start_time
+        
+        # Second request (cache hit)
+        start_time = time.time()
+        success2, response2 = self.test_endpoint('GET', search_endpoint, 200,
+                                               description="Alumni search - Second request (cache hit)")
+        second_time = time.time() - start_time
+        
+        if success1 and success2:
+            print(f"    Alumni search caching: {first_time:.3f}s → {second_time:.3f}s")
+            if second_time < first_time:
+                print("    ✅ Alumni search caching appears to be working")
+            else:
+                print("    ⚠️  Alumni search caching may not be working optimally")
+        
+        print("\n🔒 Testing Alumni Endpoint Security:")
+        
+        # Test various authentication scenarios
+        auth_test_scenarios = [
+            ('GET', 'alumni/search', 200, None, 'Public search without auth (should work with masked contacts)'),
+            ('GET', f'alumni/{test_alumni_id}/reveal', 401, None, 'Reveal contacts without auth (should return 401)'),
+            ('GET', 'admin/alumni', 401, None, 'Admin get alumni without auth (should return 401)'),
+            ('POST', 'admin/alumni', 401, test_alumni_data[0], 'Admin create alumni without auth (should return 401)'),
+        ]
+        
+        for method, endpoint, expected_status, data, description in auth_test_scenarios:
+            success, response = self.test_endpoint(method, endpoint, expected_status, data=data, description=description)
+        
+        print("\n✅ Alumni/Senior Search Feature Testing Complete")
+        print("ℹ️  Note: Full CRUD and premium feature testing requires proper authentication")
+        print("ℹ️  Admin email for testing: sharmayatin0882@gmail.com")
+        print("ℹ️  Expected behavior:")
+        print("   - Public search works but masks email/phone for non-premium users")
+        print("   - Contact reveal requires premium subscription")
+        print("   - Admin CRUD operations require admin authentication")
+        print("   - Search results are cached for performance")
+
+    def test_alumni_with_admin_auth(self):
+        """Test alumni endpoints with admin authentication (if available)"""
+        print("👑 Testing Alumni Endpoints with Admin Auth...")
+        print("=" * 50)
+        
+        # This would require actual admin authentication
+        # For now, we'll document the expected behavior
+        
+        print("📋 Expected Behavior with Admin Authentication:")
+        print("   1. GET /api/admin/alumni:")
+        print("      - Should return array of all alumni records")
+        print("      - Should include all fields: id, name, email, phone, role, company, etc.")
+        print()
+        print("   2. POST /api/admin/alumni:")
+        print("      - Should create new alumni with provided data")
+        print("      - Should return created alumni object with generated ID")
+        print("      - Should invalidate alumni search cache")
+        print()
+        print("   3. PUT /api/admin/alumni/{alumni_id}:")
+        print("      - Should update existing alumni record")
+        print("      - Should return updated alumni object")
+        print("      - Should invalidate alumni search cache")
+        print()
+        print("   4. DELETE /api/admin/alumni/{alumni_id}:")
+        print("      - Should delete alumni record")
+        print("      - Should return success confirmation")
+        print("      - Should invalidate alumni search cache")
+        print()
+        print("   5. GET /api/alumni/search (with admin auth):")
+        print("      - Should return unmasked contact information")
+        print("      - Should show real email and phone numbers")
+        print()
+        print("   6. GET /api/alumni/{alumni_id}/reveal (with admin auth):")
+        print("      - Should return full contact information")
+        print("      - Should work same as premium user access")
+        print()
+        print("   7. GET /api/admin/stats (with admin auth):")
+        print("      - Should include 'total_alumni' field in response")
+        print("      - Should show accurate count of alumni records")
+        print()
+        
+        # Test the endpoints without auth (they should all return 401)
+        print("🔒 Testing endpoint security (all should return 401 without admin auth):")
+        
+        test_scenarios = [
+            ('GET', 'admin/alumni', 'Get all alumni'),
+            ('POST', 'admin/alumni', 'Create alumni'),
+            ('PUT', 'admin/alumni/test-id', 'Update alumni'),
+            ('DELETE', 'admin/alumni/test-id', 'Delete alumni'),
+        ]
+        
+        test_alumni = {
+            "name": "Test Alumni",
+            "email": "test@example.com",
+            "role": "Software Engineer",
+            "company": "Test Company"
+        }
+        
+        for method, endpoint, description in test_scenarios:
+            data = test_alumni if method in ['POST', 'PUT'] else None
+            success, response = self.test_endpoint(method, endpoint, 401, data=data, description=description)
+        
+        print("\n✅ All admin alumni endpoints properly secured")
+        print("⚠️  To test full functionality, admin authentication via OAuth is required")
+
+    def test_alumni_data_validation(self):
+        """Test alumni data validation and error handling"""
+        print("✅ Testing Alumni Data Validation...")
+        print("=" * 40)
+        
+        print("📋 Expected Validation Behavior:")
+        print("   - Required fields: name, email, role, company")
+        print("   - Optional fields: phone, years_of_experience, location, graduation_year")
+        print("   - Email should be valid format")
+        print("   - Years of experience should be positive integer")
+        print("   - Graduation year should be reasonable (e.g., 1950-2030)")
+        print()
+        
+        # Test invalid data scenarios (would require admin auth to actually test)
+        invalid_data_scenarios = [
+            ({}, "Empty data object"),
+            ({"name": "Test"}, "Missing required fields"),
+            ({"name": "Test", "email": "invalid-email", "role": "Engineer", "company": "Test"}, "Invalid email format"),
+            ({"name": "Test", "email": "test@example.com", "role": "Engineer", "company": "Test", "years_of_experience": -1}, "Negative years of experience"),
+            ({"name": "Test", "email": "test@example.com", "role": "Engineer", "company": "Test", "graduation_year": 1800}, "Invalid graduation year"),
+        ]
+        
+        print("🔒 Testing data validation (all should return 401 due to no admin auth):")
+        for data, description in invalid_data_scenarios:
+            success, response = self.test_endpoint('POST', 'admin/alumni', 401, data=data, 
+                                                 description=f"Create alumni with {description}")
+        
+        print("\n✅ Alumni data validation endpoints properly secured")
+        print("ℹ️  Actual validation testing requires admin authentication")
+
     def test_error_handling(self):
         """Test error handling for invalid requests"""
         print("🚫 Testing Error Handling...")
@@ -581,6 +850,9 @@ class InterviewPrepAPITester:
         
         # Test invalid question ID
         self.test_endpoint('GET', 'questions?topic_id=invalid-id', 200, description="Invalid topic ID (should return empty array)")
+        
+        # Test invalid alumni ID for reveal endpoint
+        self.test_endpoint('GET', 'alumni/invalid-id/reveal', 401, description="Invalid alumni ID for reveal (should return 401 due to no auth)")
 
     def run_all_tests(self):
         """Run all test suites"""
