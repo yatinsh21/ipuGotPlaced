@@ -19,6 +19,8 @@ import "@/App.css";
 import Footer from "./components/Footer";
 import TopNotification from "./components/AnnouncementBar";
 import AnnouncementBar from "./components/AnnouncementBar";
+import NotFoundPage from "./pages/NotFoundPage";
+import ScrollToTop from "./components/ScrollToTop";
 
 function App() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -35,8 +37,10 @@ function App() {
     <div className="App">
       <BrowserRouter>
       <AnnouncementBar  />
+      <ScrollToTop/>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="*" element={<NotFoundPage />} />
           <Route path="/topics" element={<HomePage />} />
           <Route path="/privacy" element={<PrivacyPage/>} />
           <Route path="/contact" element={<ContactPage/>} />
