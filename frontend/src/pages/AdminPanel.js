@@ -1351,7 +1351,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
     phone: '',
     role: '',
     company: '',
-    years_of_experience: '',
+    college: '',
     location: '',
     graduation_year: ''
   });
@@ -1361,7 +1361,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
     try {
       const data = {
         ...formData,
-        years_of_experience: formData.years_of_experience ? parseInt(formData.years_of_experience) : null,
+        college: formData.college ? parseInt(formData.college) : null,
         graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null,
         phone: formData.phone || null,
         location: formData.location || null
@@ -1382,7 +1382,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
         phone: '',
         role: '',
         company: '',
-        years_of_experience: '',
+        college: '',
         location: '',
         graduation_year: ''
       });
@@ -1412,7 +1412,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
       phone: alumni.phone || '',
       role: alumni.role,
       company: alumni.company,
-      years_of_experience: alumni.years_of_experience || '',
+      college: alumni.college || '',
       location: alumni.location || '',
       graduation_year: alumni.graduation_year || ''
     });
@@ -1434,7 +1434,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
                 phone: '',
                 role: '',
                 company: '',
-                years_of_experience: '',
+                college: '',
                 location: '',
                 graduation_year: ''
               });
@@ -1495,14 +1495,13 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
                     />
                   </div>
                   <div>
-                    <Label>Years of Experience</Label>
-                    <Input
-                      type="number"
-                      value={formData.years_of_experience}
-                      onChange={(e) => setFormData({ ...formData, years_of_experience: e.target.value })}
-                      placeholder="Optional"
-                    />
-                  </div>
+  <Label>College</Label>
+  <Input
+    value={formData.college}
+    onChange={(e) => setFormData({ ...formData, college: e.target.value })}
+    placeholder="e.g., MIT, Stanford"
+  />
+</div>
                   <div>
                     <Label>Location</Label>
                     <Input
@@ -1544,7 +1543,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
                 <TableHead>Phone</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Company</TableHead>
-                <TableHead>Experience</TableHead>
+                <TableHead>College</TableHead>
                 <TableHead>Location</TableHead>
                 <TableHead>Grad Year</TableHead>
                 <TableHead>Actions</TableHead>
@@ -1560,9 +1559,7 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
                   <TableCell>
                     <Badge variant="secondary">{person.company}</Badge>
                   </TableCell>
-                  <TableCell className="text-sm">
-                    {person.years_of_experience ? `${person.years_of_experience} yrs` : '-'}
-                  </TableCell>
+                  <TableCell className="text-sm">{person.college || '-'}</TableCell>
                   <TableCell className="text-sm">{person.location || '-'}</TableCell>
                   <TableCell className="text-sm">{person.graduation_year || '-'}</TableCell>
                   <TableCell>

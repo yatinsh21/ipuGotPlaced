@@ -18,6 +18,8 @@ const AlumniPage = () => {
   const [loading, setLoading] = useState(false);
   const [searchName, setSearchName] = useState('');
   const [searchCompany, setSearchCompany] = useState('');
+  const [searchCollege, setSearchCollege] = useState('');
+  const [hasSearched, setHasSearched] = useState(false);
 
   const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
@@ -31,14 +33,23 @@ const AlumniPage = () => {
     };
   };
 
-  const searchAlumni = async (name = searchName, company = searchCompany) => {
+  const searchAlumni = async (name = searchName, company = searchCompany, college = searchCollege) => {
+    // Only search if user has entered something
+    if (!name && !company && !college) {
+      setHasSearched(false);
+      setAlumni([]);
+      return;
+    }
+
     setLoading(true);
+    setHasSearched(true);
     try {
       const config = await getAuthConfig();
       const params = {};
       
       if (name) params.name = name;
       if (company) params.company = company;
+      if (college) params.college = college;
 
       const response = await axios.get(`${API}/alumni/search`, {
         ...config,
@@ -84,12 +95,7 @@ const AlumniPage = () => {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchName, searchCompany]);
-
-  // Load all alumni on mount
-  useEffect(() => {
-    searchAlumni('', '');
-  }, []);
+  }, [searchName, searchCompany, searchCollege]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -124,7 +130,7 @@ const AlumniPage = () => {
             )}
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Input
               placeholder="Search by name..."
               value={searchName}
@@ -137,11 +143,23 @@ const AlumniPage = () => {
               onChange={(e) => setSearchCompany(e.target.value)}
               className="text-sm"
             />
+            <Input
+              placeholder="Search by college..."
+              value={searchCollege}
+              onChange={(e) => setSearchCollege(e.target.value)}
+              className="text-sm"
+            />
           </div>
         </div>
 
         {/* Results - Compact Cards */}
-        {alumni.length > 0 ? (
+        {!hasSearched ? (
+          <div className="text-center py-16">
+            <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 text-base font-medium mb-1">Search to view alumni</p>
+            <p className="text-gray-400 text-sm">Enter a name, company, or college to get started</p>
+          </div>
+        ) : alumni.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {alumni.map((person) => (
               <Card key={person.id} className="hover:shadow-md transition-shadow">
@@ -165,31 +183,14 @@ const AlumniPage = () => {
                       <Building2 className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
                       <span className="text-xs font-semibold text-blue-600 truncate">{person.company}</span>
                     </div>
+
+                    {person.college && (
+                      <div className="flex items-center gap-1.5">
+                        <GraduationCap className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="text-xs text-gray-600 truncate">{person.college}</span>
+                      </div>
+                    )}
                   </div>
-                  
-                  {/* Additional Info - Compact */}
-                  {/* <div className="space-y-1 text-xs text-gray-600">
-                    {person.location && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                        <span className="truncate">{person.location}</span>
-                      </div>
-                    )}
-                    
-                    {person.years_of_experience && (
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                        <span>{person.years_of_experience}y exp</span>
-                      </div>
-                    )}
-                    
-                    {person.graduation_year && (
-                      <div className="flex items-center gap-1.5">
-                        <GraduationCap className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                        <span>'{person.graduation_year.toString().slice(-2)}</span>
-                      </div>
-                    )}
-                  </div> */}
                   
                   {/* Contact Section - Compact */}
                   <div className="pt-2.5 border-t space-y-1.5">

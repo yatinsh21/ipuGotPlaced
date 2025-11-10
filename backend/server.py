@@ -141,7 +141,7 @@ class Alumni(BaseModel):
     phone: Optional[str] = None
     role: str
     company: str
-    years_of_experience: Optional[int] = None
+    college: Optional[str] = None
     location: Optional[str] = None
     graduation_year: Optional[int] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -1171,7 +1171,7 @@ async def search_alumni(
     company: Optional[str] = None,
     name: Optional[str] = None,
     role: Optional[str] = None,
-    years_of_experience: Optional[int] = None,
+    college: Optional[str] = None,
     location: Optional[str] = None,
     graduation_year: Optional[int] = None,
     user: Optional[User] = Depends(get_current_user)
@@ -1187,8 +1187,8 @@ async def search_alumni(
         query["role"] = {"$regex": role, "$options": "i"}
     if location:
         query["location"] = {"$regex": location, "$options": "i"}
-    if years_of_experience is not None:
-        query["years_of_experience"] = years_of_experience
+    if college:  # Add college search with case-insensitive regex
+        query["college"] = {"$regex": college, "$options": "i"}
     if graduation_year is not None:
         query["graduation_year"] = graduation_year
     
@@ -1198,7 +1198,7 @@ async def search_alumni(
         company=company,
         name=name,
         role=role,
-        years_of_experience=years_of_experience,
+        college=college,
         location=location,
         graduation_year=graduation_year
     )
@@ -1235,7 +1235,7 @@ async def reveal_alumni_contact(alumni_id: str, user: User = Depends(require_pre
         "phone": alumni.get("phone", ""),
         "role": alumni["role"],
         "company": alumni["company"],
-        "years_of_experience": alumni.get("years_of_experience"),
+        "college": alumni.get("college"),
         "location": alumni.get("location"),
         "graduation_year": alumni.get("graduation_year")
     }
