@@ -132,6 +132,19 @@ class Experience(BaseModel):
     status: str = "selected"
     posted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+class Alumni(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    email: str
+    phone: Optional[str] = None
+    role: str
+    company: str
+    years_of_experience: Optional[int] = None
+    location: Optional[str] = None
+    graduation_year: Optional[int] = None
+    created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 class CreateOrderRequest(BaseModel):
     amount: int
 
