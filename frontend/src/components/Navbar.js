@@ -39,10 +39,10 @@ const Navbar = () => {
                 Experiences
               </Link>
               
-             {/* <Link to="/alumni"className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+             <Link to="/alumni"className="flex items-center cursor-not-allowed pointer-events-none gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
   <Users className="h-4 w-4" />
   <span className="relative pr-5">   
-    Alumni<NewBadge /></span></Link> */}
+    Alumni<NewBadge /></span></Link>
 
 
             </div>
@@ -141,17 +141,10 @@ const Navbar = () => {
                 <Compass className="h-4 w-4" />
                 Experiences
               </Link>
-              {/* <Link
-                to="/alumni"
-                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2 flex items-center gap-2"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                <Users className="h-4 w-4" />
-                Alumni
-                <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 px-1.5 py-0.5 rounded shadow-sm">
-                  NEW
-                </span>
-              </Link> */}
+              <Link to="/alumni"className="flex items-center cursor-not-allowed pointer-events-none gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+  <Users className="h-4 w-4" />
+  <span className="relative pr-5">   
+    Alumni<NewBadge /></span></Link>
               
               {isSignedIn ? (
                 <>

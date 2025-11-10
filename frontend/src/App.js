@@ -48,7 +48,7 @@ function App() {
           <Route path="/bookmarks" element={<BookmarksPage />} />
           <Route path="/experiences" element={<ExperiencesPage />} />
           <Route path="/experience/:experienceId" element={<ExperienceDetailPage />} />
-          <Route path="/alumninium" element={<AlumniPage />} />
+          <Route path="/alumni/connect" element={<AlumniPage />} />
           <Route 
             path="/admin" 
             element={

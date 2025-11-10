@@ -10,6 +10,18 @@ import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
+const SkeletonCard = () => (
+  <div className="animate-pulse bg-white rounded-lg border border-gray-200 p-4 space-y-2 min-h-[140px]">
+    <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
+    <div className="h-2.5 w-1/3 bg-gray-200 rounded"></div>
+    <div className="h-2.5 w-1/2 bg-gray-200 rounded"></div>
+    <div className="pt-2 border-t mt-2 space-y-2">
+      <div className="h-2.5 w-2/3 bg-gray-200 rounded"></div>
+      <div className="h-2.5 w-1/2 bg-gray-200 rounded"></div>
+      <div className="h-6 w-full bg-gray-200 rounded"></div>
+    </div>
+  </div>
+);
 
 const AlumniPage = () => {
   const { user, isSignedIn } = useUser();
@@ -160,12 +172,23 @@ const AlumniPage = () => {
 
         {/* Results - Compact Cards */}
         {!hasSearched ? (
-          <div className="text-center py-16">
-            <Search className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500 text-base font-medium mb-1">Search to view alumni</p>
-            <p className="text-gray-400 text-sm">Enter a name, company, or college to get started</p>
-          </div>
-        ) : alumni.length > 0 ? (
+  <div className="text-center py-5 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-200 rounded-xl max-w-lg mx-auto">
+    <div className="flex justify-center mb-4">
+      <div className="p-4 rounded-full bg-blue-50 border border-blue-100">
+        <Search className="h-8 w-8 text-[#0A66C2] animate-pulse" />
+      </div>
+    </div>
+    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+      Start your alumni search
+    </h3>
+    <p className="text-gray-500 text-sm mb-4">
+      Enter a <span className="font-medium text-gray-700">name</span>,{" "}
+      <span className="font-medium text-gray-700">company</span>, or{" "}
+      <span className="font-medium text-gray-700">college</span> to connect.
+    </p>
+    
+  </div>
+) : alumni.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {alumni.map((person) => (
               <Card key={person.id} className="hover:shadow-md transition-shadow">
@@ -247,14 +270,42 @@ const AlumniPage = () => {
             ))}
           </div>
         ) : loading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-300 border-t-gray-900"></div>
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-sm">No alumni found. Try different search terms.</p>
-          </div>
-        )}
+  // 🔹 Loading skeleton grid
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 py-8">
+    {[...Array(8)].map((_, i) => (
+      <SkeletonCard key={i} />
+    ))}
+  </div>
+) : (
+  // 🔹 Stylish “No results” message
+  <div className="text-center py-20 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-200 rounded-xl max-w-lg mx-auto">
+    <div className="flex justify-center mb-4">
+      <div className="p-4 rounded-full bg-red-50 border border-red-100">
+        <Search className="h-8 w-8 text-red-500" />
+      </div>
+    </div>
+    <h3 className="text-lg font-semibold text-gray-800 mb-1">
+      No alumni found
+    </h3>
+    <p className="text-gray-500 text-sm mb-3">
+      Try searching with a different name, company, or college.
+    </p>
+    <Button
+      size="sm"
+      variant="outline"
+      className="text-sm border-gray-300 hover:bg-gray-50"
+      onClick={() => {
+        setSearchName('');
+        setSearchCompany('');
+        setSearchCollege('');
+        setHasSearched(false);
+      }}
+    >
+      Clear Search
+    </Button>
+  </div>
+)
+}
       </div>
     </div>
   );
