@@ -383,12 +383,7 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus:
-    - "Alumni Model and Database"
-    - "Alumni Admin CRUD Endpoints"
-    - "Alumni Search Endpoint"
-    - "Alumni Contact Reveal Endpoint"
-    - "Admin Stats - Alumni Count"
+  current_focus: []
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
