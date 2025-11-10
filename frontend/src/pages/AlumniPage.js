@@ -103,10 +103,16 @@ const AlumniPage = () => {
       
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Compact Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">Alumni Network</h1>
-          <p className="text-sm text-gray-600">Connect with alumni at top companies</p>
-        </div>
+        <div className="mb-8 text-center sm:text-left">
+  <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 mb-2 leading-snug">
+    Tired of “Hi bhaiya” messages dying on{" "}
+    <span className="text-[#0A66C2]">LinkedIn?</span>
+  </h1>
+  <p className="text-base sm:text-lg text-gray-600 max-w-xxl">
+    Connect with <span className="font-semibold text-gray-800 underline">alumni</span> who've aced the interviews you're preparing for.
+  </p>
+</div>
+
 
         {/* Premium Banner - Compact */}
         {!isPremium && (

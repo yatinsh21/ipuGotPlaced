@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
-import { NotebookText ,Compass } from 'lucide-react';
+import { NotebookText, Compass, Users } from 'lucide-react';
 import { Crown, Bookmark, Shield, Menu, X } from 'lucide-react';
+import { NewBadge } from './NewBadge';
 
 const Navbar = () => {
   const { isSignedIn, user } = useUser();
@@ -26,19 +27,24 @@ const Navbar = () => {
             {/* Desktop Navigation */}
             <div className="hidden md:flex gap-6">
               <Link to="/topics" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
-                   <NotebookText className="h-4 w-4" />  Question Bank
+                <NotebookText className="h-4 w-4" />  
+                Question Bank
               </Link>
               <Link to="/goldmine" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
                 <Crown className="h-4 w-4" />
                 Goldmine
               </Link>
               <Link to="/experiences" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
-               <Compass className="h-4 w-4" />
+                <Compass className="h-4 w-4" />
                 Experiences
               </Link>
-              {/* <Link to="/alumni" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
-                Alumni
-              </Link> */}
+              
+             {/* <Link to="/alumni"className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+  <Users className="h-4 w-4" />
+  <span className="relative pr-5">   
+    Alumni<NewBadge /></span></Link> */}
+
+
             </div>
           </div>
 
@@ -75,12 +81,13 @@ const Navbar = () => {
               </>
             ) : (
               <SignInButton mode="modal">
-                <Button data-testid="login-btn" size="sm">
-                  Sign in with Google<img
-      src="/google.png"
-      alt="Google logo"
-      className="w-4 h-4 object-contain"
-    />
+                <Button data-testid="login-btn" size="sm" className="flex items-center gap-2">
+                  Sign in with Google
+                  <img
+                    src="/google.png"
+                    alt="Google logo"
+                    className="w-4 h-4 object-contain"
+                  />
                 </Button>
               </SignInButton>
             )}
@@ -112,9 +119,10 @@ const Navbar = () => {
             <div className="flex flex-col space-y-3">
               <Link
                 to="/topics"
-                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2"
+                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2 flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <NotebookText className="h-4 w-4" />
                 Questions
               </Link>
               <Link
@@ -127,17 +135,22 @@ const Navbar = () => {
               </Link>
               <Link
                 to="/experiences"
-                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2"
+                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2 flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <Compass className="h-4 w-4" />
                 Experiences
               </Link>
               {/* <Link
                 to="/alumni"
-                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2"
+                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2 flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
+                <Users className="h-4 w-4" />
                 Alumni
+                <span className="text-[9px] font-bold text-white bg-gradient-to-r from-blue-500 to-blue-600 px-1.5 py-0.5 rounded shadow-sm">
+                  NEW
+                </span>
               </Link> */}
               
               {isSignedIn ? (
