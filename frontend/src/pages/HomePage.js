@@ -103,9 +103,7 @@ const HomePage = () => {
     try {
       const response = await axios.get(`${API}/topics`);
       setTopics(response.data);
-      if (response.data.length > 0) {
-        setSelectedTopic(response.data[0].id);
-      }
+      // Removed: setSelectedTopic(response.data[0].id) - No default selection
     } catch (error) {
       console.error('Failed to fetch topics:', error);
     } finally {
@@ -211,73 +209,92 @@ const HomePage = () => {
               </div>
             </div>
 
-            {/* Difficulty Filter */}
-            <div className="mb-6 flex items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">Filter by difficulty:</label>
-              <Select value={difficulty} onValueChange={setDifficulty}>
-                <SelectTrigger data-testid="difficulty-filter" className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All</SelectItem>
-                  <SelectItem value="easy">Easy</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="hard">Hard</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <TopBanner/>
+            {/* Show content only when a topic is selected */}
+            {selectedTopic ? (
+              <>
+                {/* Difficulty Filter */}
+                <div className="mb-6 flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700">Filter by difficulty:</label>
+                  <Select value={difficulty} onValueChange={setDifficulty}>
+                    <SelectTrigger data-testid="difficulty-filter" className="w-40">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All</SelectItem>
+                      <SelectItem value="easy">Easy</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="hard">Hard</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <TopBanner/>
 
-            {/* Questions Accordion */}
-            <div className="bg-white border border-gray-200 shadow-sm">
-              <Accordion type="single" collapsible className="w-full">
-                {questions.map((question, index) => (
-                  <AccordionItem 
-                    key={question.id} 
-                    value={question.id}
-                  >
-                    <AccordionTrigger 
-                      data-testid={`question-${index}`}
-                      className="px-6 py-4 hover:bg-gray-50 text-left no-copy"
-                    >
-                      <div className="flex items-center gap-3 flex-1 justify-between">
-                        <div className="flex items-center gap-3 flex-1">
-                          {/* <span className="text-gray-500 font-medium">Q{index + 1}.</span> */}
-                          <span className="font-medium text-gray-900">{question.question}</span>
-                          <Badge className={getDifficultyColor(question.difficulty)}>
-                            {question.difficulty}
-                          </Badge>
-                        </div>
-                        {user?.is_premium && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => toggleBookmark(question.id, e)}
-                            data-testid={`bookmark-${index}`}
-                            className="ml-2"
+                {/* Questions Accordion */}
+                {questions.length > 0 ? (
+                  <div className="bg-white border border-gray-200 shadow-sm">
+                    <Accordion type="single" collapsible className="w-full">
+                      {questions.map((question, index) => (
+                        <AccordionItem 
+                          key={question.id} 
+                          value={question.id}
+                        >
+                          <AccordionTrigger 
+                            data-testid={`question-${index}`}
+                            className="px-6 py-4 hover:bg-gray-50 text-left no-copy"
                           >
-                            {bookmarkedIds.includes(question.id) ? (
-                              <BookmarkCheck className="h-5 w-5 text-gray-900" />
-                            ) : (
-                              <Bookmark className="h-5 w-5 text-gray-400" />
-                            )}
-                          </Button>
-                        )}
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-                      <div className="prose max-w-none no-copy">
-                        <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </div>
-
-            {questions.length === 0 && (
-              <div className="text-center py-12 bg-white border border-gray-200">
-                <p className="text-gray-500">No questions found for this topic and difficulty.</p>
+                            <div className="flex items-center gap-3 flex-1 justify-between">
+                              <div className="flex items-center gap-3 flex-1">
+                                <span className="font-medium text-gray-900">{question.question}</span>
+                                <Badge className={getDifficultyColor(question.difficulty)}>
+                                  {question.difficulty}
+                                </Badge>
+                              </div>
+                              {user?.is_premium && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => toggleBookmark(question.id, e)}
+                                  data-testid={`bookmark-${index}`}
+                                  className="ml-2"
+                                >
+                                  {bookmarkedIds.includes(question.id) ? (
+                                    <BookmarkCheck className="h-5 w-5 text-gray-900" />
+                                  ) : (
+                                    <Bookmark className="h-5 w-5 text-gray-400" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </AccordionTrigger>
+                          <AccordionContent className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+                            <div className="prose max-w-none no-copy">
+                              <p className="text-gray-700 whitespace-pre-wrap">{question.answer}</p>
+                            </div>
+                          </AccordionContent>
+                        </AccordionItem>
+                      ))}
+                    </Accordion>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 bg-white border border-gray-200 rounded-lg">
+                    <p className="text-gray-500">No questions found for this topic and difficulty.</p>
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Placeholder message when no topic is selected */
+              <div className="text-center py-20 bg-gradient-to-b from-gray-50 to-white border border-dashed border-gray-300 rounded-xl">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 rounded-full bg-blue-50 border border-blue-100">
+                    <Bookmark className="h-10 w-10 text-blue-600" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                  Select a topic to get started
+                </h3>
+                <p className="text-gray-500 text-sm">
+                  Click on any topic above to view interview questions
+                </p>
               </div>
             )}
           </>

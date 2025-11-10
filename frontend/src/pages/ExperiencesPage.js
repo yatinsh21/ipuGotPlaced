@@ -58,7 +58,7 @@ const ExperiencesPage = () => {
         {/* Compact Hero Section */}
         <div className="mb-6">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">
-            Interview Experiences
+           <span className='text-green-500'>Genuine</span>  Interview Experiences
           </h1>
           <p className="text-gray-600 mb-4">
             Real experiences from candidates who got offers
@@ -67,7 +67,7 @@ const ExperiencesPage = () => {
           {/* Search Bar */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1 max-w-xl">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 focus:border-gray-900 focus:ring-2 focus:ring-gray-900 focus:bg-white transition-all duration-200 placeholder:text-gray-400" />
               <Input
                 type="text"
                 placeholder="Search by company or role..."
