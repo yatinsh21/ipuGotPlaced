@@ -14,6 +14,7 @@ import BookmarksPage from "@/pages/BookmarksPage";
 import ContactPage from "./pages/ContactPage";
 import PrivacyPage from "./pages/PrivacyPolicy";
 import AboutPage from "./pages/AboutPage";
+import AlumniPage from "@/pages/AlumniPage";
 import "@/App.css";
 import Footer from "./components/Footer";
 import TopNotification from "./components/AnnouncementBar";
