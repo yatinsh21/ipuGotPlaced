@@ -1306,4 +1306,248 @@ const UsersManager = ({ users, onRefresh, currentUser, getAuthConfig }) => {
   );
 };
 
+// Alumni Manager Component
+const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    role: '',
+    company: '',
+    years_of_experience: '',
+    location: '',
+    graduation_year: ''
+  });
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        ...formData,
+        years_of_experience: formData.years_of_experience ? parseInt(formData.years_of_experience) : null,
+        graduation_year: formData.graduation_year ? parseInt(formData.graduation_year) : null,
+        phone: formData.phone || null,
+        location: formData.location || null
+      };
+
+      if (editing) {
+        await axios.put(`${API}/admin/alumni/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
+        toast.success('Alumni updated');
+      } else {
+        await axios.post(`${API}/admin/alumni`, data, await getAuthConfig());
+        toast.success('Alumni created');
+      }
+      setOpen(false);
+      setEditing(null);
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        role: '',
+        company: '',
+        years_of_experience: '',
+        location: '',
+        graduation_year: ''
+      });
+      fetchAllData();
+    } catch (error) {
+      console.error('Failed to save alumni:', error);
+      toast.error('Operation failed');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this alumni record?')) return;
+    try {
+      await axios.delete(`${API}/admin/alumni/${id}`, await getAuthConfig());
+      toast.success('Alumni deleted');
+      fetchAllData();
+    } catch (error) {
+      toast.error('Delete failed');
+    }
+  };
+
+  const startEdit = (alumni) => {
+    setEditing(alumni);
+    setFormData({
+      name: alumni.name,
+      email: alumni.email,
+      phone: alumni.phone || '',
+      role: alumni.role,
+      company: alumni.company,
+      years_of_experience: alumni.years_of_experience || '',
+      location: alumni.location || '',
+      graduation_year: alumni.graduation_year || ''
+    });
+    setOpen(true);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex justify-between items-center">
+          <CardTitle>Alumni Management</CardTitle>
+          <Dialog open={open} onOpenChange={(isOpen) => {
+            setOpen(isOpen);
+            if (!isOpen) {
+              setEditing(null);
+              setFormData({
+                name: '',
+                email: '',
+                phone: '',
+                role: '',
+                company: '',
+                years_of_experience: '',
+                location: '',
+                graduation_year: ''
+              });
+            }
+          }}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Alumni
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>{editing ? 'Edit Alumni' : 'Add Alumni'}</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Name *</Label>
+                    <Input
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Email *</Label>
+                    <Input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Phone</Label>
+                    <Input
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <Label>Role *</Label>
+                    <Input
+                      value={formData.role}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      placeholder="e.g., Software Engineer"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <Label>Company *</Label>
+                    <Input
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      placeholder="e.g., Google"
+                    />
+                  </div>
+                  <div>
+                    <Label>Years of Experience</Label>
+                    <Input
+                      type="number"
+                      value={formData.years_of_experience}
+                      onChange={(e) => setFormData({ ...formData, years_of_experience: e.target.value })}
+                      placeholder="Optional"
+                    />
+                  </div>
+                  <div>
+                    <Label>Location</Label>
+                    <Input
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="e.g., San Francisco, CA"
+                    />
+                  </div>
+                  <div>
+                    <Label>Graduation Year</Label>
+                    <Input
+                      type="number"
+                      value={formData.graduation_year}
+                      onChange={(e) => setFormData({ ...formData, graduation_year: e.target.value })}
+                      placeholder="e.g., 2020"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit">
+                    {editing ? 'Update' : 'Create'}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Phone</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Company</TableHead>
+                <TableHead>Experience</TableHead>
+                <TableHead>Location</TableHead>
+                <TableHead>Grad Year</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {alumni.map((person) => (
+                <TableRow key={person.id}>
+                  <TableCell className="font-medium">{person.name}</TableCell>
+                  <TableCell className="text-sm">{person.email}</TableCell>
+                  <TableCell className="text-sm">{person.phone || '-'}</TableCell>
+                  <TableCell className="text-sm">{person.role}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{person.company}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {person.years_of_experience ? `${person.years_of_experience} yrs` : '-'}
+                  </TableCell>
+                  <TableCell className="text-sm">{person.location || '-'}</TableCell>
+                  <TableCell className="text-sm">{person.graduation_year || '-'}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => startEdit(person)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDelete(person.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default AdminPanel;
