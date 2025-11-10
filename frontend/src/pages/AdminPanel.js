@@ -107,7 +107,7 @@ const AdminPanel = () => {
         ) : (
           <>
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
               <Card className="border-2 border-gray-200">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
