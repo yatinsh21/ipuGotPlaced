@@ -1134,6 +1134,14 @@ async def startup_db():
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
+        # Alumni
+        await db.alumni.create_index("id", unique=True)
+        await db.alumni.create_index("company")
+        await db.alumni.create_index("name")
+        await db.alumni.create_index("role")
+        await db.alumni.create_index("location")
+        await db.alumni.create_index("graduation_year")
+        
         # Users - ONLY clerk_id is unique
         await db.users.create_index("clerk_id", unique=True)
         await db.users.create_index("email")  # Non-unique for search
