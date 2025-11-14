@@ -364,7 +364,7 @@ const AlumniPage = () => {
               className="text-sm"
             />
             <Input
-              placeholder="Search by company..."
+              placeholder="Search by company... (Indus Valley Partners)"
               value={searchCompany}
               onChange={(e) => setSearchCompany(e.target.value)}
               className="text-sm"
