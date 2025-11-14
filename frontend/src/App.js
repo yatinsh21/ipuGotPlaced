@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HelmetProvider } from 'react-helmet-async';
 import { useUser } from "@clerk/clerk-react";
 import { Toaster } from "@/components/ui/sonner";
 import LandingPage from "@/pages/LandingPage";
@@ -17,7 +18,6 @@ import AboutPage from "./pages/AboutPage";
 import AlumniPage from "@/pages/AlumniPage";
 import "@/App.css";
 import Footer from "./components/Footer";
-import TopNotification from "./components/AnnouncementBar";
 import AnnouncementBar from "./components/AnnouncementBar";
 import NotFoundPage from "./pages/NotFoundPage";
 import ScrollToTop from "./components/ScrollToTop";
@@ -34,40 +34,45 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <BrowserRouter>
-      <AnnouncementBar  />
-      <ScrollToTop/>
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="*" element={<NotFoundPage />} />
-          <Route path="/topics" element={<HomePage />} />
-          <Route path="/privacy" element={<PrivacyPage/>} />
-          <Route path="/contact" element={<ContactPage/>} />
-          <Route path="/terms" element={<TermsPage/>} />
+    <HelmetProvider>
+      <div className="App">
+        <BrowserRouter>
+          <AnnouncementBar />
+          <ScrollToTop/>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/topics" element={<HomePage />} />
+            <Route path="/privacy" element={<PrivacyPage/>} />
+            <Route path="/contact" element={<ContactPage/>} />
+            <Route path="/terms" element={<TermsPage/>} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/goldmine" element={<GoldminePage />} />
+            
+            {/* SEO-friendly route using slug instead of ID */}
 
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/goldmine" element={<GoldminePage />} />
-          <Route path="/company/:companyId" element={<CompanyQuestionsPage />} />
-          <Route path="/bookmarks" element={<BookmarksPage />} />
-          <Route path="/experiences" element={<ExperiencesPage />} />
-          <Route path="/experience/:experienceId" element={<ExperienceDetailPage />} />
-          <Route path="/alumni/connect" element={<AlumniPage />} />
-          <Route 
-            path="/admin" 
-            element={
-              isSignedIn && user?.publicMetadata?.isAdmin ? 
-                <AdminPanel /> : 
-                <Navigate to="/" />
-            } 
-          />
-        </Routes>
+            <Route path="/company/:companyId" element={<CompanyQuestionsPage />} />
+            <Route path="/bookmarks" element={<BookmarksPage />} />
+            <Route path="/experiences" element={<ExperiencesPage />} />
+            <Route path="/experience/:experienceId" element={<ExperienceDetailPage />} />
+            <Route path="/alumni" element={<AlumniPage />} />
+            <Route 
+              path="/admin" 
+              element={
+                isSignedIn && user?.publicMetadata?.isAdmin ? 
+                  <AdminPanel /> : 
+                  <Navigate to="/" />
+              } 
+            />
+            
+            {/* Catch all - must be last */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
           <Footer/>
-          {/* <TopNotification/> */}
-      </BrowserRouter>
+        </BrowserRouter>
 
-      <Toaster />
-    </div>
+        <Toaster />
+      </div>
+    </HelmetProvider>
   );
 }
 

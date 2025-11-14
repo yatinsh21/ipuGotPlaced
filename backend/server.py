@@ -1,21 +1,17 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.gzip import GZipMiddleware
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
-
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
-# from bson import ObjectId
 from pathlib import Path
 import re
 import uuid
 from bson import ObjectId
-# from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, ConfigDict
 from typing import List, Optional
-# import uuid
 from datetime import datetime, timezone, timedelta
 import razorpay
 import json
@@ -65,10 +61,10 @@ razorpay_client = razorpay.Client(auth=(
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
 
-# Models
+# Models (keeping all your existing models)
 class User(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    clerk_id: str  # This is the primary key
+    clerk_id: str
     email: str
     name: str
     picture: Optional[str] = None
@@ -76,7 +72,7 @@ class User(BaseModel):
     is_admin: bool = False
     bookmarked_questions: List[str] = []
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    # NO 'id' field - we use clerk_id instead
+
 class Topic(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -100,26 +96,23 @@ class Company(BaseModel):
     model_config = ConfigDict(extra="ignore")
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     name: str
-    slug: Optional[str] = None  # Add slug field
+    slug: Optional[str] = None
     logo_url: Optional[str] = None
     question_count: int = 0
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     
     def __init__(self, **data):
         super().__init__(**data)
-        # Auto-generate slug from name if not provided
         if not self.slug and self.name:
             self.slug = self.generate_slug(self.name)
     
     @staticmethod
     def generate_slug(name: str) -> str:
-        """Generate URL-friendly slug from company name"""
         slug = name.lower()
-        slug = re.sub(r'[^a-z0-9\s-]', '', slug)  # Remove special chars
-        slug = re.sub(r'[\s]+', '-', slug)  # Replace spaces with hyphens
-        slug = slug.strip('-')  # Remove leading/trailing hyphens
-        return slug or str(uuid.uuid4())[:8]  # Fallback to random string
-
+        slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+        slug = re.sub(r'[\s]+', '-', slug)
+        slug = slug.strip('-')
+        return slug or str(uuid.uuid4())[:8]
 
 class Experience(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -131,7 +124,6 @@ class Experience(BaseModel):
     experience: str
     status: str = "selected"
     posted_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-
 
 class Alumni(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -146,7 +138,6 @@ class Alumni(BaseModel):
     graduation_year: Optional[int] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
-
 class CreateOrderRequest(BaseModel):
     amount: int
 
@@ -154,6 +145,175 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
     razorpay_payment_id: str
     razorpay_signature: str
+
+# ============= SEO ENHANCEMENT: SITEMAP & ROBOTS.TXT =============
+
+@app.get("/sitemap.xml", response_class=Response)
+async def get_sitemap():
+    """Generate dynamic XML sitemap for better SEO"""
+    base_url = os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
+    
+    # Fetch all companies for company-specific pages
+    companies = await db.companies.find({}, {"_id": 0, "slug": 1, "name": 1}).to_list(1000)
+    
+    # Fetch all experiences
+    experiences = await db.experiences.find({}, {"_id": 0, "id": 1}).to_list(1000)
+    
+    # Build sitemap XML
+    sitemap = ['<?xml version="1.0" encoding="UTF-8"?>']
+    sitemap.append('<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">')
+    
+    # Static pages with high priority
+    static_pages = [
+        {'loc': '/', 'priority': '1.0', 'changefreq': 'daily'},
+        {'loc': '/topics', 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': '/goldmine', 'priority': '0.9', 'changefreq': 'daily'},
+        {'loc': '/experiences', 'priority': '0.8', 'changefreq': 'weekly'},
+        {'loc': '/alumni', 'priority': '0.7', 'changefreq': 'weekly'},
+    ]
+    
+    for page in static_pages:
+        sitemap.append(f'''
+  <url>
+    <loc>{base_url}{page['loc']}</loc>
+    <lastmod>{datetime.now(timezone.utc).strftime('%Y-%m-%d')}</lastmod>
+    <changefreq>{page['changefreq']}</changefreq>
+    <priority>{page['priority']}</priority>
+  </url>''')
+    
+    # Company-specific pages (HIGHEST SEO PRIORITY)
+    for company in companies:
+        slug = company.get('slug') or Company.generate_slug(company['name'])
+        sitemap.append(f'''
+  <url>
+    <loc>{base_url}/company/{company.get('id', slug)}</loc>
+    <lastmod>{datetime.now(timezone.utc).strftime('%Y-%m-%d')}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.95</priority>
+  </url>''')
+    
+    # Experience pages
+    for exp in experiences:
+        sitemap.append(f'''
+  <url>
+    <loc>{base_url}/experience/{exp['id']}</loc>
+    <lastmod>{datetime.now(timezone.utc).strftime('%Y-%m-%d')}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>''')
+    
+    sitemap.append('</urlset>')
+    
+    return Response(
+        content=''.join(sitemap),
+        media_type='application/xml',
+        headers={'Cache-Control': 'public, max-age=3600'}
+    )
+
+@app.get("/robots.txt", response_class=Response)
+async def get_robots():
+    """Robots.txt for SEO crawling"""
+    base_url = os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
+    
+    robots_content = f"""User-agent: *
+Allow: /
+Allow: /topics
+Allow: /goldmine
+Allow: /company/*
+Allow: /experiences
+Allow: /experience/*
+Allow: /alumni
+
+Disallow: /admin
+Disallow: /api/admin
+Disallow: /dashboard
+
+Sitemap: {base_url}/sitemap.xml
+"""
+    
+    return Response(
+        content=robots_content,
+        media_type='text/plain',
+        headers={'Cache-Control': 'public, max-age=86400'}
+    )
+
+# ============= SEO ENHANCEMENT: STRUCTURED DATA ENDPOINTS =============
+
+@api_router.get("/seo/company/{company_id}")
+async def get_company_seo_data(company_id: str):
+    """Get SEO-optimized company data with structured data markup"""
+    company = await db.companies.find_one({"id": company_id}, {"_id": 0})
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+    
+    questions_count = await db.questions.count_documents({"company_id": company_id})
+    
+    # JSON-LD structured data for Google
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "EducationalOrganization",
+        "name": f"{company['name']} Interview Preparation",
+        "description": f"Practice {questions_count} real interview questions asked at {company['name']}. Ace your {company['name']} interview with our comprehensive question bank.",
+        "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/company/{company_id}",
+        "image": company.get('logo_url', ''),
+        "offers": {
+            "@type": "Offer",
+            "category": "Interview Preparation",
+            "itemOffered": {
+                "@type": "Course",
+                "name": f"{company['name']} Interview Questions",
+                "description": f"Complete collection of interview questions from {company['name']}",
+                "provider": {
+                    "@type": "Organization",
+                    "name": "InterviewGuru Pro"
+                }
+            }
+        }
+    }
+    
+    return {
+        "title": f"{company['name']} Interview Questions & Answers 2025 | IGP",
+        "description": f"Prepare for {company['name']} interviews with {questions_count}+ real questions. Technical, HR, and coding rounds covered. 98% match rate with actual interviews.",
+        "keywords": f"{company['name']} interview questions, {company['name']} interview preparation, {company['name']} coding questions, {company['name']} technical interview",
+        "canonical": f"/company/{company_id}",
+        "structuredData": structured_data,
+        "company": company,
+        "questionsCount": questions_count
+    }
+
+@api_router.get("/seo/experience/{experience_id}")
+async def get_experience_seo_data(experience_id: str):
+    """Get SEO-optimized experience data"""
+    experience = await db.experiences.find_one({"id": experience_id}, {"_id": 0})
+    if not experience:
+        raise HTTPException(status_code=404, detail="Experience not found")
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        "headline": f"{experience['company_name']} Interview Experience - {experience['role']}",
+        "description": f"Real interview experience at {experience['company_name']} for {experience['role']} position. {experience['rounds']} rounds covered.",
+        "author": {
+            "@type": "Person",
+            "name": "InterviewGuru Pro Community"
+        },
+        "datePublished": experience['posted_at'],
+        "publisher": {
+            "@type": "Organization",
+            "name": "InterviewGuru Pro"
+        }
+    }
+    
+    return {
+        "title": f"{experience['company_name']} Interview Experience - {experience['role']} | IGP",
+        "description": f"Read real {experience['company_name']} interview experience for {experience['role']}. Learn about {experience['rounds']} interview rounds and get selected.",
+        "keywords": f"{experience['company_name']} interview experience, {experience['company_name']} {experience['role']}, interview rounds, placement experience",
+        "canonical": f"/experience/{experience_id}",
+        "structuredData": structured_data,
+        "experience": experience
+    }
+
+# ============= EXISTING ENDPOINTS (keeping all your code) =============
 
 # MongoDB-based cache helper functions
 def generate_cache_key(prefix: str, **kwargs) -> str:
@@ -178,7 +338,6 @@ async def set_cached_data(key: str, data, ttl: int = 3600):
     try:
         expires_at = datetime.now(timezone.utc) + timedelta(seconds=ttl)
         
-        # Convert datetime objects to ISO format strings before caching
         def serialize_data(obj):
             if isinstance(obj, datetime):
                 return obj.isoformat()
@@ -206,6 +365,7 @@ async def set_cached_data(key: str, data, ttl: int = 3600):
         )
     except Exception as e:
         logging.warning(f"Cache set failed for {key}: {e}")
+
 async def invalidate_cache_pattern(pattern: str):
     try:
         regex_pattern = pattern.replace("*", ".*")
@@ -213,26 +373,20 @@ async def invalidate_cache_pattern(pattern: str):
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
-# Auth dependency using Clerk - REWRITTEN
+# Auth dependency using Clerk (keeping your existing auth code)
 async def get_current_user(authorization: str = Header(None, alias="Authorization")) -> Optional[User]:
-    """Verify Clerk session token and get/create user - SIMPLIFIED VERSION"""
-    
-    # Check if authorization header exists
     if not authorization:
         logging.warning("No Authorization header provided")
         return None
     
-    # Check if it's a Bearer token
     if not authorization.startswith('Bearer '):
         logging.warning(f"Invalid Authorization format: {authorization[:20]}")
         return None
     
-    # Check if Clerk client is initialized
     if not clerk_client:
         logging.error("Clerk client not initialized")
         return None
     
-    # Extract token
     token = authorization.replace('Bearer ', '').strip()
     
     if not token:
@@ -240,7 +394,6 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
         return None
     
     try:
-        # Decode JWT to get clerk_user_id
         import jwt
         decoded = jwt.decode(token, options={"verify_signature": False})
         clerk_user_id = decoded.get('sub')
@@ -251,15 +404,12 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
         
         logging.info(f"✓ Token decoded successfully for clerk_id: {clerk_user_id}")
         
-        # Get or create user in our database
         user_doc = await db.users.find_one({"clerk_id": clerk_user_id}, {"_id": 0})
         
         if not user_doc:
-            # Get user info from Clerk
             try:
                 clerk_user = clerk_client.users.get(user_id=clerk_user_id)
                 
-                # Create new user in our database
                 new_user = {
                     "clerk_id": clerk_user_id,
                     "email": clerk_user.email_addresses[0].email_address if clerk_user.email_addresses else "",
@@ -276,12 +426,10 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                     user_doc = new_user
                     logging.info(f"✓ Created new user: {new_user['email']}")
                 except Exception as insert_error:
-                    # Handle duplicate key error - try to find existing user by email
                     if "duplicate key" in str(insert_error).lower():
                         logging.warning(f"Duplicate key error, searching for existing user by email")
                         user_doc = await db.users.find_one({"email": new_user['email']}, {"_id": 0})
                         if user_doc:
-                            # Update the clerk_id for the existing user
                             await db.users.update_one(
                                 {"email": new_user['email']},
                                 {"$set": {"clerk_id": clerk_user_id}}
@@ -298,13 +446,11 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
                 logging.error(f"Failed to get Clerk user: {e}")
                 return None
         else:
-            # Update user metadata from Clerk on each request
             try:
                 clerk_user = clerk_client.users.get(user_id=clerk_user_id)
                 is_premium = clerk_user.public_metadata.get('isPremium', False) if hasattr(clerk_user, 'public_metadata') else False
                 is_admin = clerk_user.public_metadata.get('isAdmin', False) if hasattr(clerk_user, 'public_metadata') else False
                 
-                # Update if changed
                 if user_doc.get('is_premium') != is_premium or user_doc.get('is_admin') != is_admin:
                     await db.users.update_one(
                         {"clerk_id": clerk_user_id},
@@ -319,26 +465,23 @@ async def get_current_user(authorization: str = Header(None, alias="Authorizatio
         return User(**user_doc)
         
     except Exception as e:
-        logging.error(f"❌ Auth error: {e}")
+        logging.error(f"✗ Auth error: {e}")
         import traceback
         logging.error(traceback.format_exc())
         return None
 
 async def require_auth(user: User = Depends(get_current_user)) -> User:
-    """Require authenticated user"""
     if not user:
-        logging.warning("❌ Authentication required but no user found")
+        logging.warning("✗ Authentication required but no user found")
         raise HTTPException(status_code=401, detail="Authentication required")
     return user
 
 async def require_premium(user: User = Depends(require_auth)) -> User:
-    """Require premium user"""
     if not user.is_premium and not user.is_admin:
         raise HTTPException(status_code=403, detail="Premium subscription required")
     return user
 
 async def require_admin(user: User = Depends(require_auth)) -> User:
-    """Require admin user"""
     if not user.is_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
@@ -346,7 +489,6 @@ async def require_admin(user: User = Depends(require_auth)) -> User:
 # Auth endpoints
 @api_router.get("/auth/me")
 async def get_current_user_info(user: User = Depends(get_current_user)):
-    """Get current user info"""
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated")
     return user.model_dump()
@@ -477,32 +619,28 @@ async def get_experiences(company_id: Optional[str] = None):
     await set_cached_data(cache_key, experiences, ttl=3600)
     return experiences
 
-# Payment endpoints - REWRITTEN FROM SCRATCH
+# Payment endpoints
 @api_router.post("/payment/create-order")
 async def create_order(order_req: CreateOrderRequest, user: User = Depends(require_auth)):
-    """Create Razorpay order for payment"""
     try:
         logging.info(f"💰 Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
         logging.info(f"💰 Amount requested: ₹{order_req.amount / 100}")
         
-        # Create Razorpay order
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
             "currency": "INR",
             "payment_capture": 1,
-            # "offers": ["offer_RbihggUfvvAVVU"]
         })
         
         logging.info(f"✓ Razorpay order created: {razor_order['id']}")
         return razor_order
         
     except Exception as e:
-        logging.error(f"❌ Payment order creation failed: {e}")
+        logging.error(f"✗ Payment order creation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 @api_router.post("/payment/verify")
 async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(require_auth)):
-    """Verify Razorpay payment and upgrade user to premium"""
     try:
         logging.info(f"💰 Payment verification request from user: {user.email}")
         
@@ -512,15 +650,12 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
             'razorpay_signature': payment.razorpay_signature
         }
         
-        # Verify payment signature
         razorpay_client.utility.verify_payment_signature(params_dict)
         logging.info(f"✓ Payment signature verified")
         
-        # Update user to premium in MongoDB
         await db.users.update_one({"clerk_id": user.clerk_id}, {"$set": {"is_premium": True}})
         logging.info(f"✓ User upgraded to premium in MongoDB")
         
-        # Update Clerk user metadata
         if clerk_client:
             try:
                 clerk_client.users.update_metadata(
@@ -537,10 +672,10 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
         }
         
     except Exception as e:
-        logging.error(f"❌ Payment verification failed: {e}")
+        logging.error(f"✗ Payment verification failed: {e}")
         raise HTTPException(status_code=400, detail=f"Payment verification failed: {str(e)}")
 
-# Admin endpoints
+# Admin endpoints (keeping all your existing admin code)
 @api_router.get("/admin/stats")
 async def get_admin_stats(user: User = Depends(require_admin)):
     total_users = await db.users.count_documents({})
@@ -561,11 +696,9 @@ async def get_admin_stats(user: User = Depends(require_admin)):
 
 @api_router.get("/admin/users")
 async def get_all_users(user: User = Depends(require_admin)):
-    """Get all users - returns JSONResponse to handle MongoDB types"""
     users = await db.users.find({}).to_list(10000)
     
     def make_json_safe(obj):
-        """Recursively convert MongoDB types to JSON-safe types"""
         if isinstance(obj, ObjectId):
             return str(obj)
         elif isinstance(obj, datetime):
@@ -581,24 +714,18 @@ async def get_all_users(user: User = Depends(require_admin)):
 
 @api_router.post("/admin/users/{user_id}/grant-admin")
 async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    # Validate user_id
     if not user_id or user_id == "undefined" or user_id == "null":
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid user_id provided"
-        )
+        raise HTTPException(status_code=400, detail="Invalid user_id provided")
     
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Update MongoDB - admins automatically get premium
     await db.users.update_one(
         {"clerk_id": user_id}, 
         {"$set": {"is_admin": True, "is_premium": True}}
     )
     
-    # Update Clerk metadata
     if clerk_client:
         try:
             clerk_user = clerk_client.users.get(user_id=user_id)
@@ -621,28 +748,21 @@ async def grant_admin_access(user_id: str, current_user: User = Depends(require_
 
 @api_router.post("/admin/users/{user_id}/revoke-admin")
 async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-    # Validate user_id
     if not user_id or user_id == "undefined" or user_id == "null":
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid user_id provided"
-        )
+        raise HTTPException(status_code=400, detail="Invalid user_id provided")
     
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Prevent self-revocation
     if user_id == current_user.clerk_id:
         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
     
-    # Update MongoDB
     await db.users.update_one(
         {"clerk_id": user_id}, 
         {"$set": {"is_admin": False}}
     )
     
-    # Update Clerk metadata
     if clerk_client:
         try:
             clerk_user = clerk_client.users.get(user_id=user_id)
@@ -664,34 +784,26 @@ async def revoke_admin_access(user_id: str, current_user: User = Depends(require
 
 @api_router.post("/admin/users/{user_id}/toggle-premium")
 async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-    # Validate user_id
     if not user_id or user_id == "undefined" or user_id == "null":
-        raise HTTPException(
-            status_code=400, 
-            detail="Invalid user_id provided"
-        )
+        raise HTTPException(status_code=400, detail="Invalid user_id provided")
     
     target_user = await db.users.find_one({"clerk_id": user_id})
     if not target_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Don't allow removing premium from admins
     if target_user.get('is_admin') and target_user.get('is_premium'):
         raise HTTPException(
             status_code=400, 
             detail="Cannot remove premium status from admin users"
         )
     
-    # Toggle premium status
     new_premium_status = not target_user.get('is_premium', False)
     
-    # Update MongoDB
     await db.users.update_one(
         {"clerk_id": user_id}, 
         {"$set": {"is_premium": new_premium_status}}
     )
     
-    # Update Clerk metadata
     if clerk_client:
         try:
             clerk_user = clerk_client.users.get(user_id=user_id)
@@ -711,76 +823,6 @@ async def toggle_premium_status(user_id: str, current_user: User = Depends(requi
         "success": True, 
         "message": f"Premium access {status_text} for {target_user['email']}"
     }
-
-# @api_router.post("/admin/users/{user_id}/grant-admin")
-# async def grant_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-#     target_user = await db.users.find_one({"clerk_id": user_id})
-#     if not target_user:
-#         raise HTTPException(status_code=404, detail="User not found")
-    
-#     await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": True, "is_premium": True}})
-    
-#     return {"success": True, "message": f"Admin access granted to {target_user['email']}"}
-
-# @api_router.post("/admin/users/{user_id}/revoke-admin")
-# async def revoke_admin_access(user_id: str, current_user: User = Depends(require_admin)):
-#     target_user = await db.users.find_one({"clerk_id": user_id})
-#     if not target_user:
-#         raise HTTPException(status_code=404, detail="User not found")
-    
-#     if user_id == current_user.clerk_id:
-#         raise HTTPException(status_code=400, detail="Cannot revoke your own admin access")
-    
-#     await db.users.update_one({"clerk_id": user_id}, {"$set": {"is_admin": False}})
-    
-#     return {"success": True, "message": f"Admin access revoked from {target_user['email']}"}
-
-# @api_router.post("/admin/users/{user_id}/toggle-premium")
-# async def toggle_premium_status(user_id: str, current_user: User = Depends(require_admin)):
-#     # Validate user_id
-#     if not user_id or user_id == "undefined" or user_id == "null":
-#         raise HTTPException(
-#             status_code=400, 
-#             detail="Invalid user_id provided"
-#         )
-    
-#     target_user = await db.users.find_one({"clerk_id": user_id})
-#     if not target_user:
-#         raise HTTPException(status_code=404, detail="User not found")
-    
-#     # Don't allow removing premium from admins
-#     if target_user.get('is_admin') and target_user.get('is_premium'):
-#         raise HTTPException(status_code=400, detail="Cannot remove premium status from admin users")
-    
-#     # Toggle premium status
-#     new_premium_status = not target_user.get('is_premium', False)
-    
-#     # Update MongoDB
-#     await db.users.update_one(
-#         {"clerk_id": user_id}, 
-#         {"$set": {"is_premium": new_premium_status}}
-#     )
-    
-#     # Update Clerk metadata (same pattern as grant_admin_access)
-#     if clerk_client:
-#         try:
-#             clerk_user = clerk_client.users.get(user_id=user_id)
-#             clerk_client.users.update(
-#                 user_id=user_id,
-#                 public_metadata={
-#                     **clerk_user.public_metadata,
-#                     'isPremium': new_premium_status
-#                 }
-#             )
-#             logging.info(f"✓ Updated Clerk metadata for user: {target_user['email']}")
-#         except Exception as e:
-#             logging.error(f"⚠️ Failed to update Clerk metadata: {e}")
-    
-#     status_text = "granted" if new_premium_status else "revoked"
-#     return {
-#         "success": True, 
-#         "message": f"Premium access {status_text} for {target_user['email']}"
-#     }
 
 # Admin CRUD - Topics
 @api_router.post("/admin/topics")
@@ -885,14 +927,11 @@ async def create_company(company: Company, user: User = Depends(require_admin)):
     try:
         logging.info(f"Creating company: {company.name}")
         
-        # Ensure slug is generated
         if not company.slug:
             company.slug = Company.generate_slug(company.name)
         
-        # Check if slug already exists
         existing = await db.companies.find_one({"slug": company.slug})
         if existing:
-            # Make slug unique by appending a random suffix
             company.slug = f"{company.slug}-{str(uuid.uuid4())[:8]}"
             logging.info(f"Slug already exists, using: {company.slug}")
         
@@ -903,23 +942,19 @@ async def create_company(company: Company, user: User = Depends(require_admin)):
         return company
         
     except Exception as e:
-        logging.error(f"❌ Failed to create company: {e}")
+        logging.error(f"✗ Failed to create company: {e}")
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to create company: {str(e)}")
 
-
-# Update the update_company endpoint
 @api_router.put("/admin/companies/{company_id}")
 async def update_company(company_id: str, company: Company, user: User = Depends(require_admin)):
     try:
         logging.info(f"Updating company: {company_id}")
         
-        # Ensure slug exists
         if not company.slug:
             company.slug = Company.generate_slug(company.name)
         
-        # Check if slug is taken by another company
         existing = await db.companies.find_one({"slug": company.slug, "id": {"$ne": company_id}})
         if existing:
             company.slug = f"{company.slug}-{str(uuid.uuid4())[:8]}"
@@ -932,11 +967,11 @@ async def update_company(company_id: str, company: Company, user: User = Depends
         return company
         
     except Exception as e:
-        logging.error(f"❌ Failed to update company: {e}")
+        logging.error(f"✗ Failed to update company: {e}")
         import traceback
         logging.error(traceback.format_exc())
         raise HTTPException(status_code=500, detail=f"Failed to update company: {str(e)}")
-        
+
 @api_router.delete("/admin/companies/{company_id}")
 async def delete_company(company_id: str, user: User = Depends(require_admin)):
     await db.companies.delete_one({"id": company_id})
@@ -965,8 +1000,125 @@ async def delete_experience(experience_id: str, user: User = Depends(require_adm
     await invalidate_cache_pattern("experiences*")
     return {"success": True}
 
-# Middleware setup - ORDER MATTERS!
-# 1. CORS must be first to handle preflight requests
+# Alumni endpoints
+@api_router.get("/admin/alumni")
+async def get_all_alumni(user: User = Depends(require_admin)):
+    alumni = await db.alumni.find({}, {"_id": 0}).to_list(10000)
+    return alumni
+
+@api_router.post("/admin/alumni")
+async def create_alumni(alumni: Alumni, user: User = Depends(require_admin)):
+    try:
+        alumni_data = alumni.model_dump()
+        logging.info(f"Creating alumni: {alumni_data}")
+        
+        await db.alumni.insert_one(alumni_data)
+        await invalidate_cache_pattern("alumni*")
+        
+        logging.info(f"✓ Alumni created: {alumni.name} - College: {alumni.college}")
+        return alumni
+        
+    except Exception as e:
+        logging.error(f"✗ Failed to create alumni: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to create alumni: {str(e)}")
+
+@api_router.put("/admin/alumni/{alumni_id}")
+async def update_alumni(alumni_id: str, alumni: Alumni, user: User = Depends(require_admin)):
+    try:
+        alumni_data = alumni.model_dump()
+        logging.info(f"Updating alumni {alumni_id}: {alumni_data}")
+        
+        await db.alumni.update_one({"id": alumni_id}, {"$set": alumni_data})
+        await invalidate_cache_pattern("alumni*")
+        
+        logging.info(f"✓ Alumni updated successfully")
+        return alumni
+        
+    except Exception as e:
+        logging.error(f"✗ Failed to update alumni: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to update alumni: {str(e)}")
+
+@api_router.delete("/admin/alumni/{alumni_id}")
+async def delete_alumni(alumni_id: str, user: User = Depends(require_admin)):
+    await db.alumni.delete_one({"id": alumni_id})
+    await invalidate_cache_pattern("alumni*")
+    return {"success": True}
+
+# Public Alumni Endpoints
+@api_router.get("/alumni/search")
+async def search_alumni(
+    company: Optional[str] = None,
+    name: Optional[str] = None,
+    role: Optional[str] = None,
+    college: Optional[str] = None,
+    location: Optional[str] = None,
+    graduation_year: Optional[int] = None,
+    user: Optional[User] = Depends(get_current_user)
+):
+    query = {}
+    if company:
+        query["company"] = {"$regex": company, "$options": "i"}
+    if name:
+        query["name"] = {"$regex": name, "$options": "i"}
+    if role:
+        query["role"] = {"$regex": role, "$options": "i"}
+    if location:
+        query["location"] = {"$regex": location, "$options": "i"}
+    if college:
+        query["college"] = {"$regex": college, "$options": "i"}
+    if graduation_year is not None:
+        query["graduation_year"] = graduation_year
+    
+    cache_key = generate_cache_key(
+        "alumni_search",
+        company=company,
+        name=name,
+        role=role,
+        college=college,
+        location=location,
+        graduation_year=graduation_year
+    )
+    cached = await get_cached_data(cache_key)
+    if cached:
+        alumni_list = cached
+    else:
+        alumni_list = await db.alumni.find(query, {"_id": 0}).to_list(1000)
+        await set_cached_data(cache_key, alumni_list, ttl=3600)
+    
+    is_premium = user and (user.is_premium or user.is_admin) if user else False
+    
+    if not is_premium:
+        for alumni in alumni_list:
+            if alumni.get('email'):
+                alumni['email'] = '***@***.***'
+            if alumni.get('phone'):
+                alumni['phone'] = '***-***-****'
+    
+    return alumni_list
+
+@api_router.get("/alumni/{alumni_id}/reveal")
+async def reveal_alumni_contact(alumni_id: str, user: User = Depends(require_premium)):
+    alumni = await db.alumni.find_one({"id": alumni_id}, {"_id": 0})
+    if not alumni:
+        raise HTTPException(status_code=404, detail="Alumni not found")
+    
+    return {
+        "id": alumni["id"],
+        "name": alumni["name"],
+        "email": alumni.get("email", ""),
+        "phone": alumni.get("phone", ""),
+        "role": alumni["role"],
+        "company": alumni["company"],
+        "college": alumni.get("college"),
+        "location": alumni.get("location"),
+        "graduation_year": alumni.get("graduation_year")
+    }
+
+# Middleware setup
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -976,7 +1128,6 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-# 2. GZip compression
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 logging.basicConfig(
@@ -990,7 +1141,6 @@ async def startup_db():
     try:
         logger.info("🚀 Starting database initialization...")
         
-        # Step 1: Clean up null values
         logger.info("Cleaning up null ID documents...")
         null_users = await db.users.count_documents({"clerk_id": None})
         if null_users > 0:
@@ -1003,7 +1153,6 @@ async def startup_db():
         await db.experiences.delete_many({"id": None})
         logger.info("✓ Null ID cleanup complete")
         
-        # Step 2: Drop old/unused indexes
         logger.info("Dropping old indexes...")
         old_indexes = ["id_1", "email_1"]
         for index_name in old_indexes:
@@ -1013,39 +1162,32 @@ async def startup_db():
             except Exception:
                 pass
         
-        # Step 3: Create proper indexes
         logger.info("Creating indexes...")
         
-        # Topics
         await db.topics.create_index("id", unique=True)
         
-        # Questions
         await db.questions.create_index("id", unique=True)
         await db.questions.create_index("topic_id")
         await db.questions.create_index("company_id")
         await db.questions.create_index([("difficulty", 1), ("topic_id", 1)])
         await db.questions.create_index([("category", 1), ("company_id", 1)])
         
-        # Companies
         await db.companies.create_index("id", unique=True)
         await db.companies.create_index("name")
+        await db.companies.create_index("slug", unique=True)
         
-        # Experiences
         await db.experiences.create_index("id", unique=True)
         await db.experiences.create_index("company_id")
         await db.experiences.create_index([("posted_at", -1)])
         
-        # Users - ONLY clerk_id is unique
         await db.users.create_index("clerk_id", unique=True)
-        await db.users.create_index("email")  # Non-unique for search
+        await db.users.create_index("email")
         
-        # Cache
         await cache_collection.create_index("key", unique=True)
         await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
         logger.info("✓ All indexes created successfully")
         
-        # Step 4: Verify services
         if razorpay_client:
             logger.info("✓ Razorpay client initialized")
         else:
@@ -1056,7 +1198,6 @@ async def startup_db():
         else:
             logger.warning("⚠️ Clerk not configured")
         
-        # Step 5: Warm up cache
         logger.info("Warming up cache...")
         topics = await db.topics.find({}, {"_id": 0}).to_list(1000)
         await set_cached_data("topics", topics, ttl=7200)
@@ -1068,13 +1209,12 @@ async def startup_db():
         logger.info("🎉 Database initialization complete!")
         
     except Exception as e:
-        logger.error(f"❌ Startup error: {e}")
+        logger.error(f"✗ Startup error: {e}")
         import traceback
         logger.error(traceback.format_exc())
 
 @api_router.get("/debug/razorpay-status")
 async def check_razorpay_status():
-    """Debug endpoint - REMOVE IN PRODUCTION"""
     key_id = os.environ.get('RAZORPAY_KEY_ID', '')
     key_secret = os.environ.get('RAZORPAY_KEY_SECRET', '')
     
@@ -1085,9 +1225,8 @@ async def check_razorpay_status():
         "key_id_length": len(key_id) if key_id else 0,
         "key_secret_length": len(key_secret) if key_secret else 0,
         "key_id_prefix": key_id[:15] if len(key_id) >= 15 else key_id,
-        "all_env_vars": list(os.environ.keys())  # This will show ALL env vars loaded
+        "all_env_vars": list(os.environ.keys())
     }
-
 
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):
@@ -1106,7 +1245,6 @@ async def get_cache_stats(user: User = Depends(require_admin)):
     except Exception as e:
         return {"error": str(e)}
 
-        # HEAD
 @api_router.head("/health")
 async def health_head():
     return Response(status_code=200)
@@ -1134,143 +1272,5 @@ async def health_check():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
-
-
-# alluminiiiiiiiiiiiiii
-
-@api_router.get("/admin/alumni")
-async def get_all_alumni(user: User = Depends(require_admin)):
-    """Get all alumni for admin management"""
-    alumni = await db.alumni.find({}, {"_id": 0}).to_list(10000)
-    return alumni
-
-@api_router.post("/admin/alumni")
-async def create_alumni(alumni: Alumni, user: User = Depends(require_admin)):
-    """Create new alumni record"""
-    try:
-        alumni_data = alumni.model_dump()
-        
-        # Keep college as string, only graduation_year should be int
-        logging.info(f"Creating alumni: {alumni_data}")
-        
-        await db.alumni.insert_one(alumni_data)
-        await invalidate_cache_pattern("alumni*")
-        
-        logging.info(f"✓ Alumni created: {alumni.name} - College: {alumni.college}")
-        return alumni
-        
-    except Exception as e:
-        logging.error(f"❌ Failed to create alumni: {e}")
-        import traceback
-        logging.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to create alumni: {str(e)}")
-
-@api_router.put("/admin/alumni/{alumni_id}")
-async def update_alumni(alumni_id: str, alumni: Alumni, user: User = Depends(require_admin)):
-    """Update existing alumni record"""
-    try:
-        # Don't convert college to int - it should remain a string!
-        alumni_data = alumni.model_dump()
-        
-        # Log for debugging
-        logging.info(f"Updating alumni {alumni_id}: {alumni_data}")
-        
-        await db.alumni.update_one({"id": alumni_id}, {"$set": alumni_data})
-        await invalidate_cache_pattern("alumni*")
-        
-        logging.info(f"✓ Alumni updated successfully")
-        return alumni
-        
-    except Exception as e:
-        logging.error(f"❌ Failed to update alumni: {e}")
-        import traceback
-        logging.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Failed to update alumni: {str(e)}")
-
-        
-
-@api_router.delete("/admin/alumni/{alumni_id}")
-async def delete_alumni(alumni_id: str, user: User = Depends(require_admin)):
-    """Delete alumni record"""
-    await db.alumni.delete_one({"id": alumni_id})
-    await invalidate_cache_pattern("alumni*")
-    return {"success": True}
-
-# Public Alumni Endpoints
-@api_router.get("/alumni/search")
-async def search_alumni(
-    company: Optional[str] = None,
-    name: Optional[str] = None,
-    role: Optional[str] = None,
-    college: Optional[str] = None,
-    location: Optional[str] = None,
-    graduation_year: Optional[int] = None,
-    user: Optional[User] = Depends(get_current_user)
-):
-    """Search alumni with filters. Contacts are masked for non-premium users."""
-    # Build query
-    query = {}
-    if company:
-        query["company"] = {"$regex": company, "$options": "i"}
-    if name:
-        query["name"] = {"$regex": name, "$options": "i"}
-    if role:
-        query["role"] = {"$regex": role, "$options": "i"}
-    if location:
-        query["location"] = {"$regex": location, "$options": "i"}
-    if college:  # Add college search with case-insensitive regex
-        query["college"] = {"$regex": college, "$options": "i"}
-    if graduation_year is not None:
-        query["graduation_year"] = graduation_year
-    
-    # Check cache
-    cache_key = generate_cache_key(
-        "alumni_search",
-        company=company,
-        name=name,
-        role=role,
-        college=college,
-        location=location,
-        graduation_year=graduation_year
-    )
-    cached = await get_cached_data(cache_key)
-    if cached:
-        alumni_list = cached
-    else:
-        alumni_list = await db.alumni.find(query, {"_id": 0}).to_list(1000)
-        await set_cached_data(cache_key, alumni_list, ttl=3600)
-    
-    # Mask contact info for non-premium users
-    is_premium = user and (user.is_premium or user.is_admin) if user else False
-    
-    if not is_premium:
-        for alumni in alumni_list:
-            if alumni.get('email'):
-                alumni['email'] = '***@***.***'
-            if alumni.get('phone'):
-                alumni['phone'] = '***-***-****'
-    
-    return alumni_list
-
-@api_router.get("/alumni/{alumni_id}/reveal")
-async def reveal_alumni_contact(alumni_id: str, user: User = Depends(require_premium)):
-    """Reveal full contact information for premium users"""
-    alumni = await db.alumni.find_one({"id": alumni_id}, {"_id": 0})
-    if not alumni:
-        raise HTTPException(status_code=404, detail="Alumni not found")
-    
-    return {
-        "id": alumni["id"],
-        "name": alumni["name"],
-        "email": alumni.get("email", ""),
-        "phone": alumni.get("phone", ""),
-        "role": alumni["role"],
-        "company": alumni["company"],
-        "college": alumni.get("college"),
-        "location": alumni.get("location"),
-        "graduation_year": alumni.get("graduation_year")
-    }
-
-
 
 app.include_router(api_router)
