@@ -153,7 +153,7 @@ const TermsPage = () => {
         </div>
       </div>
     </div>
-    <Footer/>
+    {/* <Footer/> */}
     </>
 
   );
