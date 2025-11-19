@@ -163,7 +163,7 @@ const PrivacyPage = () => {
               </p>
               <div className="mt-3 pl-4">
                 <p className="leading-relaxed">
-                  <strong>Email:</strong> <a href="mailto:info.ipugotplaced@gmail.com" className="text-blue-600 hover:text-blue-800 font-medium">support@ipugotplaced.in</a>
+                  <strong>Email:</strong> <a href="mailto:info.ipugotplaced@gmail.com" className="text-blue-600 hover:text-blue-800 font-medium">info.ipugotplaced@gmail.com</a>
                 </p>
                 <p className="leading-relaxed">
                   <strong>Website:</strong> <a href="https://ipugotplaced.in" className="text-blue-600 hover:text-blue-800 font-medium">ipugotplaced.in</a>

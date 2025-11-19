@@ -263,7 +263,7 @@ const CompanyQuestionsPage = () => {
       if (error.response?.status === 401) {
         toast.error('Authentication failed. Please sign out and sign in again.');
       } else if (error.response?.status === 500) {
-        toast.error('Server error. Please try again later.');
+        toast.error('High Demand !, Please try again');
       } else {
         toast.error('High Demand !, Please try again');
       }
@@ -489,7 +489,7 @@ const CompanyQuestionsPage = () => {
 
                 {filteredQuestions.length === 0 && (
                   <div className="text-center py-12">
-                    <p className="text-gray-500">No questions found in this category.</p>
+                    <p className="text-gray-500">Questions coming soon! Our team is uploading them before your placement drive.</p>
                   </div>
                 )}
               </div>
