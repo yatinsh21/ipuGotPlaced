@@ -333,14 +333,14 @@ const AlumniPage = () => {
             Connect with <span className="font-semibold text-gray-800 underline">alumni</span> who've aced the interviews you're preparing for.
           </p>
           
-          {!isSignedIn && (
+          {/* {!isSignedIn && (
             <SignInButton mode="modal">
               <Button className="bg-blue-600 hover:bg-blue-700 text-white mt-4">
                 <Lock className="h-4 w-4 mr-2" />
                 Sign In to Reveal Contacts
               </Button>
             </SignInButton>
-          )}
+          )} */}
 
           
         </div>
