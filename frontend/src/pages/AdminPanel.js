@@ -577,7 +577,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthCo
     answer: '',
     difficulty: 'medium',
     topic_id: null,
-    company_id: '',
+    company_ids: [],
     category: '',
     tags: []
   });
@@ -587,11 +587,14 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthCo
     try {
       const data = { ...formData, topic_id: null };
       if (editing) {
-        await axios.put(`${API}/admin/questions/${editing.id}`, { ...editing, ...data }, await getAuthConfig());
+        const updateData = { ...editing, ...data, company_id: data.company_ids[0] || '' };
+        delete updateData.company_ids;
+        await axios.put(`${API}/admin/questions/${editing.id}`, updateData, await getAuthConfig());
         toast.success('Question updated');
       } else {
         await axios.post(`${API}/admin/questions`, data, await getAuthConfig());
-        toast.success('Question created');
+        const count = data.company_ids.length;
+        toast.success(`Question created for ${count} ${count === 1 ? 'company' : 'companies'}`);
       }
       setOpen(false);
       setEditing(null);
@@ -608,7 +611,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthCo
       answer: '',
       difficulty: 'medium',
       topic_id: null,
-      company_id: '',
+      company_ids: [],
       category: '',
       tags: []
     });
@@ -690,30 +693,47 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthCo
                   </Select>
                 </div>
                 <div>
-                  <Label>Company</Label>
-                  <Select value={formData.company_id} onValueChange={(val) => setFormData({...formData, company_id: val})}>
+                  <Label>Category</Label>
+                  <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val})}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select company" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {companies.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                      <SelectItem value="technical">Technical</SelectItem>
+                      <SelectItem value="coding">Coding</SelectItem>
+                      <SelectItem value="project">Project</SelectItem>
+                      <SelectItem value="HR">HR</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div>
-                <Label>Category</Label>
-                <Select value={formData.category} onValueChange={(val) => setFormData({...formData, category: val})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="technical">Technical</SelectItem>
-                    <SelectItem value="coding">Coding</SelectItem>
-                    <SelectItem value="project">Project</SelectItem>
-                    <SelectItem value="HR">HR</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Companies {editing ? '(cannot change when editing)' : `(${formData.company_ids.length} selected)`}</Label>
+                {editing ? (
+                  <div className="p-2 border rounded bg-gray-50 text-gray-600">
+                    {getCompanyName(editing.company_id)}
+                  </div>
+                ) : (
+                  <div className="border rounded p-3 max-h-48 overflow-y-auto space-y-2">
+                    {companies.map(company => (
+                      <label key={company.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                        <input
+                          type="checkbox"
+                          checked={formData.company_ids.includes(company.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setFormData({...formData, company_ids: [...formData.company_ids, company.id]});
+                            } else {
+                              setFormData({...formData, company_ids: formData.company_ids.filter(id => id !== company.id)});
+                            }
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span>{company.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <Label>Tags (comma-separated: v.imp, just-read, fav)</Label>
@@ -775,7 +795,7 @@ const CompanyQuestionsManager = ({ questions, companies, fetchAllData, getAuthCo
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || [], topic_id: null, company_id: q.company_id || '', category: q.category || ''}); setOpen(true); }}>
+                <Button variant="ghost" size="sm" onClick={() => { setEditing(q); setFormData({...q, tags: q.tags || [], topic_id: null, company_ids: q.company_id ? [q.company_id] : [], category: q.category || ''}); setOpen(true); }}>
                   <Edit className="h-4 w-4" />
                 </Button>
                 <Button variant="ghost" size="sm" onClick={() => handleDelete(q.id)}>

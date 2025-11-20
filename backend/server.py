@@ -851,19 +851,52 @@ async def get_all_questions(user: User = Depends(require_admin)):
     return questions
 
 @api_router.post("/admin/questions")
-async def create_question(question: Question, user: User = Depends(require_admin)):
-    await db.questions.insert_one(question.model_dump())
+async def create_question(question_data: dict, user: User = Depends(require_admin)):
+    company_ids = question_data.get('company_ids', [])
     
-    await invalidate_cache_pattern("questions*")
-    await invalidate_cache_pattern("company_questions*")
-    await invalidate_cache_pattern("bookmarks*")
+    if not company_ids and question_data.get('company_id'):
+        company_ids = [question_data['company_id']]
     
-    if question.company_id:
-        count = await db.questions.count_documents({"company_id": question.company_id})
-        await db.companies.update_one({"id": question.company_id}, {"$set": {"question_count": count}})
+    if company_ids and isinstance(company_ids, list) and len(company_ids) > 1:
+        created_questions = []
+        for company_id in company_ids:
+            question_dict = {**question_data}
+            question_dict['company_id'] = company_id
+            if 'company_ids' in question_dict:
+                del question_dict['company_ids']
+            
+            question = Question(**question_dict)
+            await db.questions.insert_one(question.model_dump())
+            created_questions.append(question)
+        
+        await invalidate_cache_pattern("questions*")
+        await invalidate_cache_pattern("company_questions*")
+        await invalidate_cache_pattern("bookmarks*")
+        
+        for company_id in company_ids:
+            count = await db.questions.count_documents({"company_id": company_id})
+            await db.companies.update_one({"id": company_id}, {"$set": {"question_count": count}})
+        
         await invalidate_cache_pattern("companies*")
-    
-    return question
+        
+        return {"success": True, "created": len(created_questions), "questions": [q.model_dump() for q in created_questions]}
+    else:
+        if 'company_ids' in question_data:
+            del question_data['company_ids']
+        
+        question = Question(**question_data)
+        await db.questions.insert_one(question.model_dump())
+        
+        await invalidate_cache_pattern("questions*")
+        await invalidate_cache_pattern("company_questions*")
+        await invalidate_cache_pattern("bookmarks*")
+        
+        if question.company_id:
+            count = await db.questions.count_documents({"company_id": question.company_id})
+            await db.companies.update_one({"id": question.company_id}, {"$set": {"question_count": count}})
+            await invalidate_cache_pattern("companies*")
+        
+        return question
 
 @api_router.put("/admin/questions/{question_id}")
 async def update_question(question_id: str, question: Question, user: User = Depends(require_admin)):
