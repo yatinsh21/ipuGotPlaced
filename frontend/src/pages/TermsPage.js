@@ -160,3 +160,5 @@ const TermsPage = () => {
 };
 
 export default TermsPage;
+
+//test
