@@ -644,22 +644,31 @@ const ProjectInterviewPage = () => {
           <div className="lg:col-span-3">
             <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {questions ? 'Your Questions' : 'Preview'}
-                  </h2>
-                  {questions && isPremium && (
-                    <button
-                      onClick={handleRegenerate}
-                      disabled={loading || remainingGenerations <= 0}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                      Regenerate
-                    </button>
-                  )}
-                </div>
-
+                <div className="mb-4">
+  <div className="flex items-center justify-between">
+    <h2 className="text-lg font-semibold text-gray-900">
+      {questions ? 'Your Questions' : 'Preview'}
+    </h2>
+    {questions && isPremium && (
+      <button
+        onClick={handleRegenerate}
+        disabled={loading || remainingGenerations <= 0}
+        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        Regenerate
+      </button>
+    )}
+  </div>
+  
+  {/* Short description */}
+  <p className="text-sm text-gray-500">
+    {questions 
+      ? "AI-generated questions based on your project details"
+      : "Fill the form to generate personalized questions for your project"
+    }
+  </p>
+</div>
                 <div className="flex gap-2 overflow-x-auto">
                   <TabButton id="easy" label="Easy" count={displayQuestions.easy_questions.length} />
                   <TabButton id="medium" label="Medium" count={displayQuestions.medium_questions.length} />
