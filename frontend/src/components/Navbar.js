@@ -41,7 +41,7 @@ const Navbar = () => {
               
               <Link to="/alumni" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                 <Users className="h-4 w-4" />
-                <span className="relative pr-5">   
+                <span className="relative ">   
                   Alumni
                 </span>
               </Link>
@@ -161,7 +161,7 @@ const Navbar = () => {
               
               <Link 
                 to="/project-interview-prep" 
-                className="text-base font-medium text-gray-700  hover:text-gray-900 py-2 flex items-center gap-2"
+                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2 flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <Sparkles className="h-4 w-4" />
