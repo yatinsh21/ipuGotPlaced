@@ -18,6 +18,8 @@ import json
 import cloudinary
 import cloudinary.uploader
 from clerk_backend_api import Clerk
+# from emergentintegrations.llm.chat import LlmChat, UserMessage
+import google.generativeai as genai
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -170,6 +172,7 @@ async def get_sitemap():
         {'loc': '/goldmine', 'priority': '0.9', 'changefreq': 'daily'},
         {'loc': '/experiences', 'priority': '0.8', 'changefreq': 'weekly'},
         {'loc': '/alumni', 'priority': '0.7', 'changefreq': 'weekly'},
+        {'loc': '/project-interview-prep', 'priority': '0.8', 'changefreq': 'weekly'},
     ]
     
     for page in static_pages:
@@ -1150,6 +1153,238 @@ async def reveal_alumni_contact(alumni_id: str, user: User = Depends(require_pre
         "location": alumni.get("location"),
         "graduation_year": alumni.get("graduation_year")
     }
+
+# ============= PROJECT-BASED INTERVIEW QUESTIONS (PREMIUM FEATURE) =============
+
+# Pydantic models for Project Interview
+class ProjectInterviewRequest(BaseModel):
+    """Request model for project-based interview question generation"""
+    model_config = ConfigDict(extra="ignore")
+    project_title: str
+    tech_stack: List[str]  # List of technologies used
+    project_description: str
+    features_implemented: str
+    student_role: str  # Frontend / Backend / Full Stack / Solo
+
+class InterviewQuestion(BaseModel):
+    """Single interview question model"""
+    question: str
+    difficulty: str  # easy, medium, hard
+    topic: str  # What aspect of the project this relates to
+
+class ProjectInterviewResponse(BaseModel):
+    """Response model with generated interview questions"""
+    easy_questions: List[InterviewQuestion]
+    medium_questions: List[InterviewQuestion]
+    hard_questions: List[InterviewQuestion]
+    generated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+class ProjectInterviewRateLimit(BaseModel):
+    """Track daily rate limit for project interview generation"""
+    model_config = ConfigDict(extra="ignore")
+    user_id: str
+    date: str  # YYYY-MM-DD format
+    generation_count: int = 0
+    last_generation: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
+# Constants for rate limiting
+MAX_GENERATIONS_PER_DAY = 3
+
+async def check_rate_limit(user_id: str) -> tuple[bool, int]:
+    """
+    Check if user has exceeded daily rate limit for project interview generation.
+    Returns (is_allowed, remaining_count)
+    """
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    rate_limit_doc = await db.project_interview_rate_limits.find_one({
+        "user_id": user_id,
+        "date": today
+    })
+    
+    if not rate_limit_doc:
+        # First generation today
+        return True, MAX_GENERATIONS_PER_DAY
+    
+    current_count = rate_limit_doc.get('generation_count', 0)
+    remaining = MAX_GENERATIONS_PER_DAY - current_count
+    
+    return remaining > 0, remaining
+
+async def increment_rate_limit(user_id: str):
+    """Increment the generation count for a user today"""
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    
+    await db.project_interview_rate_limits.update_one(
+        {"user_id": user_id, "date": today},
+        {
+            "$set": {
+                "user_id": user_id,
+                "date": today,
+                "last_generation": datetime.now(timezone.utc).isoformat()
+            },
+            "$inc": {"generation_count": 1}
+        },
+        upsert=True
+    )
+
+@api_router.get("/project-interview/rate-limit")
+async def get_project_interview_rate_limit(user: User = Depends(require_premium)):
+    """Get remaining generations for today (premium users only)"""
+    is_allowed, remaining = await check_rate_limit(user.clerk_id)
+    return {
+        "remaining_generations": remaining,
+        "max_per_day": MAX_GENERATIONS_PER_DAY,
+        "can_generate": is_allowed
+    }
+
+# Replace the import at the top of your file:
+# OLD: from emergentintegrations.llm.chat import LlmChat, UserMessage
+# NEW: import google.generativeai as genai
+
+# Then update the generate_project_interview_questions function:
+
+@api_router.post("/project-interview/generate")
+async def generate_project_interview_questions(
+    request: ProjectInterviewRequest,
+    user: User = Depends(require_premium)
+):
+    """
+    Generate AI-powered interview questions based on project details.
+    PREMIUM USERS ONLY - Rate limited to 3 generations per day.
+    """
+    # Check rate limit
+    is_allowed, remaining = await check_rate_limit(user.clerk_id)
+    if not is_allowed:
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "message": "Daily limit reached. You can generate up to 3 sets of questions per day.",
+                "remaining": 0,
+                "reset_at": "midnight UTC"
+            }
+        )
+    
+    # Validate input
+    if not request.project_title.strip():
+        raise HTTPException(status_code=400, detail="Project title is required")
+    if not request.tech_stack or len(request.tech_stack) == 0:
+        raise HTTPException(status_code=400, detail="At least one technology in tech stack is required")
+    if not request.project_description.strip():
+        raise HTTPException(status_code=400, detail="Project description is required")
+    if not request.features_implemented.strip():
+        raise HTTPException(status_code=400, detail="Features implemented is required")
+    if request.student_role not in ["Frontend", "Backend", "Full Stack", "Solo"]:
+        raise HTTPException(status_code=400, detail="Invalid student role. Must be Frontend, Backend, Full Stack, or Solo")
+    
+    # Get Gemini API key
+    gemini_api_key = os.environ.get('GEMINI_API_KEY')
+    if not gemini_api_key:
+        logging.error("GEMINI_API_KEY not configured")
+        raise HTTPException(status_code=500, detail="AI service not configured")
+    
+    try:
+        # Configure Gemini
+        genai.configure(api_key=gemini_api_key)
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        # Create the prompt
+        system_prompt = """You are an expert technical interviewer with years of experience interviewing candidates for software engineering positions at top tech companies. Your job is to generate personalized interview questions based on a candidate's project experience.
+Generate questions that:
+1. Test the candidate's understanding of their own project
+2. Probe technical decisions and trade-offs
+3. Explore scalability, performance, and design considerations
+4. Are relevant to the technologies they used
+5. Match the difficulty level specified
+
+Always output ONLY valid JSON in the exact format requested. No markdown, no explanations."""
+
+        user_prompt = f"""Based on the following project details, generate exactly 15 interview questions - 5 Easy, 5 Medium, and 5 Hard.
+
+PROJECT DETAILS:
+- Title: {request.project_title}
+- Tech Stack: {', '.join(request.tech_stack)}
+- Description: {request.project_description}
+- Features Implemented: {request.features_implemented}
+- Candidate Role: {request.student_role}
+
+DIFFICULTY GUIDELINES:
+- Easy: Basic understanding questions, "What is...", "How did you...", "Explain..."
+- Medium: Design decisions, "Why did you choose...", "What challenges...", "How would you improve..."
+- Hard: Deep technical, scalability, system design, edge cases, performance optimization
+
+Output ONLY a valid JSON object in this exact format (no markdown code blocks):
+{{
+  "easy_questions": [
+    {{"question": "...", "difficulty": "easy", "topic": "..."}},
+    {{"question": "...", "difficulty": "easy", "topic": "..."}},
+    {{"question": "...", "difficulty": "easy", "topic": "..."}},
+    {{"question": "...", "difficulty": "easy", "topic": "..."}},
+    {{"question": "...", "difficulty": "easy", "topic": "..."}}
+  ],
+  "medium_questions": [
+    {{"question": "...", "difficulty": "medium", "topic": "..."}},
+    {{"question": "...", "difficulty": "medium", "topic": "..."}},
+    {{"question": "...", "difficulty": "medium", "topic": "..."}},
+    {{"question": "...", "difficulty": "medium", "topic": "..."}},
+    {{"question": "...", "difficulty": "medium", "topic": "..."}}
+  ],
+  "hard_questions": [
+    {{"question": "...", "difficulty": "hard", "topic": "..."}},
+    {{"question": "...", "difficulty": "hard", "topic": "..."}},
+    {{"question": "...", "difficulty": "hard", "topic": "..."}},
+    {{"question": "...", "difficulty": "hard", "topic": "..."}},
+    {{"question": "...", "difficulty": "hard", "topic": "..."}}
+  ]
+}}"""
+
+        # Generate questions using Gemini (run in thread pool to not block)
+        import asyncio
+        full_prompt = f"{system_prompt}\n\n{user_prompt}"
+        response = await asyncio.to_thread(model.generate_content, full_prompt)
+        
+        logging.info(f"Gemini response received for user {user.email}")
+        
+        # Parse the response
+        response_text = response.text.strip()
+        
+        # Remove markdown code blocks if present
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+        response_text = response_text.strip()
+        
+        # Parse JSON
+        questions_data = json.loads(response_text)
+        
+        # Validate structure
+        if not all(key in questions_data for key in ['easy_questions', 'medium_questions', 'hard_questions']):
+            raise ValueError("Invalid response structure from AI")
+        
+        # Increment rate limit after successful generation
+        await increment_rate_limit(user.clerk_id)
+        
+        # Get updated remaining count
+        _, new_remaining = await check_rate_limit(user.clerk_id)
+        
+        return {
+            "success": True,
+            "questions": questions_data,
+            "remaining_generations": new_remaining,
+            "generated_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse AI response: {e}")
+        raise HTTPException(status_code=500, detail="Failed to parse AI response. Please try again.")
+    except Exception as e:
+        logging.error(f"Error generating interview questions: {e}")
+        import traceback
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Failed to generate questions: {str(e)}")
 
 # Middleware setup
 app.add_middleware(

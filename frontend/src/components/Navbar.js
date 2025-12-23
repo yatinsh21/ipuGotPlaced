@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser, SignInButton, UserButton } from '@clerk/clerk-react';
 import { Button } from '@/components/ui/button';
-import { NotebookText, Compass, Users } from 'lucide-react';
+import { NotebookText, Compass, Users, Sparkles } from 'lucide-react';
 import { Crown, Bookmark, Shield, Menu, X } from 'lucide-react';
 import { NewBadge } from './NewBadge';
 
@@ -45,6 +45,13 @@ const Navbar = () => {
                   Alumni<NewBadge />
                 </span>
               </Link>
+              
+              {/* <Link to="/project-interview-prep" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+                <Sparkles className="h-4 w-4" />
+                <span className="relative pr-5">
+                  Project Prep<NewBadge />
+                </span>
+              </Link> */}
             </div>
           </div>
 
@@ -148,9 +155,20 @@ const Navbar = () => {
               >
                 <Users className="h-4 w-4" />
                 <span className="relative pr-5">   
-                  Alumni<NewBadge />
+                  Alumni
                 </span>
               </Link>
+              
+              {/* <Link 
+                to="/project-interview-prep" 
+                className="text-base font-medium text-gray-700 pointer-events-none cursor-not-allowed hover:text-gray-900 py-2 flex items-center gap-2"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <Sparkles className="h-4 w-4" />
+                <span className="relative pr-5 pointer-events-none cursor-not-allowed">
+                  Project Prep<NewBadge />
+                </span>
+              </Link> */}
               
               {isSignedIn ? (
                 <>

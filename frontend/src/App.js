@@ -16,6 +16,7 @@ import ContactPage from "./pages/ContactPage";
 import PrivacyPage from "./pages/PrivacyPolicy";
 import AboutPage from "./pages/AboutPage";
 import AlumniPage from "@/pages/AlumniPage";
+import ProjectInterviewPage from "@/pages/ProjectInterviewPage";
 import "@/App.css";
 import Footer from "./components/Footer";
 import AnnouncementBar from "./components/AnnouncementBar";
@@ -55,6 +56,7 @@ function App() {
             <Route path="/experiences" element={<ExperiencesPage />} />
             <Route path="/experience/:experienceId" element={<ExperienceDetailPage />} />
             <Route path="/alumni" element={<AlumniPage />} />
+            <Route path="/project-interview-prep" element={<ProjectInterviewPage />} />
             <Route 
               path="/admin" 
               element={
