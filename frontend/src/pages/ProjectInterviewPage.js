@@ -29,12 +29,152 @@ const SAMPLE_QUESTIONS = {
 };
 
 const TECH_OPTIONS = [
-  'React', 'Vue.js', 'Angular', 'Next.js', 'Node.js', 'Express.js',
-  'Python', 'Django', 'FastAPI', 'Flask', 'Java', 'Spring Boot',
-  'MongoDB', 'PostgreSQL', 'MySQL', 'Redis', 'Firebase',
-  'AWS', 'Docker', 'Kubernetes', 'GraphQL', 'REST API',
-  'TypeScript', 'JavaScript', 'Tailwind CSS', 'Material UI'
+  // ===== Frontend Basics =====
+  'HTML', 'CSS', 'JavaScript', 'TypeScript',
+
+  // ===== Frontend Frameworks & Libraries =====
+  'React', 'Next.js', 'Vue.js', 'Nuxt.js', 'Angular',
+  'Redux', 'Redux Toolkit', 'Zustand', 'Recoil',
+  'jQuery',
+
+  // ===== UI / Styling =====
+  'Tailwind CSS', 'Bootstrap', 'Material UI', 'Chakra UI',
+  'Ant Design', 'ShadCN UI',
+  'SASS', 'SCSS', 'LESS',
+
+  // ===== Frontend Tooling =====
+  'Webpack', 'Vite', 'Parcel',
+  'Babel', 'ESLint', 'Prettier',
+
+  // ===== Backend (JavaScript / Node) =====
+  'Node.js', 'Express.js', 'NestJS',
+  'Hapi.js', 'Fastify',
+
+  // ===== Backend (Python) =====
+  'Python',
+  'Django', 'Django REST Framework',
+  'Flask', 'FastAPI',
+
+  // ===== Backend (Java / JVM) =====
+  'Core Java',
+  'JDBC',
+  'Servlets', 'JSP',
+  'JPA', 'Hibernate',
+  'Spring', 'Spring MVC', 'Spring Boot',
+  'Spring Security', 'Spring Data JPA',
+  'Spring Cloud',
+  'Microservices (Spring)',
+
+  // ===== Backend (Other Languages) =====
+  'C', 'C++',
+  'C#', '.NET', '.NET Core',
+  'Go', 'Rust',
+  'PHP', 'Laravel',
+  'Ruby', 'Ruby on Rails',
+
+  // ===== API Technologies =====
+  'REST API', 'GraphQL', 'gRPC',
+  'Swagger', 'OpenAPI',
+
+  // ===== Databases (SQL) =====
+  'MySQL', 'PostgreSQL', 'SQLite',
+  'Oracle Database', 'SQL Server',
+
+  // ===== Databases (NoSQL) =====
+  'MongoDB', 'Redis',
+  'Cassandra', 'CouchDB',
+  'DynamoDB',
+
+  // ===== ORM / Database Tools =====
+  'Prisma', 'TypeORM', 'Sequelize',
+  'Mongoose',
+
+  // ===== Backend-as-a-Service (BaaS) =====
+  'Supabase',
+  'Supabase Auth',
+  'Supabase Realtime',
+  'Supabase Storage',
+  'Firebase',
+  'Firebase Firestore',
+  'Firebase Auth',
+  'Appwrite',
+
+  // ===== Authentication & Security =====
+  'JWT',
+  'OAuth', 'OAuth 2.0',
+  'Session-based Auth',
+  'Passport.js',
+  'Auth0',
+  'HTTPS',
+  'CORS',
+  'RBAC',
+
+  // ===== Realtime & Messaging =====
+  'WebSockets',
+  'Socket.IO',
+  'Apache Kafka',
+  'RabbitMQ',
+  'MQTT',
+
+  // ===== DevOps & Cloud =====
+  'AWS', 'Azure', 'Google Cloud',
+  'Docker', 'Docker Compose',
+  'Kubernetes',
+  'Nginx', 'Apache',
+  'CI/CD',
+  'GitHub Actions', 'GitLab CI', 'Jenkins',
+  'Terraform',
+
+  // ===== Testing =====
+  'Jest',
+  'Mocha', 'Chai',
+  'JUnit', 'Mockito',
+  'Cypress', 'Playwright',
+  'React Testing Library',
+  'Postman',
+
+  // ===== Version Control & Dev Tools =====
+  'Git',
+  'GitHub', 'GitLab', 'Bitbucket',
+  'VS Code', 'IntelliJ IDEA', 'Eclipse',
+  'Linux',
+  'Shell Scripting',
+
+  // ===== Mobile Development =====
+  'React Native',
+  'Flutter',
+  'Android',
+  'iOS',
+
+  // ===== Architecture & Concepts =====
+  'MVC', 'MVVM', 'MVP',
+  'Microservices',
+  'Monolithic Architecture',
+  'Event-Driven Architecture',
+  'System Design',
+  'Design Patterns',
+  'SOLID Principles',
+
+  // ===== Data / AI / ML =====
+  'Machine Learning',
+  'Deep Learning',
+  'TensorFlow',
+  'PyTorch',
+  'Pandas',
+  'NumPy',
+
+  // ===== CMS & Content =====
+  'WordPress',
+  'Strapi',
+  'Sanity',
+  'Headless CMS',
+
+  // ===== JVM Languages =====
+  'Kotlin',
+  'Scala'
 ];
+
+
 
 const ROLE_OPTIONS = ['Frontend', 'Backend', 'Full Stack', 'Solo'];
 
@@ -428,7 +568,7 @@ const ProjectInterviewPage = () => {
 </div>
 
 <h1 className="text-3xl font-bold text-gray-900 mb-2">
-  Project Interview Preparation
+ <span className='text-b'>Project</span>  Interview Preparation
 </h1>
 
 <p className="text-gray-600 max-w-2.5xl">
@@ -727,7 +867,7 @@ const ProjectInterviewPage = () => {
               </div>
               <div className="p-4 bg-white rounded-lg border border-gray-200">
                 <RefreshCw className="h-5 w-5 text-gray-900 mb-2" />
-                <p className="text-sm font-medium text-gray-900 mb-1">3 Per Day</p>
+                <p className="text-sm font-medium text-gray-900 mb-1">3 Uses Per Day</p>
                 <p className="text-xs text-gray-600">Generate multiple question sets</p>
               </div>
             </div>

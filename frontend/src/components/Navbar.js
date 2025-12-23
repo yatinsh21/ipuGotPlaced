@@ -42,16 +42,16 @@ const Navbar = () => {
               <Link to="/alumni" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                 <Users className="h-4 w-4" />
                 <span className="relative pr-5">   
-                  Alumni<NewBadge />
+                  Alumni
                 </span>
               </Link>
               
-              {/* <Link to="/project-interview-prep" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
+              <Link to="/project-interview-prep" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                 <Sparkles className="h-4 w-4" />
                 <span className="relative pr-5">
-                  Project Prep<NewBadge />
+                  Ai Project Prep<NewBadge />
                 </span>
-              </Link> */}
+              </Link>
             </div>
           </div>
 
@@ -159,16 +159,16 @@ const Navbar = () => {
                 </span>
               </Link>
               
-              {/* <Link 
+              <Link 
                 to="/project-interview-prep" 
                 className="text-base font-medium text-gray-700 pointer-events-none cursor-not-allowed hover:text-gray-900 py-2 flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <Sparkles className="h-4 w-4" />
                 <span className="relative pr-5 pointer-events-none cursor-not-allowed">
-                  Project Prep<NewBadge />
+                  Ai Project Prep<NewBadge />
                 </span>
-              </Link> */}
+              </Link>
               
               {isSignedIn ? (
                 <>
