@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Crown, BookOpen, Building2, FileText, ChevronRight } from 'lucide-react';
+import { Crown, BookOpen, Building2, FileText, ChevronRight, Sparkles, Users } from 'lucide-react';
 import Footer from '@/components/Footer';
 // import { Crown } from 'lucide-react';
 
@@ -73,34 +73,90 @@ const LandingPage = () => {
         </div>
 
         {/* Features Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-20 px-4">
-          <Link to="/topics" className="group">
-            <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
-              <BookOpen className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Free Question Banks</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Practice 100+ interview questions organized by topics like Data Structures, Algorithms, and System Design</p>
-              <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">Browse Topics →</span>
-            </div>
-          </Link>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 mb-12 md:mb-20 px-4">
 
-          <Link to="/goldmine" className="group">
-            <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
-              <Crown className="h-10 w-10 md:h-12 md:w-12 text-yellow-500 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Company-Wise Prep</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Real questions from top companies. Practice what actually gets asked in interviews</p>
-              <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">View Companies →</span>
-            </div>
-          </Link>
+  {/* Feature 1 */}
+  <Link to="/topics" className="group">
+    <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
+      <BookOpen className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
+      <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+        Free Question Banks
+      </h3>
+      <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+        100+ questions on DSA, Algorithms, and System Design
+      </p>
+      <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
+        Browse Topics →
+      </span>
+    </div>
+  </Link>
 
-          <Link to="/experiences" className="group">
-            <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
-              <FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">Real Experiences</h3>
-              <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">Learn from students who got placed. Real stories, real insights</p>
-              <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">Read Stories →</span>
-            </div>
-          </Link>
-        </div>
+  {/* Feature 2 */}
+  <Link to="/goldmine" className="group">
+    <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
+      <Crown className="h-10 w-10 md:h-12 md:w-12 text-yellow-500 mb-3 md:mb-4" />
+      <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+        Company-Wise Prep
+      </h3>
+      <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+        Real questions asked by top companies in actual interviews
+      </p>
+      <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
+        View Companies →
+      </span>
+    </div>
+  </Link>
+
+  {/* Feature 3 */}
+  <Link to="/experiences" className="group">
+    <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
+      <FileText className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
+      <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+        Real Interview Experiences
+      </h3>
+      <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+        Learn from students who cracked top company interviews
+      </p>
+      <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
+        Read Stories →
+      </span>
+    </div>
+  </Link>
+
+  {/* Feature 4 – Project Interview Prep */}
+  <Link to="/project-interview-prep" className="group">
+    <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
+      <Sparkles className="h-10 w-10 md:h-12 md:w-12 text-indigo-600 mb-3 md:mb-4" />
+      <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+        Project Interview Prep
+      </h3>
+      <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+        AI-generated questions tailored to your project and tech stack
+      </p>
+      <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
+        Prepare Your Project →
+      </span>
+    </div>
+  </Link>
+
+  {/* Feature 5 – Alumni Connect */}
+  <Link to="/alumni-connect" className="group">
+    <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
+      <Users className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
+      <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+        Alumni Connect
+      </h3>
+      <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+        Connect with alumni who cracked the companies you're targeting
+      </p>
+      <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
+        Connect with Alumni →
+      </span>
+    </div>
+  </Link>
+
+</div>
+
 
         {/* CTA Section */}
         <div className="border-2 border-gray-900 p-8 md:p-12 text-center mx-4">

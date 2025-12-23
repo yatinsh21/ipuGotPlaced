@@ -422,16 +422,19 @@ const ProjectInterviewPage = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-            <Sparkles className="h-4 w-4" />
-            AI-Powered Interview Prep
-          </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Project Interview Questions
-          </h1>
-          <p className="text-gray-600 max-w-2xl">
-            Generate personalized interview questions based on your project experience
-          </p>
+         <div className="flex items-center gap-2 text-sm font-medium text-indigo-600 mb-2">
+  <Sparkles className="h-4 w-4" />
+  AI Interview Preparation
+</div>
+
+<h1 className="text-3xl font-bold text-gray-900 mb-2">
+  Project Interview Preparation
+</h1>
+
+<p className="text-gray-600 max-w-2.5xl">
+  Practice questions interviewers actually ask about your project, tech stack & decisions.
+</p>
+
         </div>
 
         {/* Premium Banner for non-premium users */}
@@ -698,12 +701,12 @@ const ProjectInterviewPage = () => {
                       <p className="text-sm text-gray-600 mb-4">
                         Get personalized questions for your specific project
                       </p>
-                      <button
+                      {/* <button
                         onClick={() => setShowPayment(true)}
                         className="px-6 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors"
                       >
                         Upgrade to Premium
-                      </button>
+                      </button> */}
                     </div>
                   </div>
                 )}
