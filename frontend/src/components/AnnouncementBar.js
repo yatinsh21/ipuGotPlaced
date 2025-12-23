@@ -41,7 +41,7 @@ export default function AnnouncementBar() {
           <div className="flex-1 flex items-center justify-center min-w-0">
             <p className="text-xs sm:text-sm md:text-base font-medium text-center">
               <span className="inline sm:inline"> </span>
-              🎉 IGP successfully helped 2,000+ students crack their dream placements!
+              🎉 IGP successfully helped 2,631+ students crack their dream placements!
             </p>
           </div>
           <button
