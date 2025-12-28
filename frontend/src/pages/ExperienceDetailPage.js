@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
+import SEOHelmet from '@/components/SEOHelmet';
 import {  SignInButton } from '@clerk/clerk-react';
 
 // import {  useAuth } from '@clerk/clerk-react';
@@ -23,7 +24,8 @@ const ExperienceDetailPage = () => {
   const { getToken } = useAuth();
   const [experience, setExperience] = useState(null);
   const [loading, setLoading] = useState(true);
-    const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [seoData, setSeoData] = useState(null);
   
 
   const isPremiumUser = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
@@ -32,7 +34,17 @@ const ExperienceDetailPage = () => {
 
   useEffect(() => {
     fetchExperience();
+    fetchSEOData();
   }, [experienceId]);
+
+  const fetchSEOData = async () => {
+    try {
+      const response = await axios.get(`${API}/seo/experience/${experienceId}`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch SEO data:', error);
+    }
+  };
 
   const checkIfMobile = () => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -393,6 +405,16 @@ const ExperienceDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {seoData && (
+        <SEOHelmet
+          title={seoData.title}
+          description={seoData.description}
+          keywords={seoData.keywords}
+          canonical={seoData.canonical}
+          structuredData={seoData.structuredData}
+          type="article"
+        />
+      )}
       <Navbar />
       
       <div className="max-w-5xl mx-auto px-3 sm:px-4 py-3 sm:py-4 md:py-6">

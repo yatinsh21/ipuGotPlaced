@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useUser, useAuth, SignInButton } from '@clerk/clerk-react';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
+import SEOHelmet from '@/components/SEOHelmet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -36,8 +37,22 @@ const AlumniPage = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [seoData, setSeoData] = useState(null);
 
   const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
+
+  useEffect(() => {
+    fetchSEOData();
+  }, []);
+
+  const fetchSEOData = async () => {
+    try {
+      const response = await axios.get(`${API}/seo/alumni`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch SEO data:', error);
+    }
+  };
 
   // Device detection
   const checkIfMobile = () => {

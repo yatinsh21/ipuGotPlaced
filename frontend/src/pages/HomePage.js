@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useUser, useAuth } from '@clerk/clerk-react';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
+import SEOHelmet from '@/components/SEOHelmet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,12 +19,14 @@ const API = `${BACKEND_URL}/api`;
 const HomePage = () => {
   const { isSignedIn, user } = useUser();
   const { getToken } = useAuth();
+  const [searchParams] = useSearchParams();
   const [topics, setTopics] = useState([]);
   const [questions, setQuestions] = useState([]);
   const [selectedTopic, setSelectedTopic] = useState(null);
   const [difficulty, setDifficulty] = useState('all');
   const [loading, setLoading] = useState(true);
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
+  const [seoData, setSeoData] = useState(null);
   
   const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
@@ -32,7 +36,40 @@ const HomePage = () => {
       // Fetch user's bookmarks from backend
       fetchUserBookmarks();
     }
-  }, [isPremium, isSignedIn]);
+    
+    // Check if topic parameter is in URL
+    const topicParam = searchParams.get('topic');
+    if (topicParam) {
+      setSelectedTopic(topicParam);
+    }
+  }, [isPremium, isSignedIn, searchParams]);
+
+  useEffect(() => {
+    // Fetch SEO data based on selected topic or general topics page
+    if (selectedTopic) {
+      fetchTopicSEO(selectedTopic);
+    } else {
+      fetchTopicsPageSEO();
+    }
+  }, [selectedTopic]);
+
+  const fetchTopicsPageSEO = async () => {
+    try {
+      const response = await axios.get(`${API}/seo/topics-page`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch SEO data:', error);
+    }
+  };
+
+  const fetchTopicSEO = async (topicId) => {
+    try {
+      const response = await axios.get(`${API}/seo/topic/${topicId}`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch topic SEO data:', error);
+    }
+  };
 
   const fetchUserBookmarks = async () => {
     try {
@@ -172,6 +209,16 @@ const HomePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {seoData && (
+        <SEOHelmet
+          title={seoData.title}
+          description={seoData.description}
+          keywords={seoData.keywords}
+          canonical={seoData.canonical}
+          structuredData={seoData.structuredData}
+          type="website"
+        />
+      )}
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 py-8">

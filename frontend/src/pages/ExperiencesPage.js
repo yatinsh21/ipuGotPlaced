@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
+import SEOHelmet from '@/components/SEOHelmet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -15,10 +16,21 @@ const ExperiencesPage = () => {
   const [experiences, setExperiences] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [seoData, setSeoData] = useState(null);
 
   useEffect(() => {
     fetchData();
+    fetchSEOData();
   }, []);
+
+  const fetchSEOData = async () => {
+    try {
+      const response = await axios.get(`${API}/seo/experiences`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch SEO data:', error);
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -52,6 +64,16 @@ const ExperiencesPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {seoData && (
+        <SEOHelmet
+          title={seoData.title}
+          description={seoData.description}
+          keywords={seoData.keywords}
+          canonical={seoData.canonical}
+          structuredData={seoData.structuredData}
+          type="website"
+        />
+      )}
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">

@@ -5,6 +5,7 @@ import {  SignInButton } from '@clerk/clerk-react';
 
 import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
+import SEOHelmet from '@/components/SEOHelmet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,7 +26,8 @@ const CompanyQuestionsPage = () => {
   const [company, setCompany] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [bookmarkedIds, setBookmarkedIds] = useState([]);
-    const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [seoData, setSeoData] = useState(null);
   
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +38,17 @@ const CompanyQuestionsPage = () => {
       fetchUserBookmarks();
     }
     fetchCompanyAndQuestions();
+    fetchSEOData();
   }, [companyId, isPremiumUser, isSignedIn]);
+
+  const fetchSEOData = async () => {
+    try {
+      const response = await axios.get(`${API}/seo/company/${companyId}`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch SEO data:', error);
+    }
+  };
 
   const checkIfMobile = () => {
     const userAgent = navigator.userAgent.toLowerCase();
@@ -333,6 +345,17 @@ const CompanyQuestionsPage = () => {
     // Allow preview for non-logged in users
     return (
       <div className="min-h-screen bg-gray-50">
+        {seoData && (
+          <SEOHelmet
+            title={seoData.title}
+            description={seoData.description}
+            keywords={seoData.keywords}
+            canonical={seoData.canonical}
+            ogImage={company?.logo_url}
+            structuredData={seoData.structuredData}
+            type="website"
+          />
+        )}
         <Navbar />
         <div className="max-w-7xl mx-auto px-4 py-8">
           <Button 
@@ -383,6 +406,17 @@ const CompanyQuestionsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {seoData && (
+        <SEOHelmet
+          title={seoData.title}
+          description={seoData.description}
+          keywords={seoData.keywords}
+          canonical={seoData.canonical}
+          ogImage={company?.logo_url}
+          structuredData={seoData.structuredData}
+          type="website"
+        />
+      )}
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 py-8">

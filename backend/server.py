@@ -156,7 +156,10 @@ async def get_sitemap():
     base_url = os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
     
     # Fetch all companies for company-specific pages
-    companies = await db.companies.find({}, {"_id": 0, "slug": 1, "name": 1}).to_list(1000)
+    companies = await db.companies.find({}, {"_id": 0, "id": 1, "slug": 1, "name": 1}).to_list(1000)
+    
+    # Fetch all topics for topic-specific pages
+    topics = await db.topics.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)
     
     # Fetch all experiences
     experiences = await db.experiences.find({}, {"_id": 0, "id": 1}).to_list(1000)
@@ -173,6 +176,9 @@ async def get_sitemap():
         {'loc': '/experiences', 'priority': '0.8', 'changefreq': 'weekly'},
         {'loc': '/alumni', 'priority': '0.7', 'changefreq': 'weekly'},
         {'loc': '/project-interview-prep', 'priority': '0.8', 'changefreq': 'weekly'},
+        {'loc': '/about', 'priority': '0.5', 'changefreq': 'monthly'},
+        {'loc': '/contact', 'priority': '0.5', 'changefreq': 'monthly'},
+        {'loc': '/faq', 'priority': '0.6', 'changefreq': 'monthly'},
     ]
     
     for page in static_pages:
@@ -184,15 +190,28 @@ async def get_sitemap():
     <priority>{page['priority']}</priority>
   </url>''')
     
-    # Company-specific pages (HIGHEST SEO PRIORITY)
+    # Company-specific pages (HIGHEST SEO PRIORITY - these are goldmine pages)
     for company in companies:
-        slug = company.get('slug') or Company.generate_slug(company['name'])
-        sitemap.append(f'''
+        company_id = company.get('id')
+        if company_id:
+            sitemap.append(f'''
   <url>
-    <loc>{base_url}/company/{company.get('id', slug)}</loc>
+    <loc>{base_url}/company/{company_id}</loc>
     <lastmod>{datetime.now(timezone.utc).strftime('%Y-%m-%d')}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.95</priority>
+  </url>''')
+    
+    # Topic-specific pages (HIGH SEO PRIORITY for "java interview questions" etc)
+    for topic in topics:
+        topic_id = topic.get('id')
+        if topic_id:
+            sitemap.append(f'''
+  <url>
+    <loc>{base_url}/topics?topic={topic_id}</loc>
+    <lastmod>{datetime.now(timezone.utc).strftime('%Y-%m-%d')}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.92</priority>
   </url>''')
     
     # Experience pages
@@ -251,33 +270,92 @@ async def get_company_seo_data(company_id: str):
     
     questions_count = await db.questions.count_documents({"company_id": company_id})
     
-    # JSON-LD structured data for Google
+    # Get sample questions for FAQPage schema
+    sample_questions = await db.questions.find(
+        {"company_id": company_id},
+        {"_id": 0, "question": 1, "answer": 1, "difficulty": 1, "category": 1}
+    ).limit(15).to_list(15)
+    
+    # Create FAQPage structured data for better SEO
+    faq_entities = []
+    for q in sample_questions:
+        faq_entities.append({
+            "@type": "Question",
+            "name": q.get('question', ''),
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": q.get('answer', '')[:500] + "..." if len(q.get('answer', '')) > 500 else q.get('answer', '')
+            }
+        })
+    
+    # Multiple structured data types for maximum SEO impact
     structured_data = {
         "@context": "https://schema.org",
-        "@type": "EducationalOrganization",
-        "name": f"{company['name']} Interview Preparation",
-        "description": f"Practice {questions_count} real interview questions asked at {company['name']}. Ace your {company['name']} interview with our comprehensive question bank.",
-        "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/company/{company_id}",
-        "image": company.get('logo_url', ''),
-        "offers": {
-            "@type": "Offer",
-            "category": "Interview Preparation",
-            "itemOffered": {
-                "@type": "Course",
-                "name": f"{company['name']} Interview Questions",
-                "description": f"Complete collection of interview questions from {company['name']}",
-                "provider": {
+        "@graph": [
+            {
+                "@type": "FAQPage",
+                "mainEntity": faq_entities,
+                "about": {
                     "@type": "Organization",
-                    "name": "InterviewGuru Pro"
+                    "name": company['name']
+                }
+            },
+            {
+                "@type": "EducationalOrganization",
+                "name": f"{company['name']} Interview Preparation",
+                "description": f"Practice {questions_count} real interview questions asked at {company['name']}. Ace your {company['name']} interview with our comprehensive question bank.",
+                "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/company/{company_id}",
+                "image": company.get('logo_url', ''),
+                "offers": {
+                    "@type": "Offer",
+                    "category": "Interview Preparation",
+                    "itemOffered": {
+                        "@type": "Course",
+                        "name": f"{company['name']} Interview Questions",
+                        "description": f"Complete collection of interview questions from {company['name']}",
+                        "provider": {
+                            "@type": "Organization",
+                            "name": "InterviewGuru Pro"
+                        }
+                    }
+                }
+            },
+            {
+                "@type": "WebPage",
+                "name": f"{company['name']} Interview Questions",
+                "description": f"Comprehensive collection of {questions_count}+ interview questions from {company['name']}",
+                "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/company/{company_id}",
+                "breadcrumb": {
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": 1,
+                            "name": "Home",
+                            "item": os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 2,
+                            "name": "Goldmine",
+                            "item": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/goldmine"
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 3,
+                            "name": company['name'],
+                            "item": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/company/{company_id}"
+                        }
+                    ]
                 }
             }
-        }
+        ]
     }
     
     return {
-        "title": f"{company['name']} Interview Questions & Answers 2025 | IGP",
-        "description": f"Prepare for {company['name']} interviews with {questions_count}+ real questions. Technical, HR, and coding rounds covered. 98% match rate with actual interviews.",
-        "keywords": f"{company['name']} interview questions, {company['name']} interview preparation, {company['name']} coding questions, {company['name']} technical interview",
+        "title": f"{company['name']} Interview Questions & Answers 2025 | {questions_count}+ Real Problems | IGP",
+        "description": f"Ace {company['name']} interviews! Practice {questions_count}+ real interview questions covering DSA, System Design, HR rounds. Get hired at {company['name']} with 98% success rate.",
+        "keywords": f"{company['name']} interview questions, {company['name']} interview preparation, {company['name']} coding questions, {company['name']} technical interview, {company['name']} interview experience, {company['name']} DSA questions",
         "canonical": f"/company/{company_id}",
         "structuredData": structured_data,
         "company": company,
@@ -293,27 +371,248 @@ async def get_experience_seo_data(experience_id: str):
     
     structured_data = {
         "@context": "https://schema.org",
-        "@type": "Article",
-        "headline": f"{experience['company_name']} Interview Experience - {experience['role']}",
-        "description": f"Real interview experience at {experience['company_name']} for {experience['role']} position. {experience['rounds']} rounds covered.",
-        "author": {
-            "@type": "Person",
-            "name": "InterviewGuru Pro Community"
-        },
-        "datePublished": experience['posted_at'],
-        "publisher": {
-            "@type": "Organization",
-            "name": "InterviewGuru Pro"
+        "@graph": [
+            {
+                "@type": "Article",
+                "headline": f"{experience['company_name']} Interview Experience - {experience['role']}",
+                "description": f"Real interview experience at {experience['company_name']} for {experience['role']} position. {experience['rounds']} rounds covered.",
+                "author": {
+                    "@type": "Person",
+                    "name": "InterviewGuru Pro Community"
+                },
+                "datePublished": experience['posted_at'],
+                "publisher": {
+                    "@type": "Organization",
+                    "name": "InterviewGuru Pro",
+                    "url": os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
+                }
+            },
+            {
+                "@type": "WebPage",
+                "name": f"{experience['company_name']} Interview Experience",
+                "description": f"Detailed interview experience at {experience['company_name']}",
+                "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/experience/{experience_id}",
+                "breadcrumb": {
+                    "@type": "BreadcrumbList",
+                    "itemListElement": [
+                        {
+                            "@type": "ListItem",
+                            "position": 1,
+                            "name": "Home",
+                            "item": os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 2,
+                            "name": "Experiences",
+                            "item": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/experiences"
+                        },
+                        {
+                            "@type": "ListItem",
+                            "position": 3,
+                            "name": f"{experience['company_name']} - {experience['role']}",
+                            "item": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/experience/{experience_id}"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+
+@api_router.get("/seo/goldmine")
+async def get_goldmine_seo_data():
+    """Get SEO-optimized data for goldmine/companies page"""
+    companies_count = await db.companies.count_documents({})
+    total_questions = await db.questions.count_documents({})
+    
+    # Get top companies
+    top_companies = await db.companies.find(
+        {"question_count": {"$gt": 0}},
+        {"_id": 0, "name": 1}
+    ).sort("question_count", -1).limit(20).to_list(20)
+    
+    company_names = [c['name'] for c in top_companies]
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Company Interview Questions - Goldmine",
+        "description": f"Access interview questions from {companies_count}+ top tech companies. Over {total_questions} real interview questions to practice.",
+        "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/goldmine",
+        "about": {
+            "@type": "Thing",
+            "name": "Company-wise Interview Questions",
+            "description": f"Comprehensive collection from {companies_count} companies"
         }
     }
     
     return {
-        "title": f"{experience['company_name']} Interview Experience - {experience['role']} | IGP",
-        "description": f"Read real {experience['company_name']} interview experience for {experience['role']}. Learn about {experience['rounds']} interview rounds and get selected.",
-        "keywords": f"{experience['company_name']} interview experience, {experience['company_name']} {experience['role']}, interview rounds, placement experience",
+        "title": f"Company Interview Questions 2025 - {companies_count}+ Companies | Goldmine | IGP",
+        "description": f"Practice real interview questions from {companies_count}+ top companies including {', '.join(company_names[:5])} and more. {total_questions}+ authentic coding and technical questions.",
+        "keywords": f"company interview questions, {', '.join(company_names[:10])}, coding interview preparation, technical interview questions",
+        "canonical": "/goldmine",
+        "structuredData": structured_data,
+        "companiesCount": companies_count,
+        "totalQuestions": total_questions
+    }
+
+@api_router.get("/seo/topics-page")
+async def get_topics_page_seo_data():
+    """Get SEO-optimized data for topics/home page"""
+    topics_count = await db.topics.count_documents({})
+    total_questions = await db.questions.count_documents({})
+    
+    # Get popular topics
+    topics = await db.topics.find({}, {"_id": 0, "name": 1}).limit(20).to_list(20)
+    topic_names = [t['name'] for t in topics]
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": "Topic-wise Interview Questions",
+        "description": f"Practice {total_questions}+ interview questions organized by {topics_count} topics. Master DSA, System Design, and coding interviews.",
+        "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/topics",
+        "about": {
+            "@type": "Thing",
+            "name": "Programming Interview Questions by Topic",
+            "description": f"Organized collection across {topics_count} topics"
+        }
+    }
+    
+    return {
+        "title": f"Interview Questions by Topic 2025 - Practice {total_questions}+ Problems | IGP",
+        "description": f"Master coding interviews with {total_questions}+ questions across {topics_count} topics including {', '.join(topic_names[:5])} and more. Practice DSA, System Design, and technical interviews.",
+        "keywords": f"interview questions by topic, {', '.join(topic_names[:10])}, coding interview preparation, DSA questions, technical interview",
+        "canonical": "/topics",
+        "structuredData": structured_data,
+        "topicsCount": topics_count,
+        "totalQuestions": total_questions
+    }
+
+@api_router.get("/seo/alumni")
+async def get_alumni_seo_data():
+    """Get SEO-optimized data for alumni page"""
+    alumni_count = await db.alumni.count_documents({})
+    companies = await db.alumni.distinct("company")
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Alumni Network - Connect with Industry Professionals",
+        "description": f"Connect with {alumni_count}+ alumni working at top tech companies. Get career guidance and referrals.",
+        "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/alumni"
+    }
+    
+    return {
+        "title": f"Alumni Network - Connect with {alumni_count}+ Professionals at Top Companies | IGP",
+        "description": f"Network with {alumni_count}+ professionals from top companies like {', '.join(companies[:5]) if companies else 'Google, Microsoft, Amazon'}. Get referrals, career guidance, and mentorship.",
+        "keywords": f"alumni network, tech professionals, career guidance, job referrals, {', '.join(companies[:10]) if companies else ''}",
+        "canonical": "/alumni",
+        "structuredData": structured_data,
+        "alumniCount": alumni_count
+    }
+
+    
+    return {
+        "title": f"{experience['company_name']} Interview Experience - {experience['role']} 2025 | Real Candidate Story | IGP",
+        "description": f"Read authentic {experience['company_name']} interview experience for {experience['role']} position. Learn about {experience['rounds']} interview rounds, questions asked, and tips to get selected at {experience['company_name']}.",
+        "keywords": f"{experience['company_name']} interview experience, {experience['company_name']} {experience['role']}, {experience['company_name']} interview rounds, {experience['company_name']} placement, interview tips",
         "canonical": f"/experience/{experience_id}",
         "structuredData": structured_data,
         "experience": experience
+    }
+
+@api_router.get("/seo/experiences")
+async def get_experiences_page_seo_data(company_name: Optional[str] = None):
+    """Get SEO-optimized data for experiences listing page"""
+    experiences_count = await db.experiences.count_documents({})
+    companies_with_exp = await db.experiences.distinct("company_name")
+    
+    title = "Interview Experiences - Real Candidate Stories from Top Companies | IGP"
+    description = f"Read {experiences_count}+ real interview experiences from top tech companies. Learn from successful candidates, understand interview rounds, and ace your next interview."
+    keywords = "interview experiences, placement experiences, interview stories, company interview process"
+    
+    if company_name:
+        company_exp_count = await db.experiences.count_documents({"company_name": company_name})
+        title = f"{company_name} Interview Experiences 2025 - {company_exp_count}+ Real Stories | IGP"
+        description = f"Read {company_exp_count}+ authentic {company_name} interview experiences. Learn about interview rounds, questions asked, selection process, and tips from selected candidates."
+        keywords = f"{company_name} interview experience, {company_name} interview process, {company_name} placement, {company_name} interview rounds"
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        "name": title,
+        "description": description,
+        "url": f"{os.environ.get('FRONTEND_URL', 'https://yourdomain.com')}/experiences",
+        "about": {
+            "@type": "Thing",
+            "name": "Interview Experiences",
+            "description": f"Collection of {experiences_count} real interview experiences"
+        }
+    }
+    
+    return {
+        "title": title,
+        "description": description,
+        "keywords": keywords,
+        "canonical": "/experiences",
+        "structuredData": structured_data,
+        "experiencesCount": experiences_count,
+        "companies": companies_with_exp
+    }
+
+@api_router.get("/seo/topic/{topic_id}")
+async def get_topic_seo_data(topic_id: str):
+    """Get SEO-optimized topic data with structured data markup"""
+    topic = await db.topics.find_one({"id": topic_id}, {"_id": 0})
+    if not topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+    
+    # Count questions for this topic
+    questions_count = await db.questions.count_documents({"topic_id": topic_id})
+    
+    # Get sample questions for FAQPage schema
+    sample_questions = await db.questions.find(
+        {"topic_id": topic_id},
+        {"_id": 0, "question": 1, "answer": 1, "difficulty": 1}
+    ).limit(10).to_list(10)
+    
+    # Create FAQPage structured data for better SEO
+    faq_entities = []
+    for q in sample_questions:
+        faq_entities.append({
+            "@type": "Question",
+            "name": q.get('question', ''),
+            "acceptedAnswer": {
+                "@type": "Answer",
+                "text": q.get('answer', '')[:500] + "..." if len(q.get('answer', '')) > 500 else q.get('answer', '')
+            }
+        })
+    
+    structured_data = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": faq_entities,
+        "about": {
+            "@type": "Thing",
+            "name": f"{topic['name']} Programming",
+            "description": topic.get('description', f"Practice {questions_count} {topic['name']} interview questions")
+        },
+        "provider": {
+            "@type": "Organization",
+            "name": "InterviewGuru Pro",
+            "url": os.environ.get('FRONTEND_URL', 'https://yourdomain.com')
+        }
+    }
+    
+    return {
+        "title": f"{topic['name']} Interview Questions 2025 - Practice {questions_count}+ Problems | IGP",
+        "description": f"Master {topic['name']} interviews with {questions_count}+ real coding questions. Practice DSA problems, system design, and ace your technical interview. Updated for 2025.",
+        "keywords": f"{topic['name']} interview questions, {topic['name']} coding problems, {topic['name']} DSA, {topic['name']} programming interview, {topic['name']} practice questions",
+        "canonical": f"/topics?topic={topic_id}",
+        "structuredData": structured_data,
+        "topic": topic,
+        "questionsCount": questions_count
     }
 
 # ============= EXISTING ENDPOINTS (keeping all your code) =============

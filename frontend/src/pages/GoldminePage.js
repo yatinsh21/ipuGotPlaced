@@ -6,6 +6,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useUser, useAuth } from '@clerk/clerk-react';
 import Navbar from '@/components/Navbar';
+import SEOHelmet from '@/components/SEOHelmet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -26,13 +27,24 @@ const GoldminePage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
+  const [seoData, setSeoData] = useState(null);
   
   const isPremium = user?.publicMetadata?.isPremium || user?.publicMetadata?.isAdmin;
 
   useEffect(() => {
     // Always fetch companies for everyone
     fetchCompaniesPreview();
+    fetchSEOData();
   }, [isSignedIn]);
+
+  const fetchSEOData = async () => {
+    try {
+      const response = await axios.get(`${API}/seo/goldmine`);
+      setSeoData(response.data);
+    } catch (error) {
+      console.error('Failed to fetch SEO data:', error);
+    }
+  };
 
   // Device detection function
   const checkIfMobile = () => {
@@ -309,6 +321,16 @@ const GoldminePage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {seoData && (
+        <SEOHelmet
+          title={seoData.title}
+          description={seoData.description}
+          keywords={seoData.keywords}
+          canonical={seoData.canonical}
+          structuredData={seoData.structuredData}
+          type="website"
+        />
+      )}
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 py-8">
