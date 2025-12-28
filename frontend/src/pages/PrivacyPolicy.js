@@ -129,6 +129,35 @@ const PrivacyPage = () => {
             </section>
 
             <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">8.1 Third-Party Advertising</h2>
+              <p className="leading-relaxed mb-2">
+                We use third-party advertising services, including Google AdSense, to display advertisements on our Platform. These services may use cookies, web beacons, and similar technologies to:
+              </p>
+              <ul className="list-disc pl-6 space-y-2">
+                <li>Serve ads based on your prior visits to our website or other websites</li>
+                <li>Display personalized advertisements relevant to your interests</li>
+                <li>Measure the effectiveness of their advertising campaigns</li>
+                <li>Prevent fraudulent activity and improve ad security</li>
+              </ul>
+              <p className="leading-relaxed mt-3">
+                <strong>Google AdSense:</strong> Google and its partners use cookies to serve ads based on your visit to our site and other sites on the Internet. You may opt out of personalized advertising by visiting{' '}
+                <a href="https://www.google.com/settings/ads" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium underline">
+                  Google Ads Settings
+                </a>{' '}
+                or{' '}
+                <a href="http://www.aboutads.info/choices/" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium underline">
+                  www.aboutads.info
+                </a>.
+              </p>
+              <p className="leading-relaxed mt-3">
+                Third-party vendors and ad networks may also display ads on our site. For more information about how Google uses data when you use our partners' sites or apps, please visit{' '}
+                <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 font-medium underline">
+                  Google's Privacy & Terms
+                </a>.
+              </p>
+            </section>
+
+            <section>
               <h2 className="text-2xl font-bold text-gray-900 mb-3">9. Third-Party Links</h2>
               <p className="leading-relaxed">
                 Our Platform may contain links to third-party websites. We are not responsible for the privacy practices of these websites. We encourage you to read their privacy policies.

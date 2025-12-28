@@ -32,10 +32,31 @@ const AboutPage = () => {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-3">Our Mission</h2>
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-gray-700 leading-relaxed mb-3">
                   At IPUGotPlaced, we believe that every student deserves access to quality interview preparation resources. Our mission is to bridge the gap between academic learning and industry requirements by providing comprehensive interview preparation materials that actually work.
                 </p>
+                <p className="text-gray-700 leading-relaxed">
+                  Founded by IPU students who successfully navigated the placement process, we understand the challenges you face. We've been in your shoes, struggled with the same questions, and know what it takes to succeed. Now, we're dedicated to making your journey easier, more efficient, and ultimately successful.
+                </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Our Story Section */}
+        <Card className="border-2 border-gray-200 mb-8">
+          <CardContent className="p-6 sm:p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Our Story</h2>
+            <div className="space-y-4 text-gray-700 leading-relaxed">
+              <p>
+                IPUGotPlaced was born out of a simple observation: students were spending countless hours searching for relevant interview preparation material, often finding outdated or irrelevant content. We saw our peers struggling to find company-specific questions and authentic interview experiences from fellow IPU students.
+              </p>
+              <p>
+                In 2024, we decided to change this. We started collecting real interview questions from students who got placed in top companies. We documented their experiences, their preparation strategies, and the actual questions they faced. What began as a small repository for our friends quickly grew into a comprehensive platform serving thousands of IPU students.
+              </p>
+              <p>
+                Today, IPUGotPlaced is the most trusted interview preparation platform for GGSIPU students. We've helped thousands of students crack interviews at companies like TCS, Cvent, Microsoft, Google, Amazon, and many more. Every question you see here, every experience shared, comes from real students who walked this path before you.
+              </p>
             </div>
           </CardContent>
         </Card>

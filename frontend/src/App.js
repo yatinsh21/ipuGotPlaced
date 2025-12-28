@@ -17,11 +17,14 @@ import PrivacyPage from "./pages/PrivacyPolicy";
 import AboutPage from "./pages/AboutPage";
 import AlumniPage from "@/pages/AlumniPage";
 import ProjectInterviewPage from "@/pages/ProjectInterviewPage";
+import RefundPolicy from "./pages/RefundPolicy";
+import FAQPage from "./pages/FAQPage";
 import "@/App.css";
 import Footer from "./components/Footer";
 import AnnouncementBar from "./components/AnnouncementBar";
 import NotFoundPage from "./pages/NotFoundPage";
 import ScrollToTop from "./components/ScrollToTop";
+import CookieConsent from "./components/CookieConsent";
 
 function App() {
   const { isLoaded, isSignedIn, user } = useUser();
@@ -46,6 +49,8 @@ function App() {
             <Route path="/privacy" element={<PrivacyPage/>} />
             <Route path="/contact" element={<ContactPage/>} />
             <Route path="/terms" element={<TermsPage/>} />
+            <Route path="/refund-policy" element={<RefundPolicy/>} />
+            <Route path="/faq" element={<FAQPage/>} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/goldmine" element={<GoldminePage />} />
             
@@ -70,6 +75,7 @@ function App() {
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
           <Footer/>
+          <CookieConsent />
         </BrowserRouter>
 
         <Toaster />
