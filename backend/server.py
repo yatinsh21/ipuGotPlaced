@@ -1183,7 +1183,13 @@ async def create_question(question_data: dict, user: User = Depends(require_admi
         
         return {"success": True, "created": len(created_questions), "questions": [q.model_dump() for q in created_questions]}
     else:
-        if 'company_ids' in question_data:
+        # Handle single company case
+        if 'company_ids' in question_data and company_ids:
+            # Extract the first company_id and set it
+            question_data['company_id'] = company_ids[0]
+            del question_data['company_ids']
+        elif 'company_ids' in question_data:
+            # No companies selected, just remove the field
             del question_data['company_ids']
         
         question = Question(**question_data)
