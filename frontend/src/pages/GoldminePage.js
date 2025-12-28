@@ -250,6 +250,7 @@ const GoldminePage = () => {
                 ["All Question Answers", true, true],
                 ["Company-wise Questions", false, true],
                 ["Top Companies", false, true],
+                ["AI Project Prep", false, true],
                 ["Bookmark Questions", false, true],
                 [
                   <>

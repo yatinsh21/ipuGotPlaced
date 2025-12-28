@@ -286,6 +286,7 @@ const AlumniPage = () => {
                 "Company-wise Questions",
                 "Bookmark Questions",
                 "Premium Experiences",
+                "AI Project Prep",
                 "Tags & Filters",
                 "Priority Support"
               ].map((feature, idx) => (

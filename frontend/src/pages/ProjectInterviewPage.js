@@ -519,6 +519,7 @@ const ProjectInterviewPage = () => {
                 ["Project Interview Questions", false, true],
                 ["Bookmark Questions", false, true],
                 ["Premium Experiences", false, true],
+                ["AI Project Prep", false, true],
                 ["AI-Powered Features", false, true],
               ].map(([feature, free, premium], idx) => (
                 <React.Fragment key={idx}>
