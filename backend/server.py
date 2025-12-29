@@ -20,9 +20,6 @@ import cloudinary.uploader
 from clerk_backend_api import Clerk
 # from emergentintegrations.llm.chat import LlmChat, UserMessage
 import google.generativeai as genai
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -62,46 +59,6 @@ razorpay_client = razorpay.Client(auth=(
     os.environ.get('RAZORPAY_KEY_ID', ''), 
     os.environ.get('RAZORPAY_KEY_SECRET', '')
 ))
-
-# Email Configuration
-SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.gmail.com')
-SMTP_PORT = int(os.environ.get('SMTP_PORT', 587))
-SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
-SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
-NOTIFICATION_EMAIL = os.environ.get('NOTIFICATION_EMAIL', '')
-
-def send_email_notification(subject: str, body: str, is_html: bool = True):
-    """
-    Send email notification via Gmail SMTP
-    """
-    if not SMTP_USERNAME or not SMTP_PASSWORD or not NOTIFICATION_EMAIL:
-        logging.warning("⚠️ Email configuration missing - skipping email notification")
-        return False
-    
-    try:
-        # Create message
-        msg = MIMEMultipart('alternative')
-        msg['From'] = SMTP_USERNAME
-        msg['To'] = NOTIFICATION_EMAIL
-        msg['Subject'] = subject
-        
-        # Attach body
-        if is_html:
-            msg.attach(MIMEText(body, 'html'))
-        else:
-            msg.attach(MIMEText(body, 'plain'))
-        
-        # Connect to Gmail SMTP server
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()  # Enable TLS encryption
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.send_message(msg)
-        
-        logging.info(f"📧 Email sent successfully: {subject}")
-        return True
-    except Exception as e:
-        logging.error(f"❌ Failed to send email: {e}")
-        return False
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -978,76 +935,10 @@ async def create_order(order_req: CreateOrderRequest, user: User = Depends(requi
         })
         
         logging.info(f"✓ Razorpay order created: {razor_order['id']}")
-        
-        # Send email notification for payment initialization
-        amount_inr = order_req.amount / 100
-        email_subject = f"💳 Payment Initialized - ₹{amount_inr}"
-        email_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #2563eb; margin-bottom: 20px;">💳 Payment Initialized</h2>
-                
-                <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; border-left: 4px solid #2563eb;">
-                    <h3 style="margin-top: 0; color: #1e40af;">Payment Details</h3>
-                    <p><strong>User Email:</strong> {user.email}</p>
-                    <p><strong>User Name:</strong> {user.name}</p>
-                    <p><strong>Clerk ID:</strong> {user.clerk_id}</p>
-                    <p><strong>Amount:</strong> ₹{amount_inr}</p>
-                    <p><strong>Order ID:</strong> {razor_order['id']}</p>
-                    <p><strong>Currency:</strong> INR</p>
-                    <p><strong>Time:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; color: #92400e;"><strong>⚠️ Action Required:</strong> User is proceeding with payment. Monitor for completion.</p>
-                </div>
-                
-                <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
-                    This is an automated notification from your Interview Prep Platform.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        send_email_notification(email_subject, email_body)
-        
         return razor_order
         
     except Exception as e:
         logging.error(f"✗ Payment order creation failed: {e}")
-        
-        # Send email notification for payment error
-        email_subject = f"❌ Payment Order Creation Failed"
-        email_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #dc2626; margin-bottom: 20px;">❌ Payment Order Creation Failed</h2>
-                
-                <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626;">
-                    <h3 style="margin-top: 0; color: #991b1b;">Error Details</h3>
-                    <p><strong>User Email:</strong> {user.email}</p>
-                    <p><strong>User Name:</strong> {user.name}</p>
-                    <p><strong>Clerk ID:</strong> {user.clerk_id}</p>
-                    <p><strong>Attempted Amount:</strong> ₹{order_req.amount / 100}</p>
-                    <p><strong>Error:</strong> {str(e)}</p>
-                    <p><strong>Time:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; color: #92400e;"><strong>⚠️ Action Required:</strong> Payment order creation failed. Please investigate the issue.</p>
-                </div>
-                
-                <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
-                    This is an automated notification from your Interview Prep Platform.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        send_email_notification(email_subject, email_body)
-        
         raise HTTPException(status_code=500, detail=f"Failed to create payment order: {str(e)}")
 
 @api_router.post("/payment/verify")
@@ -1077,38 +968,6 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
             except Exception as e:
                 logging.error(f"⚠️ Failed to update Clerk metadata (non-critical): {e}")
         
-        # Send email notification for successful payment verification
-        email_subject = f"✅ Payment Verified Successfully"
-        email_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #16a34a; margin-bottom: 20px;">✅ Payment Verified Successfully</h2>
-                
-                <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; border-left: 4px solid #16a34a;">
-                    <h3 style="margin-top: 0; color: #15803d;">Payment Verification Details</h3>
-                    <p><strong>User Email:</strong> {user.email}</p>
-                    <p><strong>User Name:</strong> {user.name}</p>
-                    <p><strong>Clerk ID:</strong> {user.clerk_id}</p>
-                    <p><strong>Order ID:</strong> {payment.razorpay_order_id}</p>
-                    <p><strong>Payment ID:</strong> {payment.razorpay_payment_id}</p>
-                    <p><strong>Premium Status:</strong> Activated ✅</p>
-                    <p><strong>Time:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background-color: #dbeafe; border-radius: 8px; border-left: 4px solid #2563eb;">
-                    <p style="margin: 0; color: #1e40af;"><strong>🎉 Success:</strong> User has been upgraded to premium access.</p>
-                </div>
-                
-                <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
-                    This is an automated notification from your Interview Prep Platform.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        send_email_notification(email_subject, email_body)
-        
         return {
             "success": True,
             "message": "Payment verified and premium access granted"
@@ -1116,39 +975,6 @@ async def verify_payment(payment: VerifyPaymentRequest, user: User = Depends(req
         
     except Exception as e:
         logging.error(f"✗ Payment verification failed: {e}")
-        
-        # Send email notification for payment verification error
-        email_subject = f"❌ Payment Verification Failed"
-        email_body = f"""
-        <html>
-        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #dc2626; margin-bottom: 20px;">❌ Payment Verification Failed</h2>
-                
-                <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; border-left: 4px solid #dc2626;">
-                    <h3 style="margin-top: 0; color: #991b1b;">Verification Error Details</h3>
-                    <p><strong>User Email:</strong> {user.email}</p>
-                    <p><strong>User Name:</strong> {user.name}</p>
-                    <p><strong>Clerk ID:</strong> {user.clerk_id}</p>
-                    <p><strong>Order ID:</strong> {payment.razorpay_order_id}</p>
-                    <p><strong>Payment ID:</strong> {payment.razorpay_payment_id}</p>
-                    <p><strong>Error:</strong> {str(e)}</p>
-                    <p><strong>Time:</strong> {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')}</p>
-                </div>
-                
-                <div style="margin-top: 20px; padding: 15px; background-color: #fef3c7; border-radius: 8px; border-left: 4px solid #f59e0b;">
-                    <p style="margin: 0; color: #92400e;"><strong>⚠️ Critical:</strong> Payment verification failed. This could indicate a signature mismatch or fraudulent attempt. Please investigate immediately.</p>
-                </div>
-                
-                <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">
-                    This is an automated notification from your Interview Prep Platform.
-                </p>
-            </div>
-        </body>
-        </html>
-        """
-        send_email_notification(email_subject, email_body)
-        
         raise HTTPException(status_code=400, detail=f"Payment verification failed: {str(e)}")
 
 # Admin endpoints (keeping all your existing admin code)
