@@ -25,7 +25,7 @@ const Navbar = () => {
             </Link>
             
             {/* Desktop Navigation */}
-            <div className="hidden md:flex gap-6">
+            <div className="hidden md:flex gap-6 items-center">
               <Link to="/topics" className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
                 <NotebookText className="h-4 w-4" />  
                 Question Bank
@@ -41,16 +41,18 @@ const Navbar = () => {
               
               <Link to="/alumni" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
                 <Users className="h-4 w-4" />
-                <span className="relative ">   
+                <span className="relative">   
                   Alumni
                 </span>
               </Link>
               
-              <Link to="/project-interview-prep" className="flex items-center gap-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors">
-                <Sparkles className="h-4 w-4" />
-                <span className="relative pr-5">
-                  Ai Project Prep<NewBadge />
-                </span>
+              {/* Highlighted AI Project Prep Button */}
+              <Link to="/project-interview-prep">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-none font-medium text-sm">
+                  <Sparkles className="h-4 w-4" />
+                  <span>AI Project Prep</span>
+                  {/* <NewBadge /> */}
+                </div>
               </Link>
             </div>
           </div>
@@ -159,15 +161,18 @@ const Navbar = () => {
                 </span>
               </Link>
               
+              {/* Highlighted Mobile AI Project Prep */}
               <Link 
                 to="/project-interview-prep" 
-                className="text-base font-medium text-gray-700 hover:text-gray-900 py-2 flex items-center gap-2"
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <Sparkles className="h-4 w-4" />
-                <span className="relative pr-5 ">
-                  Ai Project Prep<NewBadge />
-                </span>
+                <div className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-none font-medium">
+                  <Sparkles className="h-4 w-4" />
+                  <span className="relative pr-5">
+                    AI Project Prep
+                    {/* <NewBadge /> */}
+                  </span>
+                </div>
               </Link>
               
               {isSignedIn ? (
