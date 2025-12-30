@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import { Button } from '@/components/ui/button';
-import { Crown, BookOpen, Building2, FileText, ChevronRight, Sparkles, Users } from 'lucide-react';
+import { Crown, BookOpen, Building2,Infinity, FileText, ChevronRight, Sparkles, Users } from 'lucide-react';
 import Footer from '@/components/Footer';
 // import { Crown } from 'lucide-react';
 
@@ -151,6 +151,20 @@ const LandingPage = () => {
       </p>
       <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
         Connect with Alumni →
+      </span>
+    </div>
+  </Link>
+  <Link to="/goldmine" className="group">
+    <div className="border-2 border-gray-200 p-6 md:p-8 hover:border-gray-900 transition-all">
+      <Infinity className="h-10 w-10 md:h-12 md:w-12 text-gray-900 mb-3 md:mb-4" />
+      <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
+        Lifetime Access @ ₹299
+      </h3>
+      <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
+        For just ₹299, get lifetime access to everything you need for placements:
+      </p>
+      <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
+        Unlock Access →
       </span>
     </div>
   </Link>
