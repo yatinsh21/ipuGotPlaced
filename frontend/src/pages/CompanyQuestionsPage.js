@@ -443,9 +443,14 @@ const CompanyQuestionsPage = () => {
               <div>
                 <h1 className="text-4xl font-bold text-gray-900">{company?.name}</h1>
                 {isPremiumUser ? (
+                  <>
                   <p className="text-gray-600">{questions.length} interview questions</p>
+                  </>
                 ) : (
-                  <p className="text-gray-600">Premium content • Upgrade to view</p>
+                  <>
+                  {/* {<p className="text-sm text-gray-600">{company.question_count} questions</p> } */}
+                  <p className="text-gray-600">Premium content • Upgrade to view {company.question_count} questions</p>
+                  </>
                 )}
               </div>
             </div>
