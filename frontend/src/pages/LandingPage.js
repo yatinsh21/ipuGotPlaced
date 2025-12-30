@@ -161,7 +161,7 @@ const LandingPage = () => {
         Lifetime Access @ ₹299
       </h3>
       <p className="text-sm md:text-base text-gray-600 mb-3 md:mb-4">
-        For just ₹299, get lifetime access to everything you need for placements:
+        For just ₹299, get lifetime access to everything you need for placements.
       </p>
       <span className="text-sm md:text-base text-gray-900 font-medium group-hover:underline">
         Unlock Access →
