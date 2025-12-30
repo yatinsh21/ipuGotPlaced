@@ -20,6 +20,9 @@ import cloudinary.uploader
 from clerk_backend_api import Clerk
 # from emergentintegrations.llm.chat import LlmChat, UserMessage
 import google.generativeai as genai
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -59,6 +62,87 @@ razorpay_client = razorpay.Client(auth=(
     os.environ.get('RAZORPAY_KEY_ID', ''), 
     os.environ.get('RAZORPAY_KEY_SECRET', '')
 ))
+
+# Email configuration
+GMAIL_USER = os.environ.get('GMAIL_USER', '')
+GMAIL_APP_PASSWORD = os.environ.get('GMAIL_APP_PASSWORD', '')
+
+def send_payment_notification_email(user_email: str, user_name: str, amount: int, source: str, order_id: str):
+    """Send email notification when payment is initiated"""
+    try:
+        if not GMAIL_USER or not GMAIL_APP_PASSWORD:
+            logging.warning("Gmail credentials not configured, skipping email notification")
+            return
+        
+        # Create message
+        msg = MIMEMultipart('alternative')
+        msg['From'] = GMAIL_USER
+        msg['To'] = GMAIL_USER  # Send to admin email
+        msg['Subject'] = f'💰 Payment Initiated - ₹{amount/100} from {user_name}'
+        
+        # Email body
+        amount_inr = amount / 100
+        timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+        
+        html_body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <div style="max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 10px;">
+                    <h2 style="color: #4CAF50; border-bottom: 2px solid #4CAF50; padding-bottom: 10px;">
+                        💰 New Payment Initiated
+                    </h2>
+                    
+                    <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                        <p style="margin: 10px 0;"><strong>User Name:</strong> {user_name}</p>
+                        <p style="margin: 10px 0;"><strong>User Email:</strong> {user_email}</p>
+                        <p style="margin: 10px 0;"><strong>Amount:</strong> <span style="color: #4CAF50; font-size: 18px; font-weight: bold;">₹{amount_inr:.2f}</span></p>
+                        <p style="margin: 10px 0;"><strong>Page/Feature:</strong> {source}</p>
+                        <p style="margin: 10px 0;"><strong>Razorpay Order ID:</strong> <code style="background-color: #e8e8e8; padding: 2px 6px; border-radius: 3px;">{order_id}</code></p>
+                        <p style="margin: 10px 0;"><strong>Timestamp:</strong> {timestamp}</p>
+                    </div>
+                    
+                    <div style="background-color: #fff3cd; padding: 10px; border-left: 4px solid #ffc107; margin: 20px 0;">
+                        <p style="margin: 0;"><strong>Note:</strong> This is a payment initiation notification. The user has clicked the payment button and Razorpay checkout has opened. Payment completion will be confirmed separately.</p>
+                    </div>
+                    
+                    <p style="color: #666; font-size: 12px; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd;">
+                        This is an automated notification from IPUGotPlaced Interview Prep Platform
+                    </p>
+                </div>
+            </body>
+        </html>
+        """
+        
+        text_body = f"""
+New Payment Initiated
+=====================
+
+User Name: {user_name}
+User Email: {user_email}
+Amount: ₹{amount_inr:.2f}
+Page/Feature: {source}
+Razorpay Order ID: {order_id}
+Timestamp: {timestamp}
+
+Note: This is a payment initiation notification. The user has clicked the payment button and Razorpay checkout has opened.
+
+---
+IPUGotPlaced Interview Prep Platform
+        """
+        
+        # Attach both HTML and plain text versions
+        msg.attach(MIMEText(text_body, 'plain'))
+        msg.attach(MIMEText(html_body, 'html'))
+        
+        # Send email
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+            server.send_message(msg)
+        
+        logging.info(f"✓ Payment notification email sent to {GMAIL_USER}")
+        
+    except Exception as e:
+        logging.error(f"✗ Failed to send payment notification email: {e}")
 
 app = FastAPI()
 api_router = APIRouter(prefix="/api")
@@ -142,6 +226,7 @@ class Alumni(BaseModel):
 
 class CreateOrderRequest(BaseModel):
     amount: int
+    source: Optional[str] = "Unknown Page"
 
 class VerifyPaymentRequest(BaseModel):
     razorpay_order_id: str
@@ -927,6 +1012,7 @@ async def create_order(order_req: CreateOrderRequest, user: User = Depends(requi
     try:
         logging.info(f"💰 Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
         logging.info(f"💰 Amount requested: ₹{order_req.amount / 100}")
+        logging.info(f"💰 Payment source page: {order_req.source}")
         
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
@@ -935,6 +1021,16 @@ async def create_order(order_req: CreateOrderRequest, user: User = Depends(requi
         })
         
         logging.info(f"✓ Razorpay order created: {razor_order['id']}")
+        
+        # Send email notification
+        send_payment_notification_email(
+            user_email=user.email,
+            user_name=user.name,
+            amount=order_req.amount,
+            source=order_req.source,
+            order_id=razor_order['id']
+        )
+        
         return razor_order
         
     except Exception as e:

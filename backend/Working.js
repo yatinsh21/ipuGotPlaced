@@ -1,3 +1,4 @@
+//venv\Scripts\activate
 // uvicorn server:app --reload --host 0.0.0.0 --port 8000
 
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, UploadFile, File, Header
