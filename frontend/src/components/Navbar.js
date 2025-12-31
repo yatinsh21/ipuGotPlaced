@@ -48,7 +48,7 @@ const Navbar = () => {
               
               {/* Highlighted AI Project Prep Button */}
               <Link to="/project-interview-prep">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-none font-medium text-sm">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 border-[2px] border-black text-black rounded-none font-medium text-sm">
                   <Sparkles className="h-4 w-4" />
                   <span>AI Project Prep</span>
                   {/* <NewBadge /> */}
@@ -166,7 +166,7 @@ const Navbar = () => {
                 to="/project-interview-prep" 
                 onClick={() => setMobileMenuOpen(false)}
               >
-                <div className="flex items-center gap-2 px-3 py-2 bg-black text-white rounded-none font-medium">
+                <div className="flex items-center gap-2 px-3 py-2 border-[2px] border-black text-black rounded-none font-medium">
                   <Sparkles className="h-4 w-4" />
                   <span className="relative pr-5">
                     AI Project Prep
