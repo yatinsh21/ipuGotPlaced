@@ -140,6 +140,18 @@ class Alumni(BaseModel):
     graduation_year: Optional[int] = None
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
+class Activity(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    user_email: str
+    user_name: Optional[str] = None
+    activity_type: str  # login, payment_initiation, alumni_page_view, ai_project_usage, company_questions_view, question_view
+    resource_id: Optional[str] = None  # ID of the resource accessed (company_id, question_id, etc.)
+    resource_name: Optional[str] = None  # Name of the resource (company name, question title, etc.)
+    metadata: Optional[dict] = None  # Additional context (e.g., payment amount, search filters)
+    timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+
 class CreateOrderRequest(BaseModel):
     amount: int
 
@@ -675,6 +687,31 @@ async def invalidate_cache_pattern(pattern: str):
     except Exception as e:
         logging.warning(f"Cache invalidation failed for {pattern}: {e}")
 
+# Activity logging helper function
+async def log_activity(
+    user_id: str,
+    user_email: str,
+    activity_type: str,
+    user_name: Optional[str] = None,
+    resource_id: Optional[str] = None,
+    resource_name: Optional[str] = None,
+    metadata: Optional[dict] = None
+):
+    """Log user activity for analytics tracking"""
+    try:
+        activity = Activity(
+            user_id=user_id,
+            user_email=user_email,
+            user_name=user_name,
+            activity_type=activity_type,
+            resource_id=resource_id,
+            resource_name=resource_name,
+            metadata=metadata
+        )
+        await db.activities.insert_one(activity.model_dump())
+    except Exception as e:
+        logging.warning(f"Activity logging failed: {e}")
+
 # Auth dependency using Clerk (keeping your existing auth code)
 async def get_current_user(authorization: str = Header(None, alias="Authorization")) -> Optional[User]:
     if not authorization:
@@ -776,6 +813,18 @@ async def require_auth(user: User = Depends(get_current_user)) -> User:
     if not user:
         logging.warning("✗ Authentication required but no user found")
         raise HTTPException(status_code=401, detail="Authentication required")
+    
+    # Log login activity for analytics
+    try:
+        await log_activity(
+            user_id=user.clerk_id,
+            user_email=user.email,
+            user_name=user.name,
+            activity_type="login"
+        )
+    except Exception as e:
+        logging.warning(f"Failed to log login activity: {e}")
+    
     return user
 
 async def require_premium(user: User = Depends(require_auth)) -> User:
@@ -859,6 +908,21 @@ async def get_company_questions(
     user = await get_current_user(authorization) if authorization else None
     is_premium = user and (user.is_premium or user.is_admin)
     
+    # Log company questions access for analytics
+    if user:
+        company = await db.companies.find_one({"id": company_id}, {"_id": 0, "name": 1})
+        company_name = company.get("name") if company else None
+        
+        await log_activity(
+            user_id=user.clerk_id,
+            user_email=user.email,
+            user_name=user.name,
+            activity_type="company_questions_view",
+            resource_id=company_id,
+            resource_name=company_name,
+            metadata={"category": category}
+        )
+    
     cache_key = generate_cache_key("company_questions", company_id=company_id, category=category)
     cached = await get_cached_data(cache_key)
     if cached:
@@ -927,6 +991,15 @@ async def create_order(order_req: CreateOrderRequest, user: User = Depends(requi
     try:
         logging.info(f"💰 Payment order request from user: {user.email} (clerk_id: {user.clerk_id})")
         logging.info(f"💰 Amount requested: ₹{order_req.amount / 100}")
+        
+        # Log payment initiation for analytics
+        await log_activity(
+            user_id=user.clerk_id,
+            user_email=user.email,
+            user_name=user.name,
+            activity_type="payment_initiation",
+            metadata={"amount": order_req.amount, "currency": "INR"}
+        )
         
         razor_order = razorpay_client.order.create({
             "amount": order_req.amount,
@@ -1400,6 +1473,23 @@ async def search_alumni(
     graduation_year: Optional[int] = None,
     user: Optional[User] = Depends(get_current_user)
 ):
+    # Log alumni page access for analytics
+    if user:
+        await log_activity(
+            user_id=user.clerk_id,
+            user_email=user.email,
+            user_name=user.name,
+            activity_type="alumni_page_view",
+            metadata={
+                "filters": {
+                    "company": company,
+                    "role": role,
+                    "location": location,
+                    "graduation_year": graduation_year
+                }
+            }
+        )
+    
     query = {}
     if company:
         query["company"] = {"$regex": company, "$options": "i"}
@@ -1672,6 +1762,20 @@ Output ONLY a valid JSON object in this exact format (no markdown code blocks):
         # Increment rate limit after successful generation
         await increment_rate_limit(user.clerk_id)
         
+        # Log AI project usage for analytics
+        await log_activity(
+            user_id=user.clerk_id,
+            user_email=user.email,
+            user_name=user.name,
+            activity_type="ai_project_usage",
+            resource_name=request.project_title,
+            metadata={
+                "tech_stack": request.tech_stack,
+                "student_role": request.student_role,
+                "questions_generated": 15
+            }
+        )
+        
         # Get updated remaining count
         _, new_remaining = await check_rate_limit(user.clerk_id)
         
@@ -1756,6 +1860,14 @@ async def startup_db():
         await db.users.create_index("clerk_id", unique=True)
         await db.users.create_index("email")
         
+        # Analytics indexes for better query performance
+        await db.activities.create_index("id", unique=True)
+        await db.activities.create_index("user_id")
+        await db.activities.create_index("activity_type")
+        await db.activities.create_index([("timestamp", -1)])
+        await db.activities.create_index([("activity_type", 1), ("timestamp", -1)])
+        await db.activities.create_index([("user_id", 1), ("activity_type", 1)])
+        
         await cache_collection.create_index("key", unique=True)
         await cache_collection.create_index("expires_at", expireAfterSeconds=0)
         
@@ -1800,6 +1912,165 @@ async def check_razorpay_status():
         "key_id_prefix": key_id[:15] if len(key_id) >= 15 else key_id,
         "all_env_vars": list(os.environ.keys())
     }
+
+# ============= ANALYTICS ENDPOINTS (ADMIN ONLY) =============
+
+@api_router.get("/admin/analytics/overview")
+async def get_analytics_overview(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: User = Depends(require_admin)
+):
+    """
+    Get overall analytics overview with date filtering
+    Returns counts for different activity types
+    """
+    try:
+        # Build date filter query
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date
+        
+        query = {}
+        if date_filter:
+            query["timestamp"] = date_filter
+        
+        # Get counts for each activity type
+        total_activities = await db.activities.count_documents(query)
+        
+        activity_types = ["login", "payment_initiation", "alumni_page_view", "company_questions_view", "ai_project_usage"]
+        activity_counts = {}
+        
+        for activity_type in activity_types:
+            type_query = {**query, "activity_type": activity_type}
+            count = await db.activities.count_documents(type_query)
+            activity_counts[activity_type] = count
+        
+        # Get unique users count
+        unique_users_pipeline = [
+            {"$match": query},
+            {"$group": {"_id": "$user_id"}},
+            {"$count": "unique_users"}
+        ]
+        unique_users_result = await db.activities.aggregate(unique_users_pipeline).to_list(1)
+        unique_users = unique_users_result[0]["unique_users"] if unique_users_result else 0
+        
+        return {
+            "total_activities": total_activities,
+            "unique_users": unique_users,
+            "activity_breakdown": activity_counts,
+            "date_range": {
+                "start": start_date,
+                "end": end_date
+            }
+        }
+    except Exception as e:
+        logging.error(f"Error fetching analytics overview: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/analytics/activities")
+async def get_activities(
+    activity_type: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: int = 100,
+    user: User = Depends(require_admin)
+):
+    """
+    Get detailed activity logs with filtering
+    """
+    try:
+        # Build query
+        query = {}
+        
+        if activity_type:
+            query["activity_type"] = activity_type
+        
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date
+        if date_filter:
+            query["timestamp"] = date_filter
+        
+        # Fetch activities
+        activities = await db.activities.find(
+            query,
+            {"_id": 0}
+        ).sort("timestamp", -1).limit(limit).to_list(limit)
+        
+        return activities
+    except Exception as e:
+        logging.error(f"Error fetching activities: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@api_router.get("/admin/analytics/popular-content")
+async def get_popular_content(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user: User = Depends(require_admin)
+):
+    """
+    Get most accessed companies and content
+    """
+    try:
+        # Build date filter
+        date_filter = {}
+        if start_date:
+            date_filter["$gte"] = start_date
+        if end_date:
+            date_filter["$lte"] = end_date
+        
+        match_query = {"activity_type": "company_questions_view"}
+        if date_filter:
+            match_query["timestamp"] = date_filter
+        
+        # Get most accessed companies
+        companies_pipeline = [
+            {"$match": match_query},
+            {"$group": {
+                "_id": "$resource_id",
+                "company_name": {"$first": "$resource_name"},
+                "access_count": {"$sum": 1},
+                "unique_users": {"$addToSet": "$user_id"}
+            }},
+            {"$project": {
+                "company_id": "$_id",
+                "company_name": 1,
+                "access_count": 1,
+                "unique_users_count": {"$size": "$unique_users"}
+            }},
+            {"$sort": {"access_count": -1}},
+            {"$limit": 10}
+        ]
+        
+        popular_companies = await db.activities.aggregate(companies_pipeline).to_list(10)
+        
+        # Get AI project usage stats
+        ai_match_query = {"activity_type": "ai_project_usage"}
+        if date_filter:
+            ai_match_query["timestamp"] = date_filter
+        
+        ai_usage_count = await db.activities.count_documents(ai_match_query)
+        
+        # Get alumni page views
+        alumni_match_query = {"activity_type": "alumni_page_view"}
+        if date_filter:
+            alumni_match_query["timestamp"] = date_filter
+        
+        alumni_views_count = await db.activities.count_documents(alumni_match_query)
+        
+        return {
+            "most_accessed_companies": popular_companies,
+            "ai_project_usage_total": ai_usage_count,
+            "alumni_page_views_total": alumni_views_count
+        }
+    except Exception as e:
+        logging.error(f"Error fetching popular content: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.get("/admin/cache-stats")
 async def get_cache_stats(user: User = Depends(require_admin)):

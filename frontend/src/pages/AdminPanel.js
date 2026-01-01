@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Users, BookOpen, Building2, FileText, Edit, Trash2, Plus } from 'lucide-react';
+import { Users, BookOpen, Building2, FileText, Edit, Trash2, Plus, Activity, TrendingUp, DollarSign, Eye, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -216,6 +216,10 @@ const AdminPanel = () => {
     <TabsTrigger value="users" className="whitespace-nowrap text-sm px-3 py-2">
       Users
     </TabsTrigger>
+    
+    <TabsTrigger value="analytics" className="whitespace-nowrap text-sm px-3 py-2">
+      Analytics
+    </TabsTrigger>
   </TabsList>
 </div>
 
@@ -275,6 +279,10 @@ const AdminPanel = () => {
 
               <TabsContent value="users">
                 <UsersManager users={users} onRefresh={fetchAllData} currentUser={user} getAuthConfig={getAuthConfig} />
+              </TabsContent>
+
+              <TabsContent value="analytics">
+                <AnalyticsManager getAuthConfig={getAuthConfig} />
               </TabsContent>
             </Tabs>
           </>
@@ -1602,5 +1610,369 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
     </Card>
   );
 };
+// Analytics Manager Component
+const AnalyticsManager = ({ getAuthConfig }) => {
+  const [analytics, setAnalytics] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [popularContent, setPopularContent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days ago
+    end: new Date().toISOString().split('T')[0] // today
+  });
+  const [selectedActivityType, setSelectedActivityType] = useState('all');
 
+  useEffect(() => {
+    fetchAnalytics();
+  }, [dateRange]);
+
+  const fetchAnalytics = async () => {
+    setLoading(true);
+    try {
+      const config = await getAuthConfig();
+      
+      // Fetch overview
+      const overviewRes = await axios.get(`${API}/admin/analytics/overview`, {
+        ...config,
+        params: {
+          start_date: dateRange.start,
+          end_date: dateRange.end
+        }
+      });
+      
+      // Fetch recent activities
+      const activitiesRes = await axios.get(`${API}/admin/analytics/activities`, {
+        ...config,
+        params: {
+          activity_type: selectedActivityType === 'all' ? undefined : selectedActivityType,
+          start_date: dateRange.start,
+          end_date: dateRange.end,
+          limit: 50
+        }
+      });
+      
+      // Fetch popular content
+      const popularRes = await axios.get(`${API}/admin/analytics/popular-content`, {
+        ...config,
+        params: {
+          start_date: dateRange.start,
+          end_date: dateRange.end
+        }
+      });
+      
+      setAnalytics(overviewRes.data);
+      setActivities(activitiesRes.data);
+      setPopularContent(popularRes.data);
+    } catch (error) {
+      console.error('Failed to fetch analytics:', error);
+      toast.error('Failed to load analytics');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const activityTypeLabels = {
+    login: 'User Logins',
+    payment_initiation: 'Payment Attempts',
+    alumni_page_view: 'Alumni Page Views',
+    company_questions_view: 'Company Questions Views',
+    ai_project_usage: 'AI Project Usage'
+  };
+
+  const getActivityIcon = (type) => {
+    switch(type) {
+      case 'login': return <Users className="h-4 w-4" />;
+      case 'payment_initiation': return <DollarSign className="h-4 w-4" />;
+      case 'alumni_page_view': return <Eye className="h-4 w-4" />;
+      case 'company_questions_view': return <BookOpen className="h-4 w-4" />;
+      case 'ai_project_usage': return <Sparkles className="h-4 w-4" />;
+      default: return <Activity className="h-4 w-4" />;
+    }
+  };
+
+  const getActivityColor = (type) => {
+    switch(type) {
+      case 'login': return 'bg-blue-100 text-blue-800';
+      case 'payment_initiation': return 'bg-green-100 text-green-800';
+      case 'alumni_page_view': return 'bg-purple-100 text-purple-800';
+      case 'company_questions_view': return 'bg-yellow-100 text-yellow-800';
+      case 'ai_project_usage': return 'bg-pink-100 text-pink-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card className="border-2 border-gray-200">
+        <CardContent className="py-12">
+          <div className="flex justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Date Range Selector */}
+      <Card className="border-2 border-gray-200">
+        <CardHeader>
+          <CardTitle>Analytics Dashboard</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <Label>Start Date</Label>
+              <Input
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                max={dateRange.end}
+              />
+            </div>
+            <div className="flex-1">
+              <Label>End Date</Label>
+              <Input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+                min={dateRange.start}
+                max={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+            <Button onClick={fetchAnalytics}>
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+          
+          {/* Quick Date Ranges */}
+          <div className="flex gap-2 mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const end = new Date().toISOString().split('T')[0];
+                const start = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                setDateRange({ start, end });
+              }}
+            >
+              Last 7 Days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const end = new Date().toISOString().split('T')[0];
+                const start = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                setDateRange({ start, end });
+              }}
+            >
+              Last 30 Days
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const end = new Date().toISOString().split('T')[0];
+                const start = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+                setDateRange({ start, end });
+              }}
+            >
+              Last 90 Days
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Card className="border-2 border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Total Activities</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-gray-400" />
+              <span className="text-3xl font-bold text-gray-900">
+                {analytics?.total_activities || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Active Users</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-blue-500" />
+              <span className="text-3xl font-bold text-gray-900">
+                {analytics?.unique_users || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">User Logins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-green-500" />
+              <span className="text-3xl font-bold text-gray-900">
+                {analytics?.activity_breakdown?.login || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Payment Attempts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-yellow-500" />
+              <span className="text-3xl font-bold text-gray-900">
+                {analytics?.activity_breakdown?.payment_initiation || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Company Views</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-purple-500" />
+              <span className="text-3xl font-bold text-gray-900">
+                {analytics?.activity_breakdown?.company_questions_view || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-2 border-gray-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">AI Project Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-pink-500" />
+              <span className="text-3xl font-bold text-gray-900">
+                {analytics?.activity_breakdown?.ai_project_usage || 0}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Popular Content */}
+      <Card className="border-2 border-gray-200">
+        <CardHeader>
+          <CardTitle>Most Popular Companies</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {popularContent?.most_accessed_companies?.length > 0 ? (
+              popularContent.most_accessed_companies.map((company, index) => (
+                <div key={company.company_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-8 h-8 bg-gray-200 rounded-full font-bold text-gray-700">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium text-gray-900">{company.company_name || 'Unknown'}</p>
+                      <p className="text-sm text-gray-600">
+                        {company.access_count} views • {company.unique_users_count} unique users
+                      </p>
+                    </div>
+                  </div>
+                  <Badge className="bg-blue-100 text-blue-800">
+                    {company.access_count}
+                  </Badge>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-4">No data available</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Recent Activities */}
+      <Card className="border-2 border-gray-200">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle>Recent Activities</CardTitle>
+            <Select value={selectedActivityType} onValueChange={(val) => {
+              setSelectedActivityType(val);
+              fetchAnalytics();
+            }}>
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="login">Logins</SelectItem>
+                <SelectItem value="payment_initiation">Payments</SelectItem>
+                <SelectItem value="company_questions_view">Company Views</SelectItem>
+                <SelectItem value="alumni_page_view">Alumni Views</SelectItem>
+                <SelectItem value="ai_project_usage">AI Usage</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {activities.length > 0 ? (
+              activities.map((activity) => (
+                <div key={activity.id} className="border border-gray-200 p-3 rounded-lg">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3 flex-1">
+                      <div className={`p-2 rounded-lg ${getActivityColor(activity.activity_type)}`}>
+                        {getActivityIcon(activity.activity_type)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Badge className={getActivityColor(activity.activity_type)}>
+                            {activityTypeLabels[activity.activity_type] || activity.activity_type}
+                          </Badge>
+                          <span className="text-sm text-gray-600">
+                            {new Date(activity.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {activity.user_name || activity.user_email}
+                        </p>
+                        {activity.resource_name && (
+                          <p className="text-sm text-gray-600">
+                            {activity.resource_name}
+                          </p>
+                        )}
+                        {activity.metadata && Object.keys(activity.metadata).length > 0 && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            {JSON.stringify(activity.metadata)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-gray-500 py-8">No activities found</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
 export default AdminPanel;

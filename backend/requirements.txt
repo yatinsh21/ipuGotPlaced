@@ -1,33 +1,22 @@
-# Core Framework
-fastapi==0.110.1
-uvicorn==0.25.0
+fastapi>=0.115.12
+uvicorn[standard]==0.25.0
 python-multipart==0.0.20
-
-# Database
+pydantic>=2.11.2
+pydantic-settings>=2.3.4
 motor==3.3.1
 pymongo==4.5.0
-
-# Authentication - Clerk
 clerk-backend-api==3.3.1
-
-# Security
+cryptography>=45.0.0,<46.0.0
 passlib[bcrypt]==1.7.4
-
-# emergentintegrations>=0.1.0
-
-redis[hiredis]>=5.0.0
-# Payment Integration
-razorpay==2.0.0
-
-# Image Upload
-cloudinary==1.41.0
-
-# HTTP Client
-httpx==0.28.1
-
-# Environment Variables
-python-dotenv==1.1.1
 PyJWT==2.9.0
-
+razorpay==2.0.0
+cloudinary==1.41.0
+httpx==0.28.1
+python-dotenv==1.1.1
 upstash-redis==1.5.0
-google-generativeai>=0.8.0
+google-generativeai==0.8.6
+google-api-python-client>=2.108.0
+google-ai-generativelanguage==0.6.15
+tqdm>=4.66.0
+orjson>=3.9.0
+fastapi-sitemap>=1.0.4
