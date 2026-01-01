@@ -1984,24 +1984,36 @@ async def get_activities(
     try:
         # Build query
         query = {}
-        
+       
         if activity_type:
             query["activity_type"] = activity_type
-        
+       
+        # Parse date filters to datetime objects for proper comparison
         date_filter = {}
         if start_date:
-            date_filter["$gte"] = start_date
+            try:
+                # Parse as date-only (00:00:00 UTC) for start of day
+                start_dt = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                date_filter["$gte"] = start_dt.isoformat()
+            except ValueError:
+                logging.warning(f"Invalid start_date format: {start_date}")
         if end_date:
-            date_filter["$lte"] = end_date
+            try:
+                # Parse as date-only, add 1 day and subtract 1 second for end of day
+                end_dt = datetime.strptime(end_date, '%Y-%m-%d').replace(tzinfo=timezone.utc)
+                end_dt = end_dt.replace(hour=23, minute=59, second=59, microsecond=999999)
+                date_filter["$lte"] = end_dt.isoformat()
+            except ValueError:
+                logging.warning(f"Invalid end_date format: {end_date}")
         if date_filter:
             query["timestamp"] = date_filter
-        
+       
         # Fetch activities
         activities = await db.activities.find(
             query,
             {"_id": 0}
         ).sort("timestamp", -1).limit(limit).to_list(limit)
-        
+       
         return activities
     except Exception as e:
         logging.error(f"Error fetching activities: {e}")
