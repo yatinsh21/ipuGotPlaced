@@ -1618,7 +1618,8 @@ const AnalyticsManager = ({ getAuthConfig }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({
-    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    // Change default to last 30 days instead of 7
+start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0]
   });
   const [selectedActivityType, setSelectedActivityType] = useState('all');
