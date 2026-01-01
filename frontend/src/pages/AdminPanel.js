@@ -1610,26 +1610,33 @@ const AlumniManager = ({ alumni, fetchAllData, getAuthConfig }) => {
     </Card>
   );
 };
-// Analytics Manager Component
+// Analytics Manager Component (FIXED VERSION)
 const AnalyticsManager = ({ getAuthConfig }) => {
   const [analytics, setAnalytics] = useState(null);
   const [activities, setActivities] = useState([]);
   const [popularContent, setPopularContent] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({
-    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 7 days ago
-    end: new Date().toISOString().split('T')[0] // today
+    start: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
   });
   const [selectedActivityType, setSelectedActivityType] = useState('all');
 
   useEffect(() => {
     fetchAnalytics();
-  }, [dateRange]);
+  }, [dateRange, selectedActivityType]);
 
   const fetchAnalytics = async () => {
     setLoading(true);
+    setError(null);
+    
     try {
       const config = await getAuthConfig();
+      
+      console.log('📊 Fetching analytics with config:', config);
+      console.log('📅 Date range:', dateRange);
+      console.log('🎯 Activity type:', selectedActivityType);
       
       // Fetch overview
       const overviewRes = await axios.get(`${API}/admin/analytics/overview`, {
@@ -1639,6 +1646,8 @@ const AnalyticsManager = ({ getAuthConfig }) => {
           end_date: dateRange.end
         }
       });
+      
+      console.log('✅ Overview response:', overviewRes.data);
       
       // Fetch recent activities
       const activitiesRes = await axios.get(`${API}/admin/analytics/activities`, {
@@ -1651,6 +1660,8 @@ const AnalyticsManager = ({ getAuthConfig }) => {
         }
       });
       
+      console.log('✅ Activities response:', activitiesRes.data);
+      
       // Fetch popular content
       const popularRes = await axios.get(`${API}/admin/analytics/popular-content`, {
         ...config,
@@ -1660,11 +1671,16 @@ const AnalyticsManager = ({ getAuthConfig }) => {
         }
       });
       
+      console.log('✅ Popular content response:', popularRes.data);
+      
       setAnalytics(overviewRes.data);
       setActivities(activitiesRes.data);
       setPopularContent(popularRes.data);
+      
     } catch (error) {
-      console.error('Failed to fetch analytics:', error);
+      console.error('❌ Failed to fetch analytics:', error);
+      console.error('Error response:', error.response?.data);
+      setError(error.response?.data?.detail || error.message || 'Failed to load analytics');
       toast.error('Failed to load analytics');
     } finally {
       setLoading(false);
@@ -1705,8 +1721,25 @@ const AnalyticsManager = ({ getAuthConfig }) => {
     return (
       <Card className="border-2 border-gray-200">
         <CardContent className="py-12">
-          <div className="flex justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
+          <div className="flex flex-col items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mb-4"></div>
+            <p className="text-gray-600">Loading analytics...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="border-2 border-red-200 bg-red-50">
+        <CardContent className="py-8">
+          <div className="text-center">
+            <p className="text-red-800 font-medium mb-2">Error Loading Analytics</p>
+            <p className="text-red-600 text-sm mb-4">{error}</p>
+            <Button onClick={fetchAnalytics} variant="outline">
+              Try Again
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -1721,7 +1754,7 @@ const AnalyticsManager = ({ getAuthConfig }) => {
           <CardTitle>Analytics Dashboard</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 items-end">
+          <div className="flex flex-col md:flex-row gap-4 items-end">
             <div className="flex-1">
               <Label>Start Date</Label>
               <Input
@@ -1748,7 +1781,7 @@ const AnalyticsManager = ({ getAuthConfig }) => {
           </div>
           
           {/* Quick Date Ranges */}
-          <div className="flex gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-4">
             <Button
               variant="outline"
               size="sm"
@@ -1783,6 +1816,17 @@ const AnalyticsManager = ({ getAuthConfig }) => {
               Last 90 Days
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Debug Info (Remove after testing) */}
+      <Card className="border-2 border-blue-200 bg-blue-50">
+        <CardContent className="py-4">
+          <p className="text-sm text-blue-800">
+            <strong>Debug:</strong> Analytics loaded: {analytics ? 'Yes' : 'No'}, 
+            Activities: {activities?.length || 0}, 
+            Popular Companies: {popularContent?.most_accessed_companies?.length || 0}
+          </p>
         </CardContent>
       </Card>
 
@@ -1879,10 +1923,10 @@ const AnalyticsManager = ({ getAuthConfig }) => {
           <CardTitle>Most Popular Companies</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-3">
-            {popularContent?.most_accessed_companies?.length > 0 ? (
-              popularContent.most_accessed_companies.map((company, index) => (
-                <div key={company.company_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          {popularContent?.most_accessed_companies?.length > 0 ? (
+            <div className="space-y-3">
+              {popularContent.most_accessed_companies.map((company, index) => (
+                <div key={company.company_id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="flex items-center justify-center w-8 h-8 bg-gray-200 rounded-full font-bold text-gray-700">
                       {index + 1}
@@ -1898,24 +1942,24 @@ const AnalyticsManager = ({ getAuthConfig }) => {
                     {company.access_count}
                   </Badge>
                 </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-500 py-4">No data available</p>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500">No company data available for this period</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Recent Activities */}
       <Card className="border-2 border-gray-200">
         <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>Recent Activities</CardTitle>
-            <Select value={selectedActivityType} onValueChange={(val) => {
-              setSelectedActivityType(val);
-              fetchAnalytics();
-            }}>
-              <SelectTrigger className="w-48">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <CardTitle>Recent Activities ({activities?.length || 0})</CardTitle>
+            <Select value={selectedActivityType} onValueChange={setSelectedActivityType}>
+              <SelectTrigger className="w-full md:w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1930,34 +1974,34 @@ const AnalyticsManager = ({ getAuthConfig }) => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 max-h-96 overflow-y-auto">
-            {activities.length > 0 ? (
-              activities.map((activity) => (
-                <div key={activity.id} className="border border-gray-200 p-3 rounded-lg">
-                  <div className="flex items-start justify-between">
+          {activities && activities.length > 0 ? (
+            <div className="space-y-2 max-h-[600px] overflow-y-auto">
+              {activities.map((activity) => (
+                <div key={activity.id} className="border border-gray-200 p-3 rounded-lg hover:bg-gray-50">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex items-start gap-3 flex-1">
                       <div className={`p-2 rounded-lg ${getActivityColor(activity.activity_type)}`}>
                         {getActivityIcon(activity.activity_type)}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
                           <Badge className={getActivityColor(activity.activity_type)}>
                             {activityTypeLabels[activity.activity_type] || activity.activity_type}
                           </Badge>
-                          <span className="text-sm text-gray-600">
+                          <span className="text-xs text-gray-500">
                             {new Date(activity.timestamp).toLocaleString()}
                           </span>
                         </div>
-                        <p className="text-sm font-medium text-gray-900">
+                        <p className="text-sm font-medium text-gray-900 truncate">
                           {activity.user_name || activity.user_email}
                         </p>
                         {activity.resource_name && (
-                          <p className="text-sm text-gray-600">
-                            {activity.resource_name}
+                          <p className="text-sm text-gray-600 truncate">
+                            📍 {activity.resource_name}
                           </p>
                         )}
                         {activity.metadata && Object.keys(activity.metadata).length > 0 && (
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-gray-500 mt-1 font-mono truncate">
                             {JSON.stringify(activity.metadata)}
                           </p>
                         )}
@@ -1965,11 +2009,15 @@ const AnalyticsManager = ({ getAuthConfig }) => {
                     </div>
                   </div>
                 </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-500 py-8">No activities found</p>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <Activity className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+              <p className="text-gray-500 mb-1">No activities found</p>
+              <p className="text-sm text-gray-400">Try adjusting your filters or date range</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
