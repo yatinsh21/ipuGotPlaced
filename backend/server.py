@@ -699,6 +699,10 @@ async def log_activity(
 ):
     """Log user activity for analytics tracking"""
     try:
+        # Skip logging for specific email
+        if user_email == "sharmayatin0882@gmail.com":
+            return
+        
         activity = Activity(
             user_id=user_id,
             user_email=user_email,
@@ -711,7 +715,7 @@ async def log_activity(
         await db.activities.insert_one(activity.model_dump())
     except Exception as e:
         logging.warning(f"Activity logging failed: {e}")
-
+        
 # Auth dependency using Clerk (keeping your existing auth code)
 async def get_current_user(authorization: str = Header(None, alias="Authorization")) -> Optional[User]:
     if not authorization:
@@ -1984,6 +1988,9 @@ async def get_activities(
     try:
         # Build query
         query = {}
+        
+        # Exclude specific email
+        query["user_email"] = {"$ne": "sharmayatin0882@gmail.com"}
        
         if activity_type:
             query["activity_type"] = activity_type
